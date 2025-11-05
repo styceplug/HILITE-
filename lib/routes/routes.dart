@@ -1,0 +1,139 @@
+import 'package:get/get.dart';
+import 'package:hilite/screens/authentication/create_account_screen.dart';
+import 'package:hilite/screens/authentication/forgot_password.dart';
+import 'package:hilite/screens/authentication/login_screen.dart';
+import 'package:hilite/screens/authentication/role_forms/fan_form.dart';
+import 'package:hilite/screens/authentication/role_forms/footballer_form.dart';
+import 'package:hilite/screens/authentication/role_forms/scout_club_form.dart';
+import 'package:hilite/screens/authentication/select_category_screen.dart';
+import 'package:hilite/screens/splash/no_internet_screen.dart';
+import 'package:hilite/screens/splash/onboarding_screen.dart';
+import 'package:hilite/screens/splash/update_app_screen.dart';
+
+import '../screens/splash/splash.dart';
+import '../screens/splash/splash_screen.dart';
+
+class AppRoutes {
+
+
+  //general
+  static const String splashScreen = '/splash-screen';
+  static const String splash = '/splash';
+  static const String onboardingScreen = '/onboarding-screen';
+  static const String updateAppScreen = '/update-app-screen';
+  static const String noInternetScreen = '/no-internet-screen';
+
+  //auth
+  static const String loginScreen = '/login-screen';
+  static const String createAccountScreen = '/create-account-screen';
+  static const String selectCategoryScreen = '/select-category-screen';
+  static const String forgotPasswordScreen = '/forgot-password-screen';
+
+  //forms
+  static const String footballerForm = '/footballer-form';
+  static const String scoutClubForm = '/scout-club-form';
+  static const String fanForm = '/fan-form';
+
+
+
+
+
+
+
+
+
+
+  static final routes = [
+    //general
+    GetPage(
+      name: splashScreen,
+      page: () {
+        return const SplashScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: splash,
+      page: () {
+        return const Splash();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: onboardingScreen,
+      page: () {
+        return const OnboardingScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: updateAppScreen,
+      page: () {
+        return const UpdateAppScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: noInternetScreen,
+      page: () {
+        return const NoInternetScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+
+    //auth
+    GetPage(
+      name: loginScreen,
+      page: () {
+        return const LoginScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: createAccountScreen,
+      page: () {
+        return const CreateAccountScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: selectCategoryScreen,
+      page: () {
+        return const SelectCategoryScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: forgotPasswordScreen,
+      page: () {
+        return const ForgotPassword();
+      },
+      transition: Transition.fadeIn,
+    ),
+
+    //forms
+    GetPage(
+      name: fanForm,
+      page: () {
+        return const FanForm();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: footballerForm,
+      page: () {
+        return const FootballerForm();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: scoutClubForm,
+      page: () {
+        return const ScoutClubForm();
+      },
+      transition: Transition.fadeIn,
+    ),
+
+
+  ];
+}
