@@ -10,7 +10,7 @@ class AppColors {
 
   // ===== Accent & Background =====
   static const Color accent = Color(0xFFF2F4F7); // Light gray for contrast/background
-  static const Color bgColor = Color(0xFFF9FBFD); // Slight off-white background for depth
+  static const Color bgColor = Color(0xFFF9FBFD);
 
   // ===== Status Colors =====
   static const Color success = Color(0xFF2E7D32);

@@ -6,6 +6,9 @@ import 'package:hilite/screens/authentication/role_forms/fan_form.dart';
 import 'package:hilite/screens/authentication/role_forms/footballer_form.dart';
 import 'package:hilite/screens/authentication/role_forms/scout_club_form.dart';
 import 'package:hilite/screens/authentication/select_category_screen.dart';
+import 'package:hilite/screens/authentication/verify_profile.dart';
+import 'package:hilite/screens/home/home_screen.dart';
+import 'package:hilite/screens/settings/settings_screen.dart';
 import 'package:hilite/screens/splash/no_internet_screen.dart';
 import 'package:hilite/screens/splash/onboarding_screen.dart';
 import 'package:hilite/screens/splash/update_app_screen.dart';
@@ -28,11 +31,19 @@ class AppRoutes {
   static const String createAccountScreen = '/create-account-screen';
   static const String selectCategoryScreen = '/select-category-screen';
   static const String forgotPasswordScreen = '/forgot-password-screen';
+  static const String verifyProfileScreen = '/verify-profile-screen';
+
 
   //forms
   static const String footballerForm = '/footballer-form';
   static const String scoutClubForm = '/scout-club-form';
   static const String fanForm = '/fan-form';
+
+  //inapp
+  static const String homeScreen = '/home-screen';
+  static const String settingsScreen = '/settings-screen';
+
+
 
 
 
@@ -110,6 +121,13 @@ class AppRoutes {
       },
       transition: Transition.fadeIn,
     ),
+    GetPage(
+      name: verifyProfileScreen,
+      page: () {
+        return const VerifyProfile();
+      },
+      transition: Transition.fadeIn,
+    ),
 
     //forms
     GetPage(
@@ -133,6 +151,23 @@ class AppRoutes {
       },
       transition: Transition.fadeIn,
     ),
+
+    //inapp
+    GetPage(
+      name: homeScreen,
+      page: () {
+        return const HomeScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: settingsScreen,
+      page: () {
+        return const SettingsScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+
 
 
   ];

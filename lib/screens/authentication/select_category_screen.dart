@@ -134,7 +134,7 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
                   } else if (selectedRole == 'scout-club') {
                     Get.toNamed(AppRoutes.scoutClubForm);
                   } else if (selectedRole == 'fan') {
-                    Get.toNamed(AppRoutes.fanForm);
+                    Get.toNamed(AppRoutes.verifyProfileScreen);
                   }
                 },
                 isDisabled: selectedRole.isEmpty,

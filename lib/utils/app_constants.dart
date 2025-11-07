@@ -4,7 +4,7 @@ class AppConstants {
   static const String APP_NAME = 'HILITE';
 
 
-  static const String BASE_URL = '';
+  static const String BASE_URL = 'https://hilite-oq2v.onrender.com/api';
 
   //TOKEN
   static const authToken = 'authToken';
@@ -12,7 +12,14 @@ class AppConstants {
   static const String lastVersionCheck = 'lastVersionCheck';
 
   //update
-  static const String VERSION_CHECK = '';
+  static const String VERSION_CHECK = '/version-check';
+
+  //auth
+  static const String POST_LOGIN = '/v1/auth/login';
+  static const String POST_REGISTER_FAN = '/v1/auth/register/fan';
+  static const String POST_REGISTER_OTHERS = '/v1/auth/register/others';
+  static const String GET_USERNAME_AVAILABILITY = '/v1/auth/username';
+  static const String POST_PASS_RESET = '/v1/auth/password/initiate-reset';
 
 
 
@@ -30,6 +37,9 @@ class AppConstants {
   }
   static String getGifAsset(String image) {
     return 'assets/gifs/$image.gif';
+  }
+  static String getLeagueAsset(String image) {
+    return 'assets/league/$image.png';
   }
 
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/auth_controller.dart';
+import 'package:hilite/widgets/snackbars.dart';
 
 import '../../routes/routes.dart';
 import '../../utils/colors.dart';
@@ -15,6 +17,18 @@ class ForgotPassword extends StatefulWidget {
 }
 
 class _ForgotPasswordState extends State<ForgotPassword> {
+  AuthController authController = Get.find<AuthController>();
+  TextEditingController mailController = TextEditingController();
+
+  void requestLink() {
+    if (mailController.text.isEmpty) {
+      CustomSnackBar.failure(message: 'Please enter your email address');
+      return;
+    }
+    final mail = mailController.text.trim();
+    authController.initiatePasswordReset(mail);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,10 +99,21 @@ class _ForgotPasswordState extends State<ForgotPassword> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                CustomTextField(hintText: 'Input Email Address'),
+                CustomTextField(
+                  hintText: 'Input Email Address',
+                  controller: mailController,
+                  labelText: 'Email Address',
+                  autofillHints: [AutofillHints.email],
+                  keyboardType: TextInputType.emailAddress,
+                ),
                 SizedBox(height: Dimensions.height20),
 
-                CustomButton(text: 'SIGN IN', onPressed: () {}),
+                CustomButton(
+                  text: 'REQUEST RESET LINK',
+                  onPressed: () {
+                    requestLink();
+                  },
+                ),
                 SizedBox(height: Dimensions.height20),
                 Text(
                   'If there is an existing record attached to provided mail, a password reset link will be sent to your email',

@@ -118,7 +118,7 @@ class CustomSnackBar {
   /// --- 🔹 Bottom Toast (Fade In / Fade Out)
   static void showToast({
     required String message,
-    Color backgroundColor = Colors.black87,
+    Color backgroundColor = Colors.black12,
     Duration duration = const Duration(seconds: 2),
   }) {
     final overlay = Overlay.of(Get.overlayContext!);
@@ -144,14 +144,14 @@ class CustomSnackBar {
                     padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: backgroundColor.withOpacity(0.9),
+                      color: backgroundColor.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(25),
                     ),
                     child: Text(
                       message,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style:  TextStyle(
+                        color: Colors.white.withOpacity(0.7),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                         fontFamily: 'Poppins',

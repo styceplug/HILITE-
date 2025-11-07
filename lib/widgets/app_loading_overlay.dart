@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../utils/colors.dart';
 import '../utils/dimensions.dart';
 
+
 class AppLoadingOverlay extends StatefulWidget {
   const AppLoadingOverlay({super.key});
 
@@ -23,7 +24,7 @@ class _AppLoadingOverlayState extends State<AppLoadingOverlay>
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
 
-    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.2).animate(
+    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -37,23 +38,43 @@ class _AppLoadingOverlayState extends State<AppLoadingOverlay>
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black.withOpacity(0.3),
+      color: Colors.black.withOpacity(0.4),
       child: Center(
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-             Container(
-              padding: EdgeInsets.symmetric(horizontal: Dimensions.width20,vertical: Dimensions.height240),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(Dimensions.radius20),
-                color: AppColors.black
-              ),
-              child: CircularProgressIndicator(
-                strokeWidth: 4,
-                color: Colors.white,
-              ),
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: Container(
+            padding: EdgeInsets.all(Dimensions.height30),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(Dimensions.radius20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.4),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(
+                  strokeWidth: 4,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+                SizedBox(height: Dimensions.height20),
+                Text(
+                  "Please wait...",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: Dimensions.font14,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

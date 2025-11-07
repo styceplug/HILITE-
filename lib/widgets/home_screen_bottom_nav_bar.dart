@@ -31,24 +31,24 @@ class HomeScreenBottomNavBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               BottomBarItem(
-                name: 'Studio',
-                image: 'studio',
+                name: 'Live Scores',
+                image: 'nav1',
                 isActive: appController.currentAppPage.value == 0,
                 onClick: () {
                   appController.changeCurrentAppPage(0);
                 },
               ),
               BottomBarItem(
-                name: 'Formulator',
-                image: 'formulator',
+                name: 'Reels',
+                image: 'nav2',
                 isActive: appController.currentAppPage.value == 1,
                 onClick: () {
                   appController.changeCurrentAppPage(1);
                 },
               ),
               BottomBarItem(
-                name: 'Color Club',
-                image: 'color-club',
+                name: 'New Post',
+                image: 'nav3',
                 isActive: appController.currentAppPage.value == 2,
                 onClick: () {
                   appController.changeCurrentAppPage(2);
@@ -56,7 +56,7 @@ class HomeScreenBottomNavBar extends StatelessWidget {
               ),
               BottomBarItem(
                 name: 'Profile',
-                image: 'profile',
+                image: 'nav4',
                 isActive: appController.currentAppPage.value == 3,
                 onClick: () {
                   appController.changeCurrentAppPage(3);

@@ -52,7 +52,7 @@ class MyApp extends StatelessWidget {
                 scaffoldBackgroundColor: AppColors.bgColor
             ),
             getPages: AppRoutes.routes,
-            initialRoute: AppRoutes.splash,
+            initialRoute: AppRoutes.splashScreen,
             builder: (context, child) {
               final loaderController = Get.find<GlobalLoaderController>();
               return Obx(() {

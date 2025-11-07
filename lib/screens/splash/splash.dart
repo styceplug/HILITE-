@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/app_controller.dart';
 import 'package:hilite/widgets/bouncing_dots_indicator.dart';
 import '../../routes/routes.dart';
 import '../../utils/app_constants.dart';
@@ -18,7 +19,11 @@ class _SplashState extends State<Splash> {
   void initState() {
     super.initState();
     Future.delayed(const Duration(seconds: 5), () {
-      Get.offAllNamed(AppRoutes.onboardingScreen);
+      if (Get.find<AppController>().checkUserLoggedIn()) {
+        Get.offAllNamed(AppRoutes.homeScreen);
+      } else {
+        Get.offAllNamed(AppRoutes.onboardingScreen);
+      }
     });
   }
 
@@ -48,20 +53,19 @@ class _SplashState extends State<Splash> {
                   ),
                 ),
               ),
-
               Text(
                 'From Street to Stadium',
-
                 style: TextStyle(
                   fontSize: Dimensions.font22,
                   fontWeight: FontWeight.w700,
-                  foreground: Paint()..shader = const LinearGradient(
-                    colors: [Color(0xFF0094FF), Color(0xFF003366)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ).createShader(Rect.fromLTWH(0.0, 0.0, 200.0, 70.0)
+                  foreground: Paint()
+                    ..shader = const LinearGradient(
+                      colors: [Color(0xFF0094FF), Color(0xFF003366)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ).createShader(Rect.fromLTWH(0.0, 0.0, 200.0, 70.0)),
                 ),
-              ),),
+              ),
               Spacer(),
               BouncingDotsIndicator(
                 color: AppColors.primary,
