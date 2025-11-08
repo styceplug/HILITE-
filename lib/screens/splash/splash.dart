@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/app_controller.dart';
+import 'package:hilite/controllers/auth_controller.dart';
 import 'package:hilite/widgets/bouncing_dots_indicator.dart';
 import '../../routes/routes.dart';
 import '../../utils/app_constants.dart';
@@ -15,15 +16,14 @@ class Splash extends StatefulWidget {
 }
 
 class _SplashState extends State<Splash> {
+
+  AppController appController = Get.find<AppController>();
+
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 5), () {
-      if (Get.find<AppController>().checkUserLoggedIn()) {
-        Get.offAllNamed(AppRoutes.homeScreen);
-      } else {
-        Get.offAllNamed(AppRoutes.onboardingScreen);
-      }
+    Future.delayed(const Duration(seconds: 3), () async {
+      appController.initializeApp();
     });
   }
 

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/auth_controller.dart';
 import 'package:hilite/utils/app_constants.dart';
 import 'package:hilite/utils/dimensions.dart';
 import 'package:hilite/widgets/custom_button.dart';
 
 import '../../routes/routes.dart';
 import '../../utils/colors.dart';
+import '../../utils/storage_helper.dart';
 import '../../widgets/role_card.dart';
 
 class SelectCategoryScreen extends StatefulWidget {
@@ -17,6 +19,46 @@ class SelectCategoryScreen extends StatefulWidget {
 
 class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
   String selectedRole = '';
+
+  AuthController authController = Get.find<AuthController>();
+  String savedName = '';
+  String savedUsername = '';
+  String savedEmail = '';
+  String savedPassword = '';
+
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedSignupData();
+  }
+
+  Future<void> _loadSavedSignupData() async {
+    final info = await StorageHelper.readBasicInfo();
+    final password = await StorageHelper.readPassword();
+
+    setState(() {
+      savedName = info['name'] ?? '';
+      savedUsername = info['username'] ?? '';
+      savedEmail = info['email'] ?? '';
+      savedPassword = password ?? '';
+    });
+  }
+
+  Map<String, dynamic> body(String username, String password, String email, String name) {
+    return {
+      "name": name,
+      "username": username,
+      "email": email,
+      "password": password,
+    };
+  }
+
+  void registerFan(){
+    authController.registerFan(body(savedUsername, savedPassword, savedEmail, savedName)
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +176,7 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
                   } else if (selectedRole == 'scout-club') {
                     Get.toNamed(AppRoutes.scoutClubForm);
                   } else if (selectedRole == 'fan') {
-                    Get.toNamed(AppRoutes.verifyProfileScreen);
+                    registerFan();
                   }
                 },
                 isDisabled: selectedRole.isEmpty,

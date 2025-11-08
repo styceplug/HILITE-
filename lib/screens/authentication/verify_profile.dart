@@ -157,7 +157,7 @@ class _VerifyProfileState extends State<VerifyProfile> {
                   side: const BorderSide(color: Colors.white, width: 1),
                 ),
                 onPressed: (){
-                  Get.toNamed(AppRoutes.loginScreen);
+                  Get.offAllNamed(AppRoutes.loginScreen);
                 },
                 child: const Text(
                   "Go back to Login Screen",

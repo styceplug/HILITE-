@@ -37,17 +37,15 @@ class _LoginScreenState extends State<LoginScreen> {
   TextEditingController passwordController = TextEditingController();
 
   void login() {
-    final username = usernameController.text.trim();
+    final input = usernameController.text.trim();
     final password = passwordController.text.trim();
-    if (username.isEmpty || password.isEmpty) {
+
+    if (input.isEmpty || password.isEmpty) {
       CustomSnackBar.failure(message: 'Both fields are required');
       return;
     }
-    authController.login(
-      username,
-      password,
-      staySignedIn: isRememberMe,
-    );
+
+    authController.login(input, password, staySignedIn: isRememberMe);
   }
 
   @override
@@ -87,12 +85,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             horizontal: Dimensions.width20,
                             vertical: Dimensions.height50,
                           ),
-                          child: Text(
-                            'HILITE',
-                            style: TextStyle(
-                              fontFamily: 'BebasNeue',
-                              fontSize: Dimensions.font30,
-                              color: AppColors.white,
+                          child: InkWell(
+                            onTap: (){
+                              authController.logout();
+                            },
+                            child: Text(
+                              'HILITE',
+                              style: TextStyle(
+                                fontFamily: 'BebasNeue',
+                                fontSize: Dimensions.font30,
+                                color: AppColors.white,
+                              ),
                             ),
                           ),
                         ),

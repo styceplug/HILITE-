@@ -15,26 +15,59 @@ class AuthController extends GetxController implements GetxService {
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
-
+  var isCheckingUsername = false.obs;
+  var isUsernameAvailable = false.obs;
+  var usernameMessage = ''.obs;
   GlobalLoaderController loader = Get.find<GlobalLoaderController>();
 
 
-  Future<void> login(String username, String password, {bool staySignedIn = false}) async {
+  Future<void> login(String input, String password, {bool staySignedIn = false}) async {
     loader.showLoader();
     update();
-    Response response = await authRepo.login(username, password);
-    if (response.statusCode == 200) {
-      if (staySignedIn) {
-        saveUserToken(response.body['token']);
+
+    try {
+
+      final bool isEmail = input.contains('@') && input.contains('.');
+
+      final Map<String, dynamic> payload = {
+        (isEmail ? 'email' : 'username'): input,
+        'password': password,
+      };
+
+      Response response = await authRepo.apiClient.postData(AppConstants.POST_LOGIN, payload);
+      loader.hideLoader();
+
+      if (response.statusCode == 200) {
+        final body = response.body;
+
+        if (body['code'] == '00') {
+          final token = body['data'];
+          final message = body['message'] ?? 'Login successful';
+
+          if (staySignedIn) {
+            await saveUserToken(token);
+          }
+
+          CustomSnackBar.success(message: '$message: Welcome back ${isEmail ? input.split('@')[0] : input}');
+          Get.offAllNamed(AppRoutes.homeScreen);
+        } else {
+          CustomSnackBar.failure(
+            message: body['message'] ?? 'Invalid credentials',
+          );
+        }
+      } else {
+        CustomSnackBar.failure(
+          message: 'Login failed — please try again later',
+        );
       }
-      authRepo.apiClient.updateHeader(response.body['token']);
-      Get.offAllNamed(AppRoutes.homeScreen);
-      CustomSnackBar.success(
-          message: 'Login Successfully: Welcome back ${response.body['username']}');
-    } else {
-      CustomSnackBar.failure(message: 'Login Failed');
+    } catch (e, s) {
+      loader.hideLoader();
+      CustomSnackBar.failure(
+        message: 'An error occurred: ${e.toString()}',
+      );
+      print('$e\n$s');
     }
-    loader.hideLoader();
+
     update();
   }
 
@@ -52,48 +85,134 @@ class AuthController extends GetxController implements GetxService {
     return response;
   }
 
+  Future<void> checkUsername(String username) async {
+    if (username.isEmpty) return;
+
+    isCheckingUsername.value = true;
+    usernameMessage.value = '';
+
+    try {
+      Response response = await authRepo.checkUsername(username);
+
+      if (response.statusCode == 200 && response.body is Map) {
+        if (response.body['code'] == '00') {
+          isUsernameAvailable.value = true;
+          usernameMessage.value = response.body['message'] ?? 'Username is available';
+        } else {
+          isUsernameAvailable.value = false;
+          usernameMessage.value = response.body['message'] ?? 'Username already taken';
+        }
+      } else {
+        isUsernameAvailable.value = false;
+        usernameMessage.value = 'Username already taken';
+      }
+    } catch (e) {
+      isUsernameAvailable.value = false;
+      usernameMessage.value = 'Network error. Please retry.';
+    } finally {
+      isCheckingUsername.value = false;
+      update();
+    }
+  }
 
   Future<Response> registerFan(Map<String, dynamic> body) async {
-    _isLoading = true;
-    update();
-    Response response = await authRepo.registerFan(body);
-    _isLoading = false;
-    update();
+    Response response;
+
+    try {
+      loader.showLoader();
+      update();
+
+      response = await authRepo.registerFan(body);
+
+      if (response.body['code'] == '00' || response.statusCode == 200) {
+        CustomSnackBar.success(message: 'Registration Successful');
+        Get.offAllNamed(AppRoutes.verifyProfileScreen);
+      } else {
+        CustomSnackBar.failure(
+          message: response.body['message'] ?? 'Registration Failed',
+        );
+      }
+    } catch (e, s) {
+      print('❌ Error in registerFan: $e');
+      print('Stacktrace: $s');
+      CustomSnackBar.failure(message: 'An error occurred. Please try again.');
+      response = Response(statusCode: 500, statusText: e.toString());
+    } finally {
+      loader.hideLoader();
+      update();
+    }
+
     return response;
   }
 
-  Future<Response> registerOthers(Map<String, dynamic> body) async {
-    _isLoading = true;
+  Future<void> registerOthers(Map<String, dynamic> body) async {
+    loader.showLoader();
     update();
-    Response response = await authRepo.registerOthers(body);
-    _isLoading = false;
-    update();
-    return response;
+
+    try {
+      Response response = await authRepo.registerOthers(body);
+
+      if (response.statusCode == 201 && response.body['code'] == '00') {
+        CustomSnackBar.success(message: response.body['message'] ?? 'Registration Successful');
+        Get.offAllNamed(AppRoutes.verifyProfileScreen);
+        final userData = response.body['data'];
+
+
+      } else if (response.body['code'] == '01') {
+        CustomSnackBar.failure(message: response.body['message'] ?? 'Missing required fields');
+      } else {
+        CustomSnackBar.failure(message: response.body['message'] ?? 'Registration failed');
+      }
+    } catch (e,s) {
+      CustomSnackBar.failure(message: 'An error occurred: $e, $s');
+      print('$e,$s');
+    } finally {
+      loader.hideLoader();
+      update();
+    }
   }
 
-  Future<Response> checkUsername(String username) async {
-    _isLoading = true;
-    update();
-    Response response = await authRepo.checkUsername(username);
-    _isLoading = false;
-    update();
-    return response;
-  }
-
-
-  void saveUserToken(String token) {
+  Future<void> saveUserToken(String token) async {
     authRepo.apiClient.token = token;
     authRepo.apiClient.updateHeader(token);
-    sharedPreferences.setString(AppConstants.authToken, token);
+    await authRepo.sharedPreferences.setString(AppConstants.authToken, token);
   }
+
+  Future<bool> loadSavedSession() async {
+    final token = authRepo.sharedPreferences.getString(AppConstants.authToken);
+    if (token != null && token.isNotEmpty) {
+      authRepo.apiClient.updateHeader(token);
+      authRepo.apiClient.token = token;
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> logout() async {
+    loader.showLoader();
+    update();
+
+    try {
+      await authRepo.sharedPreferences.remove(AppConstants.authToken);
+      authRepo.apiClient.updateHeader('');
+      authRepo.apiClient.token = '';
+      sharedPreferences.remove(AppConstants.authToken);
+      CustomSnackBar.success(message: 'Logged out successfully');
+      Get.offAllNamed(AppRoutes.onboardingScreen);
+    } catch (e) {
+      CustomSnackBar.failure(message: 'Logout failed: ${e.toString()}');
+      print(e);
+    } finally {
+      loader.hideLoader();
+      update();
+    }
+  }
+
+
+
 
   bool userLoggedIn() {
     return sharedPreferences.containsKey(AppConstants.authToken);
   }
 
-  void clearSharedData() {
-    sharedPreferences.remove(AppConstants.authToken);
-    authRepo.apiClient.token = '';
-    authRepo.apiClient.updateHeader('');
-  }
 }

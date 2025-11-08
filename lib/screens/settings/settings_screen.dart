@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:hilite/controllers/auth_controller.dart';
+import 'package:hilite/routes/routes.dart';
 import 'package:hilite/widgets/custom_appbar.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../utils/colors.dart';
@@ -15,6 +18,8 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool notificationsEnabled = true;
   bool darkMode = false;
+
+  AuthController authController = Get.find<AuthController>();
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +119,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Logout
             CustomButton(
               text: "Log Out",
-              onPressed: () {},
+              onPressed: () {
+                authController.logout();
+                Get.offAllNamed(AppRoutes.loginScreen);
+              },
               backgroundColor: AppColors.error,
               borderRadius: BorderRadius.circular(Dimensions.radius10),
             ),

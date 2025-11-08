@@ -8,6 +8,7 @@ import 'package:hilite/screens/home/pages/profile_screen.dart';
 import 'package:hilite/screens/home/pages/reels_screen.dart';
 
 import '../data/repo/app_repo.dart';
+import '../routes/routes.dart';
 
 class AppController extends GetxController {
   final AppRepo appRepo;
@@ -17,13 +18,15 @@ class AppController extends GetxController {
   Rx<ThemeMode> themeMode = Rx<ThemeMode>(ThemeMode.system);
 
   var currentAppPage = 0.obs;
+  var isFirstTime = false.obs;
   PageController pageController = PageController();
+  AuthController authController = Get.find<AuthController>();
 
   final List<Widget> pages = [
     LiveScoreScreen(),
     ReelsScreen(),
     NewPost(),
-    ProfileScreen()
+    ProfileScreen(),
   ];
 
   @override
@@ -32,11 +35,32 @@ class AppController extends GetxController {
   }
 
   void initializeApp() async {
-    await Future.wait([]);
+    await Future.wait([checkFirstTimeUse(), checkLoginAndNavigate()]);
   }
 
-  bool checkUserLoggedIn() {
-    return Get.find<AuthController>().userLoggedIn();
+  Future<void> checkLoginAndNavigate() async {
+    final loggedIn = authController.userLoggedIn();
+
+    if (isFirstTime.value) {
+      Get.offAllNamed(AppRoutes.onboardingScreen);
+    } else if (loggedIn) {
+
+      Get.offAllNamed(AppRoutes.homeScreen);
+    } else {
+
+      Get.offAllNamed(AppRoutes.splashScreen);
+    }
+  }
+  Future<void> checkFirstTimeUse() async {
+    final prefs = appRepo.sharedPreferences;
+    final seen = prefs.getBool('hasSeenOnboarding') ?? false;
+
+    if (!seen) {
+      isFirstTime.value = true;
+      await prefs.setBool('hasSeenOnboarding', true);
+    } else {
+      isFirstTime.value = false;
+    }
   }
 
   void changeCurrentAppPage(int page, {bool movePage = true}) {

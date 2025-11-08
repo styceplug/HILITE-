@@ -2,7 +2,6 @@ import 'package:get/get.dart';
 import 'package:hilite/screens/authentication/create_account_screen.dart';
 import 'package:hilite/screens/authentication/forgot_password.dart';
 import 'package:hilite/screens/authentication/login_screen.dart';
-import 'package:hilite/screens/authentication/role_forms/fan_form.dart';
 import 'package:hilite/screens/authentication/role_forms/footballer_form.dart';
 import 'package:hilite/screens/authentication/role_forms/scout_club_form.dart';
 import 'package:hilite/screens/authentication/select_category_screen.dart';
@@ -130,13 +129,6 @@ class AppRoutes {
     ),
 
     //forms
-    GetPage(
-      name: fanForm,
-      page: () {
-        return const FanForm();
-      },
-      transition: Transition.fadeIn,
-    ),
     GetPage(
       name: footballerForm,
       page: () {

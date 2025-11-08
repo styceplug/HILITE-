@@ -1,11 +1,14 @@
 import 'package:get/get.dart';
 import 'package:hilite/data/api/api_client.dart';
 import 'package:hilite/utils/app_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthRepo {
   final ApiClient apiClient;
+  final SharedPreferences sharedPreferences;
 
-  AuthRepo({required this.apiClient});
+
+  AuthRepo({required this.apiClient,required this.sharedPreferences});
 
   Future<Response> login(String username, String password) async {
     return await apiClient.postData(AppConstants.POST_LOGIN, {"username": username, "password": password});
@@ -20,7 +23,9 @@ class AuthRepo {
   }
 
   Future<Response> checkUsername(String username) async {
-    return await apiClient.getData('${AppConstants.GET_USERNAME_AVAILABILITY}/$username');
+    return await apiClient.getData(
+      '/v1/auth/username?username=$username',
+    );
   }
 
   Future<Response> initiatePasswordReset(String email) async {
