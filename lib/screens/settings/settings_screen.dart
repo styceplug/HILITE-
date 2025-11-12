@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/auth_controller.dart';
+import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/routes/routes.dart';
 import 'package:hilite/widgets/custom_appbar.dart';
 import 'package:iconsax/iconsax.dart';
@@ -20,6 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool darkMode = false;
 
   AuthController authController = Get.find<AuthController>();
+  UserController userController = Get.find<UserController>();
 
   @override
   Widget build(BuildContext context) {
@@ -48,16 +50,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             SizedBox(height: Dimensions.height10),
-
+            if(userController.user.value?.role == 'player')
             settingTile(
               icon: Iconsax.user,
               title: "Edit Profile",
-              onTap: () {},
+              onTap: () {
+                Get.toNamed(AppRoutes.editProfileScreen);
+
+              },
             ),
             settingTile(
               icon: Iconsax.lock,
               title: "Change Password",
-              onTap: () {},
+              onTap: () {
+                Get.toNamed(AppRoutes.forgotPasswordScreen);
+              },
             ),
             settingTile(
               icon: Iconsax.profile_tick,

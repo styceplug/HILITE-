@@ -1,10 +1,13 @@
 import 'package:get/get.dart';
+import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/data/repo/auth_repo.dart';
+import 'package:hilite/data/repo/user_repo.dart';
 import 'package:hilite/helpers/global_loader_controller.dart';
 import 'package:hilite/routes/routes.dart';
 import 'package:hilite/widgets/snackbars.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/user_model.dart';
 import '../utils/app_constants.dart';
 
 class AuthController extends GetxController implements GetxService {
@@ -19,6 +22,10 @@ class AuthController extends GetxController implements GetxService {
   var isUsernameAvailable = false.obs;
   var usernameMessage = ''.obs;
   GlobalLoaderController loader = Get.find<GlobalLoaderController>();
+  UserController userController = Get.find<UserController>();
+  Rx<UserModel?> user = Rx<UserModel?>(null);
+  UserRepo? userRepo;
+
 
 
   Future<void> login(String input, String password, {bool staySignedIn = false}) async {
@@ -197,6 +204,7 @@ class AuthController extends GetxController implements GetxService {
       authRepo.apiClient.updateHeader('');
       authRepo.apiClient.token = '';
       sharedPreferences.remove(AppConstants.authToken);
+      userController.clearUserCache();
       CustomSnackBar.success(message: 'Logged out successfully');
       Get.offAllNamed(AppRoutes.onboardingScreen);
     } catch (e) {
@@ -208,6 +216,37 @@ class AuthController extends GetxController implements GetxService {
     }
   }
 
+  Future<void> updateUserProfile(Map<String, dynamic> body) async {
+    try {
+      loader.showLoader();
+
+      Response response = await authRepo.updateUserProfile(body);
+
+      print('This is body: $body');
+      print('Response code: ${response.body['code']}');
+      print('Code type: ${response.body['code'].runtimeType}');
+
+      if (response.body['code'].toString() == '00') {
+        user.value = UserModel.fromJson(response.body['data']);
+
+        await userRepo?.cacheUserData(response.body['data']);
+
+        print("💾 Cached updated user profile successfully");
+
+        CustomSnackBar.success(message: 'Profile updated successfully');
+      } else {
+        CustomSnackBar.failure(
+          message: response.body['message'] ?? 'Failed to update profile',
+        );
+      }
+    } catch (e, s) {
+      print('🔥 Error updating profile: $e\n$s');
+      CustomSnackBar.failure(message: 'An unexpected error occurred');
+    } finally {
+      loader.hideLoader();
+      update();
+    }
+  }
 
 
 

@@ -30,6 +30,11 @@ dependencies:
   intl: ^0.20.2
   url_launcher: ^6.3.2
   flutter_secure_storage: ^9.2.4
+  camera: ^0.11.3
+  image_picker: ^1.2.0
+  video_player: ^2.10.0
+  http: ^1.6.0
+  http_parser: ^4.1.2
 
 dev_dependencies:
   flutter_test:
@@ -58,6 +63,7 @@ flutter:
     - assets/images/
     - assets/league/
     - assets/countries_state.json
+    - shorebird.yaml
 
 
 

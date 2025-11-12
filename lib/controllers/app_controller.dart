@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
 import 'package:hilite/controllers/auth_controller.dart';
+import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/screens/home/pages/live_score_screen.dart';
 import 'package:hilite/screens/home/pages/new_post.dart';
 import 'package:hilite/screens/home/pages/profile_screen.dart';
@@ -21,11 +22,12 @@ class AppController extends GetxController {
   var isFirstTime = false.obs;
   PageController pageController = PageController();
   AuthController authController = Get.find<AuthController>();
+  UserController userController = Get.find<UserController>();
 
   final List<Widget> pages = [
     LiveScoreScreen(),
     ReelsScreen(),
-    NewPost(),
+    ActivitiesScreen(),
     ProfileScreen(),
   ];
 
@@ -34,9 +36,14 @@ class AppController extends GetxController {
     super.onInit();
   }
 
-  void initializeApp() async {
-    await Future.wait([checkFirstTimeUse(), checkLoginAndNavigate()]);
+  Future<void> initializeApp() async {
+    await checkFirstTimeUse();
+
+    await checkLoginAndNavigate();
+
+    await userController.getUserProfile();
   }
+
 
   Future<void> checkLoginAndNavigate() async {
     final loggedIn = authController.userLoggedIn();
@@ -44,13 +51,12 @@ class AppController extends GetxController {
     if (isFirstTime.value) {
       Get.offAllNamed(AppRoutes.onboardingScreen);
     } else if (loggedIn) {
-
       Get.offAllNamed(AppRoutes.homeScreen);
     } else {
-
       Get.offAllNamed(AppRoutes.splashScreen);
     }
   }
+
   Future<void> checkFirstTimeUse() async {
     final prefs = appRepo.sharedPreferences;
     final seen = prefs.getBool('hasSeenOnboarding') ?? false;

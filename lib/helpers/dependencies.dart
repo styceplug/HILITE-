@@ -1,5 +1,7 @@
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/user_controller.dart';
+import 'package:hilite/data/repo/user_repo.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../controllers/app_controller.dart';
@@ -29,10 +31,12 @@ Future<void> init() async {
   Get.lazyPut(() => AppRepo(apiClient: Get.find(), sharedPreferences: Get.find()));
   Get.lazyPut(() => VersionRepo(apiClient: Get.find()));
   Get.lazyPut(() => AuthRepo(apiClient: Get.find(), sharedPreferences: Get.find()));
+  Get.lazyPut(() => UserRepo(apiClient: Get.find(), sharedPreferences: Get.find(), authRepo: Get.find()));
 
   //controllers
   Get.lazyPut(() => AppController(appRepo: Get.find()));
   Get.lazyPut(() => VersionController(versionRepo: Get.find()));
   Get.lazyPut(() => AuthController(authRepo: Get.find(), sharedPreferences: Get.find()));
+  Get.lazyPut(() => UserController(userRepo: Get.find(), sharedPreferences: Get.find()));
   Get.lazyPut(() => GlobalLoaderController());
 }

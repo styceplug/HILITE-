@@ -1,0 +1,2 @@
+/Users/mac/development/cube-app/android/app/.cxx/RelWithDebInfo/1l41d1i2/x86/CMakeFiles/edit_cache.dir
+/Users/mac/development/cube-app/android/app/.cxx/RelWithDebInfo/1l41d1i2/x86/CMakeFiles/rebuild_cache.dir

@@ -31,4 +31,8 @@ class AuthRepo {
   Future<Response> initiatePasswordReset(String email) async {
     return await apiClient.postData(AppConstants.POST_PASS_RESET, {"email": email});
   }
+
+  Future<Response> updateUserProfile(Map<String, dynamic> body) async {
+    return await apiClient.putData(AppConstants.UPDATE_PROFILE_DETAILS, body);
+  }
 }

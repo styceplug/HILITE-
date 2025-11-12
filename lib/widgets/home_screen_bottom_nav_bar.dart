@@ -47,7 +47,7 @@ class HomeScreenBottomNavBar extends StatelessWidget {
                 },
               ),
               BottomBarItem(
-                name: 'New Post',
+                name: 'Activities',
                 image: 'nav3',
                 isActive: appController.currentAppPage.value == 2,
                 onClick: () {

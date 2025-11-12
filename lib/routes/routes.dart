@@ -7,6 +7,9 @@ import 'package:hilite/screens/authentication/role_forms/scout_club_form.dart';
 import 'package:hilite/screens/authentication/select_category_screen.dart';
 import 'package:hilite/screens/authentication/verify_profile.dart';
 import 'package:hilite/screens/home/home_screen.dart';
+import 'package:hilite/screens/posting/post_detail_screen.dart';
+import 'package:hilite/screens/posting/upload_content.dart';
+import 'package:hilite/screens/settings/edit_profile.dart';
 import 'package:hilite/screens/settings/settings_screen.dart';
 import 'package:hilite/screens/splash/no_internet_screen.dart';
 import 'package:hilite/screens/splash/onboarding_screen.dart';
@@ -31,6 +34,7 @@ class AppRoutes {
   static const String selectCategoryScreen = '/select-category-screen';
   static const String forgotPasswordScreen = '/forgot-password-screen';
   static const String verifyProfileScreen = '/verify-profile-screen';
+  static const String editProfileScreen = '/edit-profile-screen';
 
 
   //forms
@@ -41,6 +45,9 @@ class AppRoutes {
   //inapp
   static const String homeScreen = '/home-screen';
   static const String settingsScreen = '/settings-screen';
+  static const String uploadContent = '/upload-content';
+  static const String postDetailScreen = '/post-detail-screen';
+
 
 
 
@@ -127,6 +134,13 @@ class AppRoutes {
       },
       transition: Transition.fadeIn,
     ),
+    GetPage(
+      name: editProfileScreen,
+      page: () {
+        return const EditProfileScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
 
     //forms
     GetPage(
@@ -159,7 +173,18 @@ class AppRoutes {
       },
       transition: Transition.fadeIn,
     ),
-
+    GetPage(
+      name: uploadContent,
+      page: () {
+        return const UploadContent();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: postDetailScreen,
+      page: () => const PostDetailsScreen(),
+      transition: Transition.fadeIn,
+    ),
 
 
   ];

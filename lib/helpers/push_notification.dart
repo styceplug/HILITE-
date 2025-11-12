@@ -46,7 +46,7 @@ class FirebaseMessagingHelper {
 
       final auth = Get.find<AuthController>();
       final isMerchant = auth.sharedPreferences.getBool(AppConstants.isMerchant) ?? false;
-      final platform = Platform.isIOS ? 'ios' : 'aandroid';
+      final platform = Platform.isIOS ? 'ios' : 'android';
       final newToken = DeviceToken(token: token, platform: platform);
 
       if (isMerchant && auth.currentMerchant.value != null) {

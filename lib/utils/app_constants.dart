@@ -22,6 +22,11 @@ class AppConstants {
   static const String POST_PASS_RESET = '/v1/auth/password/initiate-reset';
 
 
+  //user
+  static const String GET_PROFILE = '/v1/auth/profile';
+  static const String UPDATE_PROFILE_IMAGE = '/v1/user/personal/profile/avatar';
+  static const String UPDATE_PROFILE_DETAILS = '/v1/user/personal/profile';
+
 
 
 
