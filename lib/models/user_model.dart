@@ -9,6 +9,9 @@ class UserModel {
   final String state;
   final String? profilePicture;
   final PlayerDetails? playerDetails;
+  final AgentDetails? agentDetails;
+  final ClubDetails? clubDetails;
+  final double? score;
   final int followers;
   final int following;
   final int blocked;
@@ -16,6 +19,8 @@ class UserModel {
   final int posts;
   final DateTime createdAt;
   final DateTime updatedAt;
+  bool isFollowed;
+  bool isBlocked;
 
   UserModel({
     required this.id,
@@ -28,6 +33,9 @@ class UserModel {
     required this.state,
     this.profilePicture,
     this.playerDetails,
+    this.agentDetails,
+    this.clubDetails,
+    this.score,
     required this.followers,
     required this.following,
     required this.blocked,
@@ -35,6 +43,8 @@ class UserModel {
     required this.posts,
     required this.createdAt,
     required this.updatedAt,
+    this.isFollowed = false,
+    this.isBlocked = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -51,21 +61,32 @@ class UserModel {
       playerDetails: json['playerDetails'] != null
           ? PlayerDetails.fromJson(json['playerDetails'])
           : null,
-      followers: (json['followers'] is List)
-          ? json['followers'].length
+      agentDetails: json['agentDetails'] != null
+          ? AgentDetails.fromJson(json['agentDetails'])
+          : null,
+      clubDetails: json['clubDetails'] != null
+          ? ClubDetails.fromJson(json['clubDetails'])
+          : null,
+      score: (json['score'] is int)
+          ? (json['score'] as int).toDouble()
+          : (json['score'] ?? 0.0),
+      followers: json['followers'] is List
+          ? (json['followers'] as List).length
           : (json['followers'] ?? 0),
-      following: (json['following'] is List)
-          ? json['following'].length
+      following: json['following'] is List
+          ? (json['following'] as List).length
           : (json['following'] ?? 0),
-      blocked: (json['blocked'] is List)
-          ? json['blocked'].length
+      blocked: json['blocked'] is List
+          ? (json['blocked'] as List).length
           : (json['blocked'] ?? 0),
-      bookmarks: (json['bookmarks'] is List)
-          ? json['bookmarks'].length
+      bookmarks: json['bookmarks'] is List
+          ? (json['bookmarks'] as List).length
           : (json['bookmarks'] ?? 0),
       posts: json['posts'] ?? 0,
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updatedAt'] ?? '') ?? DateTime.now(),
+      isFollowed: json['isFollowed'] ?? false,
+      isBlocked: json['isBlocked'] ?? false,
     );
   }
 
@@ -81,6 +102,9 @@ class UserModel {
       'state': state,
       'profilePicture': profilePicture,
       'playerDetails': playerDetails?.toJson(),
+      'agentDetails': agentDetails?.toJson(),
+      'clubDetails': clubDetails?.toJson(),
+      'score': score,
       'followers': followers,
       'following': following,
       'blocked': blocked,
@@ -88,6 +112,7 @@ class UserModel {
       'posts': posts,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+
     };
   }
 
@@ -102,6 +127,9 @@ class UserModel {
     String? state,
     String? profilePicture,
     PlayerDetails? playerDetails,
+    AgentDetails? agentDetails,
+    ClubDetails? clubDetails,
+    double? score,
     int? followers,
     int? following,
     int? blocked,
@@ -109,6 +137,8 @@ class UserModel {
     int? posts,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? isFollowed,
+    bool? isBlocked,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -121,6 +151,9 @@ class UserModel {
       state: state ?? this.state,
       profilePicture: profilePicture ?? this.profilePicture,
       playerDetails: playerDetails ?? this.playerDetails,
+      agentDetails: agentDetails ?? this.agentDetails,
+      clubDetails: clubDetails ?? this.clubDetails,
+      score: score ?? this.score,
       followers: followers ?? this.followers,
       following: following ?? this.following,
       blocked: blocked ?? this.blocked,
@@ -128,6 +161,8 @@ class UserModel {
       posts: posts ?? this.posts,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isFollowed: isFollowed ?? this.isFollowed,
+      isBlocked: isBlocked ?? this.isBlocked,
     );
   }
 }
@@ -193,5 +228,65 @@ class PlayerDetails {
       weight: weight ?? this.weight,
       bio: bio ?? this.bio,
     );
+  }
+}
+
+class AgentDetails {
+  final String agencyName;
+  final String registrationId;
+  final String experience;
+
+  AgentDetails({
+    required this.agencyName,
+    required this.registrationId,
+    required this.experience,
+  });
+
+  factory AgentDetails.fromJson(Map<String, dynamic> json) {
+    return AgentDetails(
+      agencyName: json['agencyName'] ?? '',
+      registrationId: json['registrationId'] ?? '',
+      experience: json['experience'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'agencyName': agencyName,
+      'registrationId': registrationId,
+      'experience': experience,
+    };
+  }
+}
+
+class ClubDetails {
+  final String clubName;
+  final String manager;
+  final String clubType;
+  final String yearFounded;
+
+  ClubDetails({
+    required this.clubName,
+    required this.manager,
+    required this.clubType,
+    required this.yearFounded,
+  });
+
+  factory ClubDetails.fromJson(Map<String, dynamic> json) {
+    return ClubDetails(
+      clubName: json['clubName'] ?? '',
+      manager: json['manager'] ?? '',
+      clubType: json['clubType'] ?? '',
+      yearFounded: json['yearFounded'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'clubName': clubName,
+      'manager': manager,
+      'clubType': clubType,
+      'yearFounded': yearFounded,
+    };
   }
 }

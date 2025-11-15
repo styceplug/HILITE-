@@ -13,11 +13,11 @@ class ProfileAvatar extends StatefulWidget {
   final XFile? avatarFile; // pass initial XFile if you have
   final String? avatarUrl;
 
-  final Function(XFile) onImageSelected;
+  final Function(XFile)? onImageSelected;
 
   const ProfileAvatar({
     super.key,
-    required this.onImageSelected,
+    this.onImageSelected,
     this.avatarFile,
     this.avatarUrl,
   });
@@ -61,10 +61,10 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
       }
 
       setState(() {
-        selectedImage = image; // immediately show local preview
+        selectedImage = image;
       });
 
-      widget.onImageSelected(image); // pass to controller
+      widget.onImageSelected!(image); // pass to controller
     }
   }
 

@@ -26,6 +26,11 @@ class AppConstants {
   static const String GET_PROFILE = '/v1/auth/profile';
   static const String UPDATE_PROFILE_IMAGE = '/v1/user/personal/profile/avatar';
   static const String UPDATE_PROFILE_DETAILS = '/v1/user/personal/profile';
+  static const String GET_RECOMMENDED_ACCOUNTS = '/v1/recommendation/users';
+  static  String FOLLOW_ACCOUNT(String targetId) => '/v1/user/external/$targetId/follow';
+  static  String BLOCK_ACCOUNT(String targetId) => '/v1/user/external/$targetId/block';
+  static  String GET_OTHERS_PROFILE(String targetId) => '/v1/user/external/$targetId/profile';
+
 
 
 

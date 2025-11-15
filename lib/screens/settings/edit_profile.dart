@@ -62,7 +62,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     int? height = int.tryParse(heightController.text.replaceAll(RegExp(r'[^0-9]'), ''));
     int? weight = int.tryParse(weightController.text.replaceAll(RegExp(r'[^0-9]'), ''));
 
-    // Compare each top-level field before adding to request body
     if (nameController.text.trim() != user.name) {
       data["name"] = nameController.text.trim();
     }
@@ -79,7 +78,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       data["state"] = selectedState;
     }
 
-    // Player-specific details (flattened)
     if (positionController.text.trim() != (user.playerDetails?.position ?? '')) {
       data["position"] = positionController.text.trim();
     }
@@ -196,8 +194,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         onTap: () => _showBottomPicker(
                           title: "Select Height",
                           options: [
-                            '160 cm','165 cm','170 cm','175 cm','180 cm',
-                            '185 cm','190 cm','5 ft 5 in','5 ft 8 in','6 ft 0 in',
+                            '160 cm',
+                            '165 cm',
+                            '170 cm',
+                            '175 cm',
+                            '180 cm',
+                            '185 cm',
+                            '190 cm',
+                            '200 cm',
+                            '210 cm',
+                            '< 220 cm',
                           ],
                           onSelected: (val) {
                             setState(() {

@@ -74,4 +74,22 @@ class UserRepo {
       statusCode: response.statusCode,
     );
   }
+
+  Future<Response> getRecommendedUsers({int limit = 20}) async {
+    return await apiClient.getData(
+      '${AppConstants.GET_RECOMMENDED_ACCOUNTS}?limit=$limit',
+    );
+  }
+
+  Future<Response> followUser(String targetId) async {
+    return await apiClient.putData(AppConstants.FOLLOW_ACCOUNT(targetId),{});
+  }
+
+  Future<Response> blockUser(String targetId) async {
+    return await apiClient.putData(AppConstants.BLOCK_ACCOUNT(targetId), {});
+  }
+
+  Future<Response> getOthersProfile(String targetId) async {
+    return await apiClient.getData(AppConstants.GET_OTHERS_PROFILE(targetId));
+  }
 }

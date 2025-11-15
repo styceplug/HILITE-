@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:hilite/controllers/app_controller.dart';
 import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/data/repo/auth_repo.dart';
 import 'package:hilite/data/repo/user_repo.dart';
@@ -54,7 +55,7 @@ class AuthController extends GetxController implements GetxService {
           if (staySignedIn) {
             await saveUserToken(token);
           }
-
+          await userController.getUserProfile();
           CustomSnackBar.success(message: '$message: Welcome back ${isEmail ? input.split('@')[0] : input}');
           Get.offAllNamed(AppRoutes.homeScreen);
         } else {
@@ -228,11 +229,19 @@ class AuthController extends GetxController implements GetxService {
 
       if (response.body['code'].toString() == '00') {
         user.value = UserModel.fromJson(response.body['data']);
+        print('${user.value?.playerDetails?.bio} at Stage 1');
 
         await userRepo?.cacheUserData(response.body['data']);
 
         print("💾 Cached updated user profile successfully");
+        await userController.loadCachedUser();
+        print('${user.value?.playerDetails?.bio} at Stage 2');
 
+        userController.user.refresh();
+        print('${user.value?.playerDetails?.bio} at Stage 3');
+
+        update();
+        Get.back();
         CustomSnackBar.success(message: 'Profile updated successfully');
       } else {
         CustomSnackBar.failure(

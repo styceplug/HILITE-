@@ -7,6 +7,8 @@ import 'package:hilite/screens/authentication/role_forms/scout_club_form.dart';
 import 'package:hilite/screens/authentication/select_category_screen.dart';
 import 'package:hilite/screens/authentication/verify_profile.dart';
 import 'package:hilite/screens/home/home_screen.dart';
+import 'package:hilite/screens/others/others_profile.dart';
+import 'package:hilite/screens/others/recommended_accounts.dart';
 import 'package:hilite/screens/posting/post_detail_screen.dart';
 import 'package:hilite/screens/posting/upload_content.dart';
 import 'package:hilite/screens/settings/edit_profile.dart';
@@ -44,9 +46,11 @@ class AppRoutes {
 
   //inapp
   static const String homeScreen = '/home-screen';
+  static const String othersProfileScreen = '/others-profile-screen';
   static const String settingsScreen = '/settings-screen';
   static const String uploadContent = '/upload-content';
   static const String postDetailScreen = '/post-detail-screen';
+  static const String recommendedAccountsScreen = '/recommended-accounts-screen';
 
 
 
@@ -167,6 +171,13 @@ class AppRoutes {
       transition: Transition.fadeIn,
     ),
     GetPage(
+      name: othersProfileScreen,
+      page: () {
+        return const OthersProfileScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
       name: settingsScreen,
       page: () {
         return const SettingsScreen();
@@ -183,6 +194,11 @@ class AppRoutes {
     GetPage(
       name: postDetailScreen,
       page: () => const PostDetailsScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: recommendedAccountsScreen,
+      page: () => const RecommendedAccountsScreen(),
       transition: Transition.fadeIn,
     ),
 

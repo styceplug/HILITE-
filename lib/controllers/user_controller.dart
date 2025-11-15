@@ -14,6 +14,8 @@ class UserController extends GetxController {
 
   GlobalLoaderController loader = Get.find<GlobalLoaderController>();
   Rx<UserModel?> user = Rx<UserModel?>(null);
+  var recommendedUsers = <UserModel>[].obs;
+  Rxn<UserModel> othersProfile = Rxn<UserModel>();
 
   @override
   void onInit() {
@@ -21,7 +23,7 @@ class UserController extends GetxController {
     loadCachedUser();
   }
 
-  void loadCachedUser() {
+  Future<void> loadCachedUser() async{
     final cachedData = userRepo.getCachedUserData();
     if (cachedData != null) {
       user.value = UserModel.fromJson(cachedData);
@@ -84,6 +86,111 @@ class UserController extends GetxController {
     } finally {
       loader.hideLoader();
       update();
+    }
+  }
+
+  Future<void> getRecommendedUsers({int limit = 20}) async {
+    try {
+      loader.showLoader();
+
+      Response response = await userRepo.getRecommendedUsers(limit: limit);
+
+      final code = response.body['code']?.toString();
+      final message = response.body['message'];
+
+      if ((response.statusCode == 200 || response.statusCode == 201) && code == '00') {
+        recommendedUsers.value = (response.body['data'] as List)
+            .map((e) => UserModel.fromJson(e))
+            .toList();
+        print("✅ Loaded ${recommendedUsers.length} recommended users");
+      } else {
+        CustomSnackBar.failure(
+          message: message ?? 'Failed to fetch recommendations',
+        );
+      }
+    } catch (e) {
+      CustomSnackBar.failure(message: 'Error: $e');
+    } finally {
+      loader.hideLoader();
+    }
+  }
+
+  Future<void> followUser(String targetId) async {
+    try {
+      print("➡️ followUser() called for targetId: $targetId");
+      loader.showLoader();
+
+      Response response = await userRepo.followUser(targetId);
+      loader.hideLoader();
+
+      print("📩 Response from followUser: ${response.statusCode}, ${response.body}");
+
+      if (response.statusCode == 200 && response.body['code'] == '00') {
+        CustomSnackBar.success(message: 'User followed successfully');
+        final index = recommendedUsers.indexWhere((u) => u.id == targetId);
+        if (index != -1) {
+          recommendedUsers[index] =
+              recommendedUsers[index].copyWith(isFollowed: true);
+          recommendedUsers.refresh();
+        }
+      } else {
+        CustomSnackBar.failure(
+            message: response.body['message'] ?? 'Failed to follow user');
+      }
+    } catch (e, s) {
+      print("🔥 followUser error: $e\n$s");
+      CustomSnackBar.failure(message: 'Error following user: $e');
+    }
+  }
+
+  Future<void> blockUser(String targetId) async {
+    try {
+      print("🚫 blockUser() called for targetId: $targetId");
+      Response response = await userRepo.blockUser(targetId);
+
+      print("📩 Response from blockUser: ${response.statusCode}, ${response.body}");
+
+      if (response.statusCode == 200 && response.body['code'] == '00') {
+        CustomSnackBar.success(message: 'User blocked successfully');
+        final index = recommendedUsers.indexWhere((u) => u.id == targetId);
+        if (index != -1) {
+          recommendedUsers[index] =
+              recommendedUsers[index].copyWith(isBlocked: true);
+          recommendedUsers.refresh();
+        }
+      } else {
+        CustomSnackBar.failure(
+            message: response.body['message'] ?? 'Failed to block user');
+      }
+    } catch (e, s) {
+      print("🔥 blockUser error: $e\n$s");
+      CustomSnackBar.failure(message: 'Error blocking user: $e');
+    }
+  }
+
+  Future<void> getOthersProfile(String targetId) async {
+    try {
+      loader.showLoader();
+      print("👀 Fetching external profile for $targetId");
+
+      Response response =
+      await userRepo.getOthersProfile(targetId);
+
+      loader.hideLoader();
+      print("📩 Response: ${response.statusCode} ${response.body}");
+
+      if (response.statusCode == 200 && response.body['code'] == '00') {
+        othersProfile.value = UserModel.fromJson(response.body['data']);
+      } else {
+        CustomSnackBar.failure(
+          message: response.body['message'] ?? 'Failed to load profile',
+        );
+      }
+    } catch (e, s) {
+      print("🔥 Error loading external profile: $e\n$s");
+      CustomSnackBar.failure(message: 'Error loading profile');
+    } finally {
+      loader.hideLoader();
     }
   }
 }

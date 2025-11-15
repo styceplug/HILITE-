@@ -334,9 +334,9 @@ class _FootballerFormState extends State<FootballerForm> {
                                 '180 cm',
                                 '185 cm',
                                 '190 cm',
-                                '5 ft 5 in',
-                                '5 ft 8 in',
-                                '6 ft 0 in',
+                                '200 cm',
+                                '210 cm',
+                                '< 220 cm',
                               ],
                               onSelected: (val) {
                                 setState(() {
