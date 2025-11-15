@@ -112,12 +112,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SizedBox(height: Dimensions.height10),
 
               /// 📖 Bio
-              if ((player?.bio?.isNotEmpty ?? false) ||
-                  (agent?.experience?.isNotEmpty ?? false))
+              if (user.bio!.isNotEmpty)
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
                   child: Text(
-                    player?.bio ?? agent?.experience ?? '',
+                    user.bio ?? '',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: Dimensions.font13,
@@ -129,6 +128,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
 
               SizedBox(height: Dimensions.height20),
+
+
 
               /// 📊 Stats
               Row(

@@ -229,16 +229,16 @@ class AuthController extends GetxController implements GetxService {
 
       if (response.body['code'].toString() == '00') {
         user.value = UserModel.fromJson(response.body['data']);
-        print('${user.value?.playerDetails?.bio} at Stage 1');
+        print('${user.value?.bio} at Stage 1');
 
         await userRepo?.cacheUserData(response.body['data']);
 
         print("💾 Cached updated user profile successfully");
         await userController.loadCachedUser();
-        print('${user.value?.playerDetails?.bio} at Stage 2');
+        print('${user.value?.bio} at Stage 2');
 
         userController.user.refresh();
-        print('${user.value?.playerDetails?.bio} at Stage 3');
+        print('${user.value?.bio} at Stage 3');
 
         update();
         Get.back();

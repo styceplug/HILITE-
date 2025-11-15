@@ -45,32 +45,32 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
           child: Icon(Icons.info, size: Dimensions.iconSize20),
         ),
       ),
-      body: Obx(() {
-        if (userController.recommendedUsers.isEmpty) {
-          return const Center(child: Text('No recommendations yet'));
-        }
+      body: Container(
+        padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
+        child: Obx(() {
+          if (userController.recommendedUsers.isEmpty) {
+            return const Center(child: Text('No recommendations yet'));
+          }
 
-        return ListView.builder(
-          itemCount: userController.recommendedUsers.length,
-          itemBuilder: (context, index) {
-            final user = userController.recommendedUsers[index];
-            return AccountCard(
-              name: user.name,
-              bio: user.playerDetails?.bio ??
-                  user.agentDetails?.experience ??
-                  user.clubDetails?.clubType ??
-                  '',
-              role: user.role.capitalizeFirst ?? '',
-              id: user.id,
-              image: user.profilePicture ?? 'https://via.placeholder.com/150',
-              isFollowed: user.isFollowed,
-              isBlocked: user.isBlocked,
-              onFollow: () => userController.followUser(user.id),
-              onBlock: () => userController.blockUser(user.id),
-            );
-          },
-        );
-      }),
+          return ListView.builder(
+            itemCount: userController.recommendedUsers.length,
+            itemBuilder: (context, index) {
+              final user = userController.recommendedUsers[index];
+              return AccountCard(
+                name: user.name.capitalizeFirst ?? '',
+                bio: user.bio?.capitalizeFirst ?? '',
+                role: user.role.capitalizeFirst ?? '',
+                id: user.id,
+                image: user.profilePicture ?? 'https://via.placeholder.com/150',
+                isFollowed: user.isFollowed,
+                isBlocked: user.isBlocked,
+                onFollow: () => userController.followUser(user.id),
+                onBlock: () => userController.blockUser(user.id),
+              );
+            },
+          );
+        }),
+      ),
     );
   }
 
@@ -94,6 +94,7 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
           vertical: Dimensions.height10,
           horizontal: Dimensions.width10,
         ),
+        margin: EdgeInsets.only(bottom: Dimensions.height15),
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.grey1),
           borderRadius: BorderRadius.circular(Dimensions.radius10),

@@ -48,7 +48,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     clubController = TextEditingController(text: user?.playerDetails?.currentClub ?? '');
     heightController = TextEditingController(text: '${user?.playerDetails?.height ?? ''}');
     weightController = TextEditingController(text: '${user?.playerDetails?.weight ?? ''}');
-    bioController = TextEditingController(text: user?.playerDetails?.bio ?? '');
+    bioController = TextEditingController(text: user?.bio ?? '');
     selectedCountry = user?.country;
     selectedState = user?.state;
   }
@@ -84,7 +84,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (clubController.text.trim() != (user.playerDetails?.currentClub ?? '')) {
       data["currentClub"] = clubController.text.trim();
     }
-    if (bioController.text.trim() != (user.playerDetails?.bio ?? '')) {
+    if (bioController.text.trim() != (user.bio ?? '')) {
       data["bio"] = bioController.text.trim();
     }
     if (height != user.playerDetails?.height) {

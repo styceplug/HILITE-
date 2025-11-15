@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/widgets/snackbars.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -8,9 +10,8 @@ import '../utils/app_constants.dart';
 import '../utils/colors.dart';
 import '../utils/dimensions.dart';
 
-
 class ProfileAvatar extends StatefulWidget {
-  final XFile? avatarFile; // pass initial XFile if you have
+  final XFile? avatarFile;
   final String? avatarUrl;
 
   final Function(XFile)? onImageSelected;
@@ -29,6 +30,7 @@ class ProfileAvatar extends StatefulWidget {
 class _ProfileAvatarState extends State<ProfileAvatar> {
   XFile? selectedImage;
   String? avatarUrl;
+  UserController userController = Get.find<UserController>();
 
   @override
   void initState() {
@@ -50,8 +52,10 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
 
   void pickImage() async {
     final picker = ImagePicker();
-    final XFile? image =
-    await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
 
     if (image != null) {
       final fileSize = await image.length();
@@ -68,48 +72,70 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
     }
   }
 
-  ImageProvider _getImageProvider() {
+  ImageProvider? _getImageProvider() {
     if (selectedImage != null) {
       return FileImage(File(selectedImage!.path));
     } else if (avatarUrl != null && avatarUrl!.isNotEmpty) {
-      // add timestamp to force refresh after upload
-      return NetworkImage("$avatarUrl?v=${DateTime.now().millisecondsSinceEpoch}");
+      return NetworkImage(
+        "$avatarUrl?v=${DateTime.now().millisecondsSinceEpoch}",
+      );
     } else {
-      return AssetImage(AppConstants.getPngAsset('user')) as ImageProvider;
+      return null;
     }
   }
 
+  late final bool isMyProfile =
+      (userController.othersProfile.value?.id == null) ||
+      userController.othersProfile.value?.id == userController.user.value?.id;
+
   @override
   Widget build(BuildContext context) {
+    final image = _getImageProvider();
+
     return Stack(
       children: [
         GestureDetector(
-          onTap: pickImage,
-          child: Container(
-            height: Dimensions.height100 * 1.5,
-            width: Dimensions.width100 * 1.5,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              image: DecorationImage(
-                fit: BoxFit.cover,
-                image: _getImageProvider(),
+          onTap: isMyProfile ? pickImage : null,
+          child:
+              image != null
+                  ? Container(
+                    height: Dimensions.height100 * 1.5,
+                    width: Dimensions.width100 * 1.5,
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.primary),
+                      image: DecorationImage(fit: BoxFit.cover, image: image),
+                    ),
+                  )
+                  : Container(
+                    height: Dimensions.height100 * 1.5,
+                    width: Dimensions.width100 * 1.5,
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.person,
+                      color: AppColors.white,
+                      size: Dimensions.iconSize30 * 3,
+                    ),
+                  ),
+        ),
+        if (isMyProfile)
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: AppColors.error,
+              child: Icon(
+                Icons.edit,
+                size: Dimensions.iconSize20,
+                color: Colors.white,
               ),
             ),
           ),
-        ),
-        Positioned(
-          bottom: 0,
-          right: 0,
-          child: CircleAvatar(
-            radius: 18,
-            backgroundColor: AppColors.error,
-            child: Icon(
-              Icons.edit,
-              size: Dimensions.iconSize20,
-              color: Colors.white,
-            ),
-          ),
-        ),
       ],
     );
   }

@@ -42,10 +42,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppbar(
-        leadingIcon: const BackButton(),
-        title:
-        'This is a ${userController.othersProfile.value?.role.capitalizeFirst ?? 'user'}\'s profile',
-      ),
+        leadingIcon: const BackButton(),),
       body: Obx(() {
         final user = userController.othersProfile.value;
 
@@ -136,12 +133,11 @@ class _OthersProfileState extends State<OthersProfileScreen> {
               ],
 
               /// 🧾 Bio or Summary
-              if ((player?.bio?.isNotEmpty ?? false) ||
-                  (agent?.experience?.isNotEmpty ?? false))
+              if (user.bio?.isNotEmpty ?? false)
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
                   child: Text(
-                    player?.bio ?? agent?.experience ?? '',
+                    user.bio ?? '',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: Dimensions.font13,

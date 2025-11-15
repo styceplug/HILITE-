@@ -8,6 +8,7 @@ class UserModel {
   final String country;
   final String state;
   final String? profilePicture;
+  final String? bio;
   final PlayerDetails? playerDetails;
   final AgentDetails? agentDetails;
   final ClubDetails? clubDetails;
@@ -31,6 +32,7 @@ class UserModel {
     required this.number,
     required this.country,
     required this.state,
+    this.bio,
     this.profilePicture,
     this.playerDetails,
     this.agentDetails,
@@ -57,6 +59,7 @@ class UserModel {
       number: json['number'] ?? '',
       country: json['country'] ?? '',
       state: json['state'] ?? '',
+      bio: json['bio'],
       profilePicture: json['profilePicture'],
       playerDetails: json['playerDetails'] != null
           ? PlayerDetails.fromJson(json['playerDetails'])
@@ -100,6 +103,7 @@ class UserModel {
       'number': number,
       'country': country,
       'state': state,
+      'bio' : bio,
       'profilePicture': profilePicture,
       'playerDetails': playerDetails?.toJson(),
       'agentDetails': agentDetails?.toJson(),
@@ -126,6 +130,7 @@ class UserModel {
     String? country,
     String? state,
     String? profilePicture,
+    String? bio,
     PlayerDetails? playerDetails,
     AgentDetails? agentDetails,
     ClubDetails? clubDetails,
@@ -149,6 +154,7 @@ class UserModel {
       number: number ?? this.number,
       country: country ?? this.country,
       state: state ?? this.state,
+      bio: bio ?? this.bio,
       profilePicture: profilePicture ?? this.profilePicture,
       playerDetails: playerDetails ?? this.playerDetails,
       agentDetails: agentDetails ?? this.agentDetails,
@@ -174,7 +180,7 @@ class PlayerDetails {
   final String preferredFoot;
   final int height;
   final int weight;
-  final String bio;
+
 
   PlayerDetails({
     required this.dob,
@@ -183,7 +189,6 @@ class PlayerDetails {
     required this.preferredFoot,
     required this.height,
     required this.weight,
-    required this.bio,
   });
 
   factory PlayerDetails.fromJson(Map<String, dynamic> json) {
@@ -194,7 +199,6 @@ class PlayerDetails {
       preferredFoot: json['preferredFoot'] ?? '',
       height: json['height'] ?? 0,
       weight: json['weight'] ?? 0,
-      bio: json['bio'] ?? '',
     );
   }
 
@@ -206,7 +210,6 @@ class PlayerDetails {
       'preferredFoot': preferredFoot,
       'height': height,
       'weight': weight,
-      'bio': bio,
     };
   }
 
@@ -217,7 +220,6 @@ class PlayerDetails {
     String? preferredFoot,
     int? height,
     int? weight,
-    String? bio,
   }) {
     return PlayerDetails(
       dob: dob ?? this.dob,
@@ -226,7 +228,6 @@ class PlayerDetails {
       preferredFoot: preferredFoot ?? this.preferredFoot,
       height: height ?? this.height,
       weight: weight ?? this.weight,
-      bio: bio ?? this.bio,
     );
   }
 }
