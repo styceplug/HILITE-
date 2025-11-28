@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/user_controller.dart';
@@ -84,13 +85,46 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
     }
   }
 
+  Widget? _getImageWidget() {
+    if (selectedImage != null) {
+      return Container(
+        height: Dimensions.height100 * 1.5,
+        width: Dimensions.width100 * 1.5,
+        decoration: BoxDecoration(
+          color: AppColors.error,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.primary),
+          image: DecorationImage(
+            fit: BoxFit.cover,
+            image: FileImage(File(selectedImage!.path)),
+          ),
+        ),
+      );
+    } else if (avatarUrl != null && avatarUrl!.isNotEmpty) {
+      return Container(
+        height: Dimensions.height100 * 1.5,
+        width: Dimensions.width100 * 1.5,
+        decoration: BoxDecoration(
+          // color: AppColors.error,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.primary),
+        ),
+        child: ClipOval(
+          child: CachedNetworkImage(
+            imageUrl: "$avatarUrl",
+          ),
+        ),
+      );
+    }
+  }
+
   late final bool isMyProfile =
       (userController.othersProfile.value?.id == null) ||
       userController.othersProfile.value?.id == userController.user.value?.id;
 
   @override
   Widget build(BuildContext context) {
-    final image = _getImageProvider();
+    final image = _getImageWidget();
 
     return Stack(
       children: [
@@ -98,16 +132,17 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
           onTap: isMyProfile ? pickImage : null,
           child:
               image != null
-                  ? Container(
-                    height: Dimensions.height100 * 1.5,
-                    width: Dimensions.width100 * 1.5,
-                    decoration: BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.primary),
-                      image: DecorationImage(fit: BoxFit.cover, image: image),
-                    ),
-                  )
+                  ? image
+                  // ? Container(
+                  //   height: Dimensions.height100 * 1.5,
+                  //   width: Dimensions.width100 * 1.5,
+                  //   decoration: BoxDecoration(
+                  //     color: AppColors.error,
+                  //     shape: BoxShape.circle,
+                  //     border: Border.all(color: AppColors.primary),
+                  //     image: DecorationImage(fit: BoxFit.cover, image: image),
+                  //   ),
+                  // )
                   : Container(
                     height: Dimensions.height100 * 1.5,
                     width: Dimensions.width100 * 1.5,

@@ -17,7 +17,7 @@ println "Keystore path: " + keystoreProperties['storeFile']
 
 android {
     namespace = "com.project.hilite.hilite"
-     compileSdkVersion 35
+    compileSdkVersion 36
     ndkVersion "27.0.12077973"
 
     compileOptions {

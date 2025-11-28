@@ -3,8 +3,10 @@ import 'package:get/get.dart';
 import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/routes/routes.dart';
 import 'package:hilite/widgets/custom_appbar.dart';
-import 'package:hilite/widgets/custom_button.dart';
-import 'package:hilite/widgets/snackbars.dart';
+
+import 'package:hilite/widgets/custom_textfield.dart';
+import 'package:iconsax/iconsax.dart';
+
 
 import '../../models/user_model.dart';
 import '../../utils/colors.dart';
@@ -19,232 +21,811 @@ class RecommendedAccountsScreen extends StatefulWidget {
 }
 
 class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
-  UserController userController = Get.find<UserController>();
+  final UserController userController = Get.find<UserController>();
+  final TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      userController.getRecommendedUsers();
-    });
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if(userController.recommendedUsers.isEmpty){
+        userController.getRecommendedUsers();
+      } else {
+        if(userController.filteredUsers.isEmpty){
+          userController.filteredUsers.assignAll(userController.recommendedUsers);
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bgColor,
       appBar: CustomAppbar(
-        title: 'Recommended Accounts to follow',
-        leadingIcon: BackButton(),
-        actionIcon: InkWell(
-          onTap: () {
-            CustomSnackBar.showToast(
-              message:
-                  'Accounts are suggested based on your interests and connections. Your account may also be suggested to people you may know.',
-            );
+        title: 'Discover Accounts',
+        leadingIcon: const BackButton(),
+        actionIcon: IconButton(
+          icon: Icon(Icons.info_outline, size: Dimensions.iconSize24),
+          onPressed: () {
+            _showInfoDialog(context);
           },
-          child: Icon(Icons.info, size: Dimensions.iconSize20),
         ),
       ),
-      body: Container(
-        padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
-        child: Obx(() {
-          if (userController.recommendedUsers.isEmpty) {
-            return const Center(child: Text('No recommendations yet'));
-          }
+      body: RefreshIndicator(
+        onRefresh: () => userController.getRecommendedUsers(),
+        color: AppColors.primary,
+        child: Container(
+          height: Dimensions.screenHeight,
+          width: Dimensions.screenWidth,
+          child: Column(
+            children: [
+              // Search & Filters Section
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: Dimensions.width20,
+                  vertical: Dimensions.height15,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Search Bar
+                    CustomTextField(
+                      controller: searchController,
+                      hintText: 'Search by name, club, username...',
+                      prefixIcon: Icons.search,
+                      suffixIcon: Obx(() {
+                        return userController.searchQuery.value.isNotEmpty
+                            ? IconButton(
+                          icon: const Icon(Icons.clear, size: 20),
+                          onPressed: () {
+                            searchController.clear();
+                            userController.searchQuery.value = '';
+                            userController.applyFilters();
+                          },
+                        )
+                            : const SizedBox.shrink();
+                      }),
+                      onChanged: (value) {
+                        userController.onSearchChanged(value);
+                      },
+                    ),
 
-          return ListView.builder(
-            itemCount: userController.recommendedUsers.length,
-            itemBuilder: (context, index) {
-              final user = userController.recommendedUsers[index];
-              return AccountCard(
-                name: user.name.capitalizeFirst ?? '',
-                bio: user.bio?.capitalizeFirst ?? '',
-                role: user.role.capitalizeFirst ?? '',
-                id: user.id,
-                image: user.profilePicture ?? 'https://via.placeholder.com/150',
-                isFollowed: user.isFollowed,
-                isBlocked: user.isBlocked,
-                onFollow: () => userController.followUser(user.id),
-                onBlock: () => userController.blockUser(user.id),
-              );
-            },
-          );
-        }),
+                    SizedBox(height: Dimensions.height15),
+
+                    // Filter Chips
+                    _buildFilterChips(),
+                  ],
+                ),
+              ),
+
+              // Results Section
+              Obx(() {
+                final hasFilters = userController.searchQuery.value.isNotEmpty ||
+                    userController.selectedRole.value.isNotEmpty ||
+                    userController.selectedPosition.value.isNotEmpty;
+
+                return hasFilters
+                    ? Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Dimensions.width20,
+                    vertical: Dimensions.height10,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${userController.filteredUsers.length} results found',
+                        style: TextStyle(
+                          fontSize: Dimensions.font14,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          searchController.clear();
+                          userController.clearAllFilters();
+                        },
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Clear All'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: Dimensions.width10,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+                    : const SizedBox.shrink();
+              }),
+
+              // User List
+              Expanded(
+                child: Obx(() {
+                  if (userController.recommendedUsers.isEmpty) {
+                    return _buildEmptyState(
+                      icon: Icons.people_outline,
+                      title: 'No Recommendations Yet',
+                      message: 'Check back later for account suggestions',
+                    );
+                  }
+
+                  if (userController.filteredUsers.isEmpty) {
+                    return _buildEmptyState(
+                      icon: Icons.search_off,
+                      title: 'No Results Found',
+                      message: 'Try adjusting your filters',
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: Dimensions.width20,
+                      vertical: Dimensions.height15,
+                    ),
+                    itemCount: userController.filteredUsers.length,
+                    itemBuilder: (context, index) {
+                      final user = userController.filteredUsers[index];
+                      return _buildAccountCard(user);
+                    },
+                  );
+                }),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget AccountCard({
-    required String name,
-    required String bio,
-    required String id,
-    required String role,
-    required String image,
-    required bool isFollowed,
-    required bool isBlocked,
-    required VoidCallback onFollow,
-    required VoidCallback onBlock,
+  // Filter Chips Widget
+  Widget _buildFilterChips() {
+    return Obx(() {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            // Role Filter: Fans
+            _buildFilterChip(
+              label: 'Fans',
+              icon: Icons.person_outline,
+              isSelected: userController.selectedRole.value == 'fan',
+              onTap: () {
+                if (userController.selectedRole.value == 'fan') {
+                  userController.selectedRole.value = '';
+                } else {
+                  userController.selectedRole.value = 'fan';
+                  userController.selectedPosition.value = ''; // Clear position filter
+                }
+                userController.applyFilters();
+              },
+            ),
+
+            SizedBox(width: Dimensions.width10),
+
+            // Role Filter: Players
+            _buildFilterChip(
+              label: 'Players',
+              icon: Icons.sports_soccer,
+              isSelected: userController.selectedRole.value == 'player',
+              onTap: () {
+                if (userController.selectedRole.value == 'player') {
+                  userController.selectedRole.value = '';
+                  userController.selectedPosition.value = '';
+                } else {
+                  userController.selectedRole.value = 'player';
+                }
+                userController.applyFilters();
+              },
+            ),
+
+            SizedBox(width: Dimensions.width10),
+
+            // Role Filter: Agents
+            _buildFilterChip(
+              label: 'Agents',
+              icon: Icons.business_center,
+              isSelected: userController.selectedRole.value == 'agent',
+              onTap: () {
+                if (userController.selectedRole.value == 'agent') {
+                  userController.selectedRole.value = '';
+                } else {
+                  userController.selectedRole.value = 'agent';
+                  userController.selectedPosition.value = ''; // Clear position filter
+                }
+                userController.applyFilters();
+              },
+            ),
+
+            SizedBox(width: Dimensions.width10),
+
+            // Role Filter: Clubs
+            _buildFilterChip(
+              label: 'Clubs',
+              icon: Icons.shield,
+              isSelected: userController.selectedRole.value == 'club',
+              onTap: () {
+                if (userController.selectedRole.value == 'club') {
+                  userController.selectedRole.value = '';
+                } else {
+                  userController.selectedRole.value = 'club';
+                  userController.selectedPosition.value = ''; // Clear position filter
+                }
+                userController.applyFilters();
+              },
+            ),
+
+            // Position Filter (only for players)
+            if (userController.selectedRole.value == 'player') ...[
+              SizedBox(width: Dimensions.width10),
+              _buildFilterChip(
+                label: userController.selectedPosition.value.isEmpty
+                    ? 'Position'
+                    : userController.selectedPosition.value,
+                icon: Icons.location_on,
+                isSelected: userController.selectedPosition.value.isNotEmpty,
+                onTap: () {
+                  _showPositionBottomSheet(context);
+                },
+              ),
+            ],
+          ],
+        ),
+      );
+    });
+  }
+
+  // Custom Filter Chip
+  Widget _buildFilterChip({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
   }) {
     return InkWell(
-      onTap: () {
-        Get.toNamed(AppRoutes.othersProfileScreen,arguments: {'targetId':id});
-      },
-      child: Container(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(25),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: EdgeInsets.symmetric(
+          horizontal: Dimensions.width15,
           vertical: Dimensions.height10,
-          horizontal: Dimensions.width10,
         ),
-        margin: EdgeInsets.only(bottom: Dimensions.height15),
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.grey1),
-          borderRadius: BorderRadius.circular(Dimensions.radius10),
+          color: isSelected ? AppColors.primary : Colors.grey[100],
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.grey[300]!,
+            width: 1.5,
+          ),
         ),
-        child: Column(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? Colors.white : Colors.grey[700],
+            ),
+            SizedBox(width: Dimensions.width5),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey[800],
+                fontWeight: FontWeight.w600,
+                fontSize: Dimensions.font14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Enhanced Account Card
+  Widget _buildAccountCard(UserModel user) {
+    final isFollowed = user.isFollowed ?? false;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+      margin: EdgeInsets.only(bottom: Dimensions.height15),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.08),
+        child: InkWell(
+          onTap: () => Get.toNamed(
+            AppRoutes.othersProfileScreen,
+            arguments: {'targetId': user.id},
+          ),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: EdgeInsets.all(Dimensions.width15),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipOval(
-                  child: Image.network(
-                    image,
-                    height: Dimensions.height10 * 6,
-                    width: Dimensions.width10 * 6,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: Dimensions.height10 * 6,
-                        width: Dimensions.width10 * 6,
-                        decoration: BoxDecoration(color: AppColors.error),
-                        child: Icon(Icons.person, color: AppColors.white),
-                      );
-                    },
-                  ),
+                // Avatar section (unchanged)
+                Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(50),
+                      child: Image.network(
+                        user.profilePicture ?? 'https://via.placeholder.com/150',
+                        height: 65,
+                        width: 65,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) {
+                          return Container(
+                            height: 65,
+                            width: 65,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.person,
+                              color: AppColors.primary,
+                              size: 32,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(width: Dimensions.width10),
+
+                SizedBox(width: Dimensions.width15),
+
+                // Content
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      // Name + Badge (unchanged)
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: Dimensions.font17,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: Dimensions.width10,
-                              vertical: Dimensions.height5,
-                            ),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(
-                                  Dimensions.radius15),
-                              color: AppColors.primary,
-                            ),
-                            child: InkWell(
-                              onTap: () {
-                                CustomSnackBar.showToast(
-                                  message:
-                                  'This is a verified $role profile — representing their actual role in the sports world.',
-                                );
-                              },
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.info,
-                                    size: Dimensions.iconSize16,
-                                    color: AppColors.white,
-                                  ),
-                                  SizedBox(width: Dimensions.width5),
-                                  Text(
-                                    '$role'.toString().capitalizeFirst ?? '',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: Dimensions.font12,
-                                      fontWeight: FontWeight.w400,
-                                      color: AppColors.white,
-                                    ),
-                                  ),
-                                ],
+                          Expanded(
+                            child: Text(
+                              user.role == 'club'
+                                  ? (user.clubDetails?.clubName ?? 'Unknown')
+                                  : (user.name.capitalizeFirst ?? 'Unknown'),
+                              style: TextStyle(
+                                fontSize: Dimensions.font17,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.grey[900],
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          SizedBox(width: Dimensions.width5),
+                          _buildVerifiedBadge(user.role),
                         ],
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        bio,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: Dimensions.font14,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.grey[600],
+
+                      SizedBox(height: Dimensions.height5),
+
+                      // Bio (unchanged)
+                      if (user.bio != null && user.bio!.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.only(bottom: Dimensions.height10),
+                          child: Text(
+                            user.bio!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: Dimensions.font14,
+                              color: Colors.grey[600],
+                              height: 1.3,
+                            ),
+                          ),
                         ),
-                      ),
+
+                      SizedBox(height: Dimensions.height10),
+
+                      Row(
+                        children: [
+                          // Follow Button
+                          Expanded(
+                            flex: 3,
+                            child: _buildActionButton(
+                              label: isFollowed ? 'Following' : 'Follow',
+                              icon: isFollowed ? Icons.check : Icons.add,
+                              isPrimary: !isFollowed,
+                              onTap: () {
+                                if (isFollowed) {
+                                  userController.unfollowUser(user.id);
+                                } else {
+                                  userController.followUser(user.id);
+                                }
+                              },
+                            ),
+                          ),
+
+                          SizedBox(width: Dimensions.width10),
+
+                          // More Options Button
+                          _buildIconButton(
+                            icon: Icons.more_horiz,
+                            onTap: () => _showOptionsBottomSheet(context, user),
+                          ),
+                        ],
+                      )
+
                     ],
                   ),
                 ),
               ],
             ),
-            SizedBox(height: Dimensions.height10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: CustomButton(
-                    text: isBlocked ? 'Blocked' : 'Remove',
-                    onPressed: () {
-                      if (!isBlocked) {
-                        print("🧱 Block button pressed for $name");
-                        onBlock();
-                      }
-                    },
-                    backgroundColor:
-                    isBlocked ? AppColors.error : AppColors.grey4,
-                    textStyle: TextStyle(
-                      color: isBlocked ? AppColors.white : AppColors.black,
-                      fontWeight: FontWeight.w500,
-                      fontSize: Dimensions.font15,
-                    ),
-                    padding: EdgeInsets.symmetric(
-                      vertical: Dimensions.height10,
-                    ),
-                  ),
-                ),
-                SizedBox(width: Dimensions.width20),
-                Expanded(
-                  child: CustomButton(
-                    text: isFollowed ? 'Followed' : 'Follow',
-                    onPressed: () {
-                      if (!isFollowed) {
-                        print("👥 Follow button pressed for $name");
-                        onFollow();
-                      }
-                    },
-                    backgroundColor:
-                    isFollowed ? AppColors.grey4 : AppColors.primary,
-                    textStyle: TextStyle(
-                      color: isFollowed ? AppColors.black : AppColors.white,
-                      fontWeight: FontWeight.w500,
-                      fontSize: Dimensions.font15,
-                    ),
-                    padding: EdgeInsets.symmetric(
-                      vertical: Dimensions.height10,
-                    ),
-                  ),
-                ),
-              ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Verified Badge
+  Widget _buildVerifiedBadge(String role) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.verified,
+            size: 14,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            role.capitalizeFirst ?? '',
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.primary,
+              fontWeight: FontWeight.w600,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Action Button
+  Widget _buildActionButton({
+    required String label,
+    required IconData icon,
+    required bool isPrimary,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: isPrimary ? AppColors.primary : Colors.grey[100],
+      borderRadius: BorderRadius.circular(25),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(25),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: isPrimary ? Colors.white : Colors.grey[700],
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isPrimary ? Colors.white : Colors.grey[800],
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Icon Button
+  Widget _buildIconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.grey[100],
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Icon(icon, size: 20, color: Colors.grey[700]),
+        ),
+      ),
+    );
+  }
+
+  // Empty State
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String message,
+  }) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 80, color: Colors.grey[300]),
+          SizedBox(height: Dimensions.height20),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: Dimensions.font18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[800],
+            ),
+          ),
+          SizedBox(height: Dimensions.height10),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: Dimensions.font14,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Info Dialog
+  void _showInfoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.info_outline, color: AppColors.primary),
+            const SizedBox(width: 10),
+            const Text('About Recommendations'),
           ],
         ),
+        content: const Text(
+          'Accounts are suggested based on your interests and connections. Your account may also be suggested to people you may know.',
+          style: TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Position Bottom Sheet
+  void _showPositionBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => PositionsBottomSheet(
+        onSelect: (position) {
+          userController.selectedPosition.value = position;
+          userController.applyFilters();
+        },
+        currentPosition: userController.selectedPosition.value,
+      ),
+    );
+  }
+
+  // Options Bottom Sheet
+  void _showOptionsBottomSheet(BuildContext context, UserModel user) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading:  Icon(Iconsax.gift),
+              title: const Text('Gift User'),
+              onTap: () {
+                Navigator.pop(context);
+                // Add report functionality
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.block_outlined, color: Colors.red),
+              title: const Text('Block User'),
+              onTap: () {
+                Navigator.pop(context);
+                userController.blockUser(user.id);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.report_outlined),
+              title: const Text('Report User'),
+              onTap: () {
+                Navigator.pop(context);
+                // Add report functionality
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Enhanced Positions Bottom Sheet
+class PositionsBottomSheet extends StatelessWidget {
+  final Function(String) onSelect;
+  final String currentPosition;
+
+  const PositionsBottomSheet({
+    super.key,
+    required this.onSelect,
+    this.currentPosition = '',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final positions = {
+      'GK', // Goalkeeper
+      'RB', // Right Back
+      'LB', // Left Back
+      'CB', // Center Back
+      'CDM', // Defensive Midfield
+      'CM', // Central Midfield
+      'CAM', // Attacking Midfield
+      'RW', // Right Wing
+      'LW', // Left Wing
+      'ST', //
+    };
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag Handle
+          Container(
+            width: 40,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Title
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Select Position',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (currentPosition.isNotEmpty)
+                TextButton(
+                  onPressed: () {
+                    onSelect('');
+                    Get.back();
+                  },
+                  child: const Text('Clear'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Positions by Category
+          ...positions.map((entry) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    entry,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: entry.split(',').map((pos) {
+                    final isSelected = currentPosition == pos;
+                    return InkWell(
+                      onTap: () {
+                        onSelect(pos);
+                        Get.back();
+                      },
+                      borderRadius: BorderRadius.circular(25),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary
+                              : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(25),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary
+                                : Colors.grey[300]!,
+                          ),
+                        ),
+                        child: Text(
+                          pos,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? Colors.white : Colors.grey[800],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+              ],
+            );
+          }).toList(),
+
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }

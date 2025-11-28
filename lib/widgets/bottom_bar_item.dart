@@ -18,7 +18,7 @@ class BottomBarItem extends StatefulWidget {
     required this.name,
     required this.isActive,
     required this.onClick,
-    this.onHold
+    this.onHold,
   });
 
   @override
@@ -41,14 +41,14 @@ class _BottomBarItemState extends State<BottomBarItem> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // icon
-
             Image.asset(
               AppConstants.getPngAsset(widget.image),
-              width: Dimensions.iconSize16 * 1.65,
-              height: Dimensions.iconSize16 * 1.65,
-              color: widget.isActive
-                  ? AppColors.primary
-                  : AppColors.grey4,
+              width: Dimensions.iconSize20,
+              height: Dimensions.iconSize20,
+              color:
+                  widget.isActive
+                      ? AppColors.white
+                      : AppColors.grey4.withOpacity(0.5),
             ),
             // space
             SizedBox(height: Dimensions.height5),
@@ -59,11 +59,11 @@ class _BottomBarItemState extends State<BottomBarItem> {
               style: TextStyle(
                 color:
                     widget.isActive
-                        ? AppColors.primary
-                        : AppColors.grey4,
+                        ? AppColors.white
+                        : AppColors.grey4.withOpacity(0.5),
                 fontWeight: FontWeight.w400,
                 fontSize: Dimensions.font14,
-                fontFamily: 'Poppins'
+                fontFamily: 'Poppins',
               ),
             ),
           ],

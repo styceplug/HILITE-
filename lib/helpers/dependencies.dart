@@ -1,6 +1,9 @@
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/post_controller.dart';
 import 'package:hilite/controllers/user_controller.dart';
+import 'package:hilite/data/api/api_checker.dart';
+import 'package:hilite/data/repo/post_repo.dart';
 import 'package:hilite/data/repo/user_repo.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -26,17 +29,37 @@ Future<void> init() async {
       sharedPreferences: Get.find(),
     ),
   );
+  Get.lazyPut(
+    () => ApiChecker(
+    ),
+  );
 
   // repos
-  Get.lazyPut(() => AppRepo(apiClient: Get.find(), sharedPreferences: Get.find()));
+  Get.lazyPut(
+    () => AppRepo(apiClient: Get.find(), sharedPreferences: Get.find()),
+  );
   Get.lazyPut(() => VersionRepo(apiClient: Get.find()));
-  Get.lazyPut(() => AuthRepo(apiClient: Get.find(), sharedPreferences: Get.find()));
-  Get.lazyPut(() => UserRepo(apiClient: Get.find(), sharedPreferences: Get.find(), authRepo: Get.find()));
+  Get.lazyPut(
+    () => AuthRepo(apiClient: Get.find(), sharedPreferences: Get.find()),
+  );
+  Get.lazyPut(
+    () => UserRepo(
+      apiClient: Get.find(),
+      sharedPreferences: Get.find(),
+      authRepo: Get.find(),
+    ),
+  );
+  Get.lazyPut(() => PostRepo(apiClient: Get.find()));
 
   //controllers
   Get.lazyPut(() => AppController(appRepo: Get.find()));
   Get.lazyPut(() => VersionController(versionRepo: Get.find()));
-  Get.lazyPut(() => AuthController(authRepo: Get.find(), sharedPreferences: Get.find()));
-  Get.lazyPut(() => UserController(userRepo: Get.find(), sharedPreferences: Get.find()));
+  Get.lazyPut(
+    () => AuthController(authRepo: Get.find(), sharedPreferences: Get.find()),
+  );
+  Get.lazyPut(
+    () => UserController(userRepo: Get.find(), sharedPreferences: Get.find()),
+  );
   Get.lazyPut(() => GlobalLoaderController());
+  Get.lazyPut(() => PostController(postRepo: Get.find()));
 }

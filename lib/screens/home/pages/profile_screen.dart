@@ -24,7 +24,7 @@ class ProfileScreen extends StatefulWidget {
 
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final userController = Get.find<UserController>();
+  UserController userController = Get.find<UserController>();
 
   @override
   void initState() {
@@ -39,15 +39,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return GetBuilder<UserController>(
       builder: (controller) {
-        final user = controller.user.value;
+        print('this has been rebuilt');
+        var user = controller.user.value;
 
         if (user == null) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final player = user.playerDetails;
-        final club = user.clubDetails;
-        final agent = user.agentDetails;
+        var player = user.playerDetails;
+        var club = user.clubDetails;
+        var agent = user.agentDetails;
+
+        print(user.bio);
 
         return SingleChildScrollView(
           padding: EdgeInsets.symmetric(
@@ -112,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SizedBox(height: Dimensions.height10),
 
               /// 📖 Bio
-              if (user.bio!.isNotEmpty)
+
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
                   child: Text(
@@ -194,7 +197,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
 
               /// ✏️ Edit Profile Button
-              if (user.role != 'fan')
+
                 CustomButton(
                   text: 'Edit Profile',
                   onPressed: () {

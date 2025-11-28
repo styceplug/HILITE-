@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/post_controller.dart';
 
 import '../../controllers/app_controller.dart';
 import '../../utils/dimensions.dart';
@@ -15,6 +16,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   AppController appController = Get.find<AppController>();
+  PostController postController = Get.find<PostController>();
 
 
   DateTime? lastPressed;
@@ -77,8 +79,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           movePage: false,
                         );
                       }
-                      if (index == 1) {
-                        //fetch quick references
+                      if (index !=0) {
+                        postController.pauseAll();
                       }
                     },
                   ),

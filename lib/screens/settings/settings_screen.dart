@@ -71,6 +71,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: "Verify Account",
               onTap: () {},
             ),
+            settingTile(
+              icon: Iconsax.link,
+              title: "Referral Program",
+              onTap: () {Get.toNamed(AppRoutes.referralScreen);},
+            ),
 
             SizedBox(height: Dimensions.height30),
 

@@ -116,7 +116,7 @@ class UserModel {
       'posts': posts,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
-
+      'isFollowed': isFollowed,
     };
   }
 

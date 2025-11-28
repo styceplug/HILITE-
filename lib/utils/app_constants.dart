@@ -27,9 +27,13 @@ class AppConstants {
   static const String UPDATE_PROFILE_IMAGE = '/v1/user/personal/profile/avatar';
   static const String UPDATE_PROFILE_DETAILS = '/v1/user/personal/profile';
   static const String GET_RECOMMENDED_ACCOUNTS = '/v1/recommendation/users';
+  static const String GET_RECOMMENDED_POSTS = '/v1/recommendation/posts';
   static  String FOLLOW_ACCOUNT(String targetId) => '/v1/user/external/$targetId/follow';
+  static  String UNFOLLOW_ACCOUNT(String targetId) => '/v1/user/external/$targetId/unfollow';
   static  String BLOCK_ACCOUNT(String targetId) => '/v1/user/external/$targetId/block';
   static  String GET_OTHERS_PROFILE(String targetId) => '/v1/user/external/$targetId/profile';
+  static  String UNLIKE_POST(String postId) => '/v1/post/retrieve/$postId/unlike';
+  static  String LIKE_POST(String postId) => '/v1/post/retrieve/$postId/like';
 
 
 

@@ -18,11 +18,11 @@ class HomeScreenBottomNavBar extends StatelessWidget {
       () => ClipRect(
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Colors.black.withOpacity(0.6),
             // borderRadius: BorderRadius.circular(Dimensions.radius30),
           ),
           padding: EdgeInsets.only(
-            bottom: Dimensions.height70,
+            bottom: Dimensions.height40,
             left: Dimensions.width15,
             right: Dimensions.width15,
             top: Dimensions.height15,
@@ -30,36 +30,29 @@ class HomeScreenBottomNavBar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+
               BottomBarItem(
-                name: 'Live Scores',
-                image: 'nav1',
+                name: 'Reels',
+                image: 'nav2',
                 isActive: appController.currentAppPage.value == 0,
                 onClick: () {
                   appController.changeCurrentAppPage(0);
                 },
               ),
               BottomBarItem(
-                name: 'Reels',
-                image: 'nav2',
+                name: 'Activities',
+                image: 'nav3',
                 isActive: appController.currentAppPage.value == 1,
                 onClick: () {
                   appController.changeCurrentAppPage(1);
                 },
               ),
               BottomBarItem(
-                name: 'Activities',
-                image: 'nav3',
+                name: 'Profile',
+                image: 'nav4',
                 isActive: appController.currentAppPage.value == 2,
                 onClick: () {
                   appController.changeCurrentAppPage(2);
-                },
-              ),
-              BottomBarItem(
-                name: 'Profile',
-                image: 'nav4',
-                isActive: appController.currentAppPage.value == 3,
-                onClick: () {
-                  appController.changeCurrentAppPage(3);
                 },
 
               ),

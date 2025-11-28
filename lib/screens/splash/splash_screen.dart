@@ -31,59 +31,72 @@ class _SplashScreenState extends State<SplashScreen>
           height: Dimensions.screenHeight,
           width: Dimensions.screenWidth,
           decoration: BoxDecoration(
-            image: DecorationImage(
-              fit: BoxFit.cover,
-              image: AssetImage(AppConstants.getPngAsset('sitting-ballers')),
-            ),
+            // image: DecorationImage(
+            //   fit: BoxFit.cover,
+            //   image: AssetImage(AppConstants.getPngAsset('sitting-ballers')),
+            // ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
+          child: Stack(
             children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: Dimensions.width20,vertical: Dimensions.height20),
-
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Your Game. \nYour Spotlight.',
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                        fontSize: Dimensions.font30 * 2,
-                        fontWeight: FontWeight.w400,
-                        fontFamily: 'BebasNeue',
-                        height: 1,
-                        color: Colors.white
-                      ),
-                    ),
-                    Text(
-                      'Show your skills, connect with scouts, and get discovered.',
-                      style: TextStyle(
-                        fontSize: Dimensions.font18,
-                        fontWeight: FontWeight.w300,
-                        color: Colors.white
-                      ),
-                    ),
-                    SizedBox(height: Dimensions.height30),
-                    CustomButton(
-                      text: 'LOGIN',
-                      onPressed: () {
-                        Get.toNamed(AppRoutes.loginScreen);
-                      },
-                    ),
-                    SizedBox(height: Dimensions.height10),
-                    CustomButton(
-                      text: 'CREATE ACCOUNT',
-                      onPressed: () {
-                        Get.toNamed(AppRoutes.createAccountScreen);
-                      },
-                      backgroundColor: AppColors.bgColor,
-                      borderColor: AppColors.primary,
-                    ),
-                  ],
-                ),
+              Image.asset(
+                AppConstants.getPngAsset('sitting-ballers'),
+                fit: BoxFit.cover,
+                height: Dimensions.screenHeight,
+                width: Dimensions.screenWidth,
               ),
-              SizedBox(height: Dimensions.height50),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: Dimensions.width20,
+                      vertical: Dimensions.height20,
+                    ),
+
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Your Game. \nYour Spotlight.',
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                            fontSize: Dimensions.font30 * 2,
+                            fontWeight: FontWeight.w400,
+                            fontFamily: 'BebasNeue',
+                            height: 1,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          'Show your skills, connect with scouts, and get discovered.',
+                          style: TextStyle(
+                            fontSize: Dimensions.font18,
+                            fontWeight: FontWeight.w300,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: Dimensions.height30),
+                        CustomButton(
+                          text: 'LOGIN',
+                          onPressed: () {
+                            Get.toNamed(AppRoutes.loginScreen);
+                          },
+                        ),
+                        SizedBox(height: Dimensions.height10),
+                        CustomButton(
+                          text: 'CREATE ACCOUNT',
+                          onPressed: () {
+                            Get.toNamed(AppRoutes.createAccountScreen);
+                          },
+                          backgroundColor: AppColors.bgColor,
+                          borderColor: AppColors.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: Dimensions.height50),
+                ],
+              ),
             ],
           ),
         ),

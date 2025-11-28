@@ -11,7 +11,6 @@ import '../../widgets/custom_appbar.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/profile_avatar.dart';
 
-
 class OthersProfileScreen extends StatefulWidget {
   const OthersProfileScreen({super.key});
 
@@ -19,16 +18,14 @@ class OthersProfileScreen extends StatefulWidget {
   State<OthersProfileScreen> createState() => _OthersProfileState();
 }
 
-
-
 class _OthersProfileState extends State<OthersProfileScreen> {
-  final UserController userController = Get.find<UserController>();
+  UserController userController = Get.find<UserController>();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final targetId = Get.arguments?['targetId'];
+      var targetId = Get.arguments?['targetId'];
       if (targetId != null) {
         userController.getOthersProfile(targetId);
       } else {
@@ -41,18 +38,19 @@ class _OthersProfileState extends State<OthersProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppbar(
-        leadingIcon: const BackButton(),),
+      appBar: CustomAppbar(leadingIcon: const BackButton()),
       body: Obx(() {
-        final user = userController.othersProfile.value;
+        var user = userController.othersProfile.value;
+
+        final isFollowing = userController.othersProfile.value!.isFollowed;
 
         if (user == null) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final player = user.playerDetails;
-        final club = user.clubDetails;
-        final agent = user.agentDetails;
+        var player = user.playerDetails;
+        var club = user.clubDetails;
+        var agent = user.agentDetails;
 
         return SingleChildScrollView(
           padding: EdgeInsets.symmetric(
@@ -68,7 +66,9 @@ class _OthersProfileState extends State<OthersProfileScreen> {
 
               /// 🧾 Name and Username
               Text(
-                user.name,
+                user.role == 'club'
+                    ? (user.clubDetails?.clubName ?? 'Unknown Club')
+                    : (user.name.capitalizeFirst ?? 'Unknown'),
                 style: TextStyle(
                   fontSize: Dimensions.font18,
                   fontWeight: FontWeight.w600,
@@ -96,41 +96,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                   _buildStat('Following', '${user.following}'),
                 ],
               ),
-
-              SizedBox(height: Dimensions.height30),
-
-              /// ⚽ Player Info
-              if (user.role == 'player') ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildInfoTag('Position: ${player?.position ?? '-'}'),
-                    _buildInfoTag('Height: ${player?.height ?? '-'}cm'),
-                    _buildInfoTag('Weight: ${player?.weight ?? '-'}kg'),
-                  ],
-                ),
-                SizedBox(height: Dimensions.height20),
-              ],
-
-              /// 🏢 Club Info
-              if (user.role == 'club') ...[
-                _buildInfoTag('Club Name: ${club?.clubName ?? '-'}'),
-                SizedBox(height: Dimensions.height5),
-                _buildInfoTag('Club Type: ${club?.clubType ?? '-'}'),
-                SizedBox(height: Dimensions.height5),
-                _buildInfoTag('Manager: ${club?.manager ?? '-'}'),
-                SizedBox(height: Dimensions.height5),
-                _buildInfoTag('Founded: ${club?.yearFounded ?? '-'}'),
-                SizedBox(height: Dimensions.height20),
-              ],
-
-              /// 🤝 Agent Info
-              if (user.role == 'agent') ...[
-                _buildInfoTag('Agency: ${agent?.agencyName ?? '-'}'),
-                SizedBox(height: Dimensions.height5),
-                _buildInfoTag('Experience: ${agent?.experience ?? '-'}'),
-                SizedBox(height: Dimensions.height20),
-              ],
+              SizedBox(height: Dimensions.height20),
 
               /// 🧾 Bio or Summary
               if (user.bio?.isNotEmpty ?? false)
@@ -148,7 +114,77 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                   ),
                 ),
 
-              SizedBox(height: Dimensions.height30),
+              SizedBox(height: Dimensions.height20),
+
+              /// ⚽ Player Info
+              if (user.role == 'player') ...[
+                Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildInfoTag('Position: ${player?.position ?? '-'}'),
+                        _buildInfoTag('Height: ${player?.height ?? '-'}cm'),
+                        _buildInfoTag('Weight: ${player?.weight ?? '-'}kg'),
+                      ],
+                    ),
+                    SizedBox(height: Dimensions.height20),
+                    CustomButton(
+                      text: 'Gift Creator',
+                      textStyle: TextStyle(
+                        color: AppColors.white,
+                        fontSize: Dimensions.font15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      onPressed: () {
+                        CustomSnackBar.processing(
+                          message: 'Direct messaging coming soon!',
+                        );
+                      },
+                      backgroundColor: AppColors.primary,
+                      borderRadius: BorderRadius.circular(Dimensions.radius10),
+                    ),
+
+                  ],
+                ),
+                SizedBox(height: Dimensions.height20),
+              ],
+
+              /// 🏢 Club Info
+              if (user.role == 'club') ...[
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildInfoTag('Account Name: ${user.name ?? '-'}'),
+                      SizedBox(width: Dimensions.height5),
+                      _buildInfoTag('Club Type: ${club?.clubType ?? '-'}'),
+                      SizedBox(width: Dimensions.height5),
+                      _buildInfoTag('Manager: ${club?.manager ?? '-'}'),
+                      SizedBox(width: Dimensions.height5),
+                      _buildInfoTag('Founded: ${club?.yearFounded ?? '-'}'),
+                      SizedBox(width: Dimensions.height5),
+                    ],
+                  ),
+                ),
+              ],
+
+              /// 🤝 Agent Info
+              if (user.role == 'agent') ...[
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildInfoTag('Agency: ${agent?.agencyName ?? '-'}'),
+                      SizedBox(width: Dimensions.height5),
+                      _buildInfoTag('Experience: ${agent?.experience ?? '-'}'),
+                      SizedBox(width: Dimensions.height5),
+                    ],
+                  ),
+                ),
+              ],
+
+              // SizedBox(height: Dimensions.height20),
 
               /// 🔘 Follow & Message Buttons
               Row(
@@ -156,17 +192,19 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                 children: [
                   Expanded(
                     child: CustomButton(
-                      text: 'Follow',
+                      text: isFollowing ? 'Unfollow' : 'Follow',
                       textStyle: TextStyle(
                         color: AppColors.white,
                         fontSize: Dimensions.font15,
                         fontWeight: FontWeight.w500,
                       ),
-                      onPressed: () =>
-                          userController.followUser(user.id),
+                      onPressed:
+                          () =>
+                              !isFollowing
+                                  ? userController.followUser(user.id)
+                                  : userController.unfollowUser(user.id),
                       backgroundColor: AppColors.primary,
-                      borderRadius:
-                      BorderRadius.circular(Dimensions.radius10),
+                      borderRadius: BorderRadius.circular(Dimensions.radius10),
                     ),
                   ),
                   SizedBox(width: Dimensions.width20),
@@ -180,16 +218,16 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                       ),
                       onPressed: () {
                         CustomSnackBar.showToast(
-                            message:
-                            'Direct messaging coming soon!');
+                          message: 'Direct messaging coming soon!',
+                        );
                       },
                       backgroundColor: AppColors.grey4,
-                      borderRadius:
-                      BorderRadius.circular(Dimensions.radius10),
+                      borderRadius: BorderRadius.circular(Dimensions.radius10),
                     ),
                   ),
                 ],
               ),
+
 
               SizedBox(height: Dimensions.height40),
 

@@ -18,23 +18,26 @@ class AuthController extends GetxController implements GetxService {
   AuthController({required this.authRepo, required this.sharedPreferences});
 
   bool _isLoading = false;
+
   bool get isLoading => _isLoading;
   var isCheckingUsername = false.obs;
   var isUsernameAvailable = false.obs;
   var usernameMessage = ''.obs;
   GlobalLoaderController loader = Get.find<GlobalLoaderController>();
   UserController userController = Get.find<UserController>();
+  late AppController appController = Get.find<AppController>();
   Rx<UserModel?> user = Rx<UserModel?>(null);
   UserRepo? userRepo;
 
-
-
-  Future<void> login(String input, String password, {bool staySignedIn = false}) async {
+  Future<void> login(
+    String input,
+    String password, {
+    bool staySignedIn = false,
+  }) async {
     loader.showLoader();
     update();
 
     try {
-
       final bool isEmail = input.contains('@') && input.contains('.');
 
       final Map<String, dynamic> payload = {
@@ -42,7 +45,10 @@ class AuthController extends GetxController implements GetxService {
         'password': password,
       };
 
-      Response response = await authRepo.apiClient.postData(AppConstants.POST_LOGIN, payload);
+      Response response = await authRepo.apiClient.postData(
+        AppConstants.POST_LOGIN,
+        payload,
+      );
       loader.hideLoader();
 
       if (response.statusCode == 200) {
@@ -56,7 +62,10 @@ class AuthController extends GetxController implements GetxService {
             await saveUserToken(token);
           }
           await userController.getUserProfile();
-          CustomSnackBar.success(message: '$message: Welcome back ${isEmail ? input.split('@')[0] : input}');
+          CustomSnackBar.success(
+            message:
+                '$message: Welcome back ${isEmail ? input.split('@')[0] : input}',
+          );
           Get.offAllNamed(AppRoutes.homeScreen);
         } else {
           CustomSnackBar.failure(
@@ -70,9 +79,7 @@ class AuthController extends GetxController implements GetxService {
       }
     } catch (e, s) {
       loader.hideLoader();
-      CustomSnackBar.failure(
-        message: 'An error occurred: ${e.toString()}',
-      );
+      CustomSnackBar.failure(message: 'An error occurred: ${e.toString()}');
       print('$e\n$s');
     }
 
@@ -105,10 +112,12 @@ class AuthController extends GetxController implements GetxService {
       if (response.statusCode == 200 && response.body is Map) {
         if (response.body['code'] == '00') {
           isUsernameAvailable.value = true;
-          usernameMessage.value = response.body['message'] ?? 'Username is available';
+          usernameMessage.value =
+              response.body['message'] ?? 'Username is available';
         } else {
           isUsernameAvailable.value = false;
-          usernameMessage.value = response.body['message'] ?? 'Username already taken';
+          usernameMessage.value =
+              response.body['message'] ?? 'Username already taken';
         }
       } else {
         isUsernameAvailable.value = false;
@@ -161,17 +170,21 @@ class AuthController extends GetxController implements GetxService {
       Response response = await authRepo.registerOthers(body);
 
       if (response.statusCode == 201 && response.body['code'] == '00') {
-        CustomSnackBar.success(message: response.body['message'] ?? 'Registration Successful');
+        CustomSnackBar.success(
+          message: response.body['message'] ?? 'Registration Successful',
+        );
         Get.offAllNamed(AppRoutes.verifyProfileScreen);
         final userData = response.body['data'];
-
-
       } else if (response.body['code'] == '01') {
-        CustomSnackBar.failure(message: response.body['message'] ?? 'Missing required fields');
+        CustomSnackBar.failure(
+          message: response.body['message'] ?? 'Missing required fields',
+        );
       } else {
-        CustomSnackBar.failure(message: response.body['message'] ?? 'Registration failed');
+        CustomSnackBar.failure(
+          message: response.body['message'] ?? 'Registration failed',
+        );
       }
-    } catch (e,s) {
+    } catch (e, s) {
       CustomSnackBar.failure(message: 'An error occurred: $e, $s');
       print('$e,$s');
     } finally {
@@ -206,6 +219,7 @@ class AuthController extends GetxController implements GetxService {
       authRepo.apiClient.token = '';
       sharedPreferences.remove(AppConstants.authToken);
       userController.clearUserCache();
+      appController.changeCurrentAppPage(0);
       CustomSnackBar.success(message: 'Logged out successfully');
       Get.offAllNamed(AppRoutes.onboardingScreen);
     } catch (e) {
@@ -229,16 +243,18 @@ class AuthController extends GetxController implements GetxService {
 
       if (response.body['code'].toString() == '00') {
         user.value = UserModel.fromJson(response.body['data']);
-        print('${user.value?.bio} at Stage 1');
+        print('${userController.user.value?.bio} at Stage 1');
 
-        await userRepo?.cacheUserData(response.body['data']);
+        if (user.value != null) await userController.saveUser(user.value!);
 
         print("💾 Cached updated user profile successfully");
         await userController.loadCachedUser();
-        print('${user.value?.bio} at Stage 2');
+        print(
+          'user from usercontroller ${userController.user.value?.bio} at Stage 2',
+        );
 
         userController.user.refresh();
-        print('${user.value?.bio} at Stage 3');
+        print('${userController.user.value?.bio} at Stage 3');
 
         update();
         Get.back();
@@ -257,10 +273,7 @@ class AuthController extends GetxController implements GetxService {
     }
   }
 
-
-
   bool userLoggedIn() {
     return sharedPreferences.containsKey(AppConstants.authToken);
   }
-
 }

@@ -116,6 +116,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
                 ),
               ),
             ),
+
           ],
         ),
       ),

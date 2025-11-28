@@ -12,6 +12,7 @@ import 'package:hilite/screens/others/recommended_accounts.dart';
 import 'package:hilite/screens/posting/post_detail_screen.dart';
 import 'package:hilite/screens/posting/upload_content.dart';
 import 'package:hilite/screens/settings/edit_profile.dart';
+import 'package:hilite/screens/settings/referral_screen.dart';
 import 'package:hilite/screens/settings/settings_screen.dart';
 import 'package:hilite/screens/splash/no_internet_screen.dart';
 import 'package:hilite/screens/splash/onboarding_screen.dart';
@@ -49,6 +50,7 @@ class AppRoutes {
   static const String othersProfileScreen = '/others-profile-screen';
   static const String settingsScreen = '/settings-screen';
   static const String uploadContent = '/upload-content';
+  static const String referralScreen = '/referral-screen';
   static const String postDetailScreen = '/post-detail-screen';
   static const String recommendedAccountsScreen = '/recommended-accounts-screen';
 
@@ -199,6 +201,11 @@ class AppRoutes {
     GetPage(
       name: recommendedAccountsScreen,
       page: () => const RecommendedAccountsScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: referralScreen,
+      page: () =>  ReferralScreen(),
       transition: Transition.fadeIn,
     ),
 

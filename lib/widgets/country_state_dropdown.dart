@@ -103,7 +103,7 @@ class CountryState extends StatefulWidget {
 
 class _CountryStateState extends State<CountryState> {
   final _countryService = CountryService();
-  late Future<List<CountryData>> _countriesFuture;
+  late final Future<List<CountryData>> _countriesFuture;
 
   @override
   void initState() {

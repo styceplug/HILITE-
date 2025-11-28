@@ -35,12 +35,20 @@ dependencies:
   video_player: ^2.10.0
   http: ^1.6.0
   http_parser: ^4.1.2
+  cached_network_image: ^3.4.1
+  chewie: ^1.13.0
+  visibility_detector: ^0.4.0+2
+  flutter_cache_manager: ^3.3.1
+#  sqflite: 2.3.3+1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   flutter_launcher_icons: ^0.14.4
+
+dependency_overrides:
+#  sqflite_android: 2.3.0+2
 
 flutter_launcher_icons:
   android: "launcher_icon"

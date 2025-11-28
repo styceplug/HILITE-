@@ -23,7 +23,7 @@ class _SplashState extends State<Splash> {
   void initState() {
     super.initState();
     Future.delayed(const Duration(seconds: 3), () async {
-      appController.initializeApp();
+      await appController.initializeApp();
     });
   }
 

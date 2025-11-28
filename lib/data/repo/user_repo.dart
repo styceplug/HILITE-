@@ -85,6 +85,10 @@ class UserRepo {
     return await apiClient.putData(AppConstants.FOLLOW_ACCOUNT(targetId),{});
   }
 
+  Future<Response> unfollowUser(String targetId) async {
+    return await apiClient.putData(AppConstants.UNFOLLOW_ACCOUNT(targetId),{});
+  }
+
   Future<Response> blockUser(String targetId) async {
     return await apiClient.putData(AppConstants.BLOCK_ACCOUNT(targetId), {});
   }

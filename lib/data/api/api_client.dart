@@ -43,7 +43,10 @@ class ApiClient extends GetConnect implements GetxService {
   Future<bool> _hasConnection() async {
     final connectivity = await Connectivity().checkConnectivity();
     final connected = connectivity != ConnectivityResult.none;
-    if (!connected) print('📴 No internet connection');
+    if (!connected) {
+      print('📴 No internet connection');
+      CustomSnackBar.failure(message: 'No internet connection');
+    };
     return connected;
   }
 
@@ -117,8 +120,13 @@ class ApiClient extends GetConnect implements GetxService {
   Future<Response> putData(String uri, dynamic body, {Map<String, String>? headers}) async {
     print('➡️ PUT: $baseUrl$uri');
     print('🧾 Body: $body');
+
+    // 💡 NEW DIAGNOSTIC PRINT: Show the final headers being used
+    final finalHeaders = headers ?? _mainHeaders;
+    print('🔍 DEBUG PUT HEADERS: $finalHeaders');
+
     return _handleRequest(
-          () => put(uri, body, headers: headers ?? _mainHeaders),
+          () => put(uri, body, headers: finalHeaders),
       uri,
     );
   }

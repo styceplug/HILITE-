@@ -1,14 +1,15 @@
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/auth_controller.dart';
-import '../../controllers/user_controller.dart';
-import '../../utils/colors.dart';
-import '../../utils/dimensions.dart';
-import '../../widgets/country_state_dropdown.dart';
-import '../../widgets/custom_appbar.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_textfield.dart';
+import 'package:hilite/controllers/user_controller.dart';
+import 'package:hilite/widgets/custom_appbar.dart';
+import 'package:hilite/widgets/custom_button.dart';
+import 'package:hilite/widgets/custom_textfield.dart';
+import 'package:hilite/widgets/country_state_dropdown.dart';
+import 'package:hilite/utils/colors.dart';
+import 'package:hilite/utils/dimensions.dart';
+
+import '../../widgets/snackbars.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -20,272 +21,151 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final formKey = GlobalKey<FormState>();
   final UserController userController = Get.find<UserController>();
-  AuthController authController = Get.find<AuthController>();
+  final AuthController authController = Get.find<AuthController>();
 
-  // Controllers
+  // common
   late TextEditingController nameController;
   late TextEditingController usernameController;
-  late TextEditingController emailController;
   late TextEditingController numberController;
-  late TextEditingController positionController;
-  late TextEditingController clubController;
+  late TextEditingController bioController;
+
+  // player
+  late TextEditingController positionController; // selected via bottom sheet
+  late TextEditingController preferredFootController; // bottom sheet
+  late TextEditingController currentClubController; // text input
   late TextEditingController heightController;
   late TextEditingController weightController;
-  late TextEditingController bioController;
+
+  // agent
+  late TextEditingController agencyNameController;
+  late TextEditingController registrationIdController;
+  late TextEditingController experienceController;
+
+  // club
+  late TextEditingController clubNameController;
+  late TextEditingController managerController;
+  late TextEditingController clubTypeController; // bottom sheet
+  late TextEditingController yearFoundedController;
 
   String? selectedCountry;
   String? selectedState;
+
+  // pick lists
+  final List<String> positions = [
+    'GK', 'RB', 'LB', 'CB', 'CDM', 'CM', 'CAM', 'RW', 'LW', 'ST'
+  ];
+  final List<String> feet = ['Left', 'Right', 'Both'];
+  final List<String> clubTypes = ['Academy', 'Amateur', 'Professional'];
 
   @override
   void initState() {
     super.initState();
     final user = userController.user.value;
 
+    // initialize controllers with existing values (if user is null, use empty)
     nameController = TextEditingController(text: user?.name ?? '');
     usernameController = TextEditingController(text: user?.username ?? '');
     numberController = TextEditingController(text: user?.number ?? '');
-    positionController = TextEditingController(text: user?.playerDetails?.position ?? '');
-    clubController = TextEditingController(text: user?.playerDetails?.currentClub ?? '');
-    heightController = TextEditingController(text: '${user?.playerDetails?.height ?? ''}');
-    weightController = TextEditingController(text: '${user?.playerDetails?.weight ?? ''}');
     bioController = TextEditingController(text: user?.bio ?? '');
+
     selectedCountry = user?.country;
     selectedState = user?.state;
+
+    positionController = TextEditingController(text: user?.playerDetails?.position ?? '');
+    preferredFootController = TextEditingController(text: user?.playerDetails?.preferredFoot ?? '');
+    currentClubController = TextEditingController(text: user?.playerDetails?.currentClub ?? '');
+    heightController = TextEditingController(text: user?.playerDetails?.height?.toString() ?? '');
+    weightController = TextEditingController(text: user?.playerDetails?.weight?.toString() ?? '');
+
+    agencyNameController = TextEditingController(text: user?.agentDetails?.agencyName ?? '');
+    registrationIdController = TextEditingController(text: user?.agentDetails?.registrationId ?? '');
+    experienceController = TextEditingController(text: user?.agentDetails?.experience ?? '');
+
+    clubNameController = TextEditingController(text: user?.clubDetails?.clubName ?? '');
+    managerController = TextEditingController(text: user?.clubDetails?.manager ?? '');
+    clubTypeController = TextEditingController(text: user?.clubDetails?.clubType ?? '');
+    yearFoundedController = TextEditingController(text: user?.clubDetails?.yearFounded ?? '');
   }
 
-  Map<String, dynamic> body() {
+  @override
+  void dispose() {
+    // dispose controllers
+    nameController.dispose();
+    usernameController.dispose();
+    numberController.dispose();
+    bioController.dispose();
+
+    positionController.dispose();
+    preferredFootController.dispose();
+    currentClubController.dispose();
+    heightController.dispose();
+    weightController.dispose();
+
+    agencyNameController.dispose();
+    registrationIdController.dispose();
+    experienceController.dispose();
+
+    clubNameController.dispose();
+    managerController.dispose();
+    clubTypeController.dispose();
+    yearFoundedController.dispose();
+
+    super.dispose();
+  }
+
+  /// Build a minimal flat body that only includes changed fields.
+  Map<String, dynamic> _buildBody() {
     final user = userController.user.value;
     if (user == null) return {};
 
-    Map<String, dynamic> data = {};
+    final Map<String, dynamic> data = {};
 
-    int? height = int.tryParse(heightController.text.replaceAll(RegExp(r'[^0-9]'), ''));
-    int? weight = int.tryParse(weightController.text.replaceAll(RegExp(r'[^0-9]'), ''));
-
-    if (nameController.text.trim() != user.name) {
-      data["name"] = nameController.text.trim();
-    }
-    if (usernameController.text.trim() != user.username) {
-      data["username"] = usernameController.text.trim();
-    }
-    if (numberController.text.trim() != user.number) {
-      data["number"] = numberController.text.trim();
-    }
-    if (selectedCountry != user.country) {
-      data["country"] = selectedCountry;
-    }
-    if (selectedState != user.state) {
-      data["state"] = selectedState;
+    void addIfChanged(String key, dynamic newValue, dynamic oldValue) {
+      final bool isValueEmpty = newValue == null || (newValue is String && newValue.trim().isEmpty);
+      if (!isValueEmpty && newValue != oldValue) {
+        data[key] = newValue;
+      }
     }
 
-    if (positionController.text.trim() != (user.playerDetails?.position ?? '')) {
-      data["position"] = positionController.text.trim();
+    // common
+    addIfChanged('name', nameController.text.trim(), user.name);
+    addIfChanged('username', usernameController.text.trim(), user.username);
+    addIfChanged('number', numberController.text.trim(), user.number);
+    addIfChanged('bio', bioController.text.trim(), user.bio);
+    addIfChanged('country', selectedCountry, user.country);
+    addIfChanged('state', selectedState, user.state);
+
+    // role-specific: player (flat keys)
+    if (user.role == 'player') {
+      addIfChanged('position', positionController.text.trim(), user.playerDetails?.position);
+      addIfChanged('currentClub', currentClubController.text.trim(), user.playerDetails?.currentClub);
+      addIfChanged('preferredFoot', preferredFootController.text.trim(), user.playerDetails?.preferredFoot);
+
+      final int? h = int.tryParse(heightController.text.replaceAll(RegExp(r'[^0-9]'), ''));
+      final int? w = int.tryParse(weightController.text.replaceAll(RegExp(r'[^0-9]'), ''));
+
+      addIfChanged('height', h, user.playerDetails?.height);
+      addIfChanged('weight', w, user.playerDetails?.weight);
     }
-    if (clubController.text.trim() != (user.playerDetails?.currentClub ?? '')) {
-      data["currentClub"] = clubController.text.trim();
+
+    // agent
+    if (user.role == 'agent') {
+      addIfChanged('agencyName', agencyNameController.text.trim(), user.agentDetails?.agencyName);
+      addIfChanged('registrationId', registrationIdController.text.trim(), user.agentDetails?.registrationId);
+      addIfChanged('experience', experienceController.text.trim(), user.agentDetails?.experience);
     }
-    if (bioController.text.trim() != (user.bio ?? '')) {
-      data["bio"] = bioController.text.trim();
-    }
-    if (height != user.playerDetails?.height) {
-      data["height"] = height ?? 0;
-    }
-    if (weight != user.playerDetails?.weight) {
-      data["weight"] = weight ?? 0;
+
+    // club
+    if (user.role == 'club') {
+      addIfChanged('clubName', clubNameController.text.trim(), user.clubDetails?.clubName);
+      addIfChanged('manager', managerController.text.trim(), user.clubDetails?.manager);
+      addIfChanged('clubType', clubTypeController.text.trim(), user.clubDetails?.clubType);
+      addIfChanged('yearFounded', yearFoundedController.text.trim(), user.clubDetails?.yearFounded);
     }
 
     return data;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const CustomAppbar(title: 'Edit Profile'),
-      body: Obx(() {
-        final user = userController.user.value;
-        if (user == null) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: Dimensions.width20,
-            vertical: Dimensions.height20,
-          ),
-          child: Form(
-            key: formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Name Field
-                CustomTextField(
-                  labelText: "Full Name",
-                  controller: nameController,
-                ),
-                SizedBox(height: Dimensions.height5),
-                Text(
-                  "Can be edited once a year",
-                  style: TextStyle(
-                    color: AppColors.grey4,
-                    fontSize: Dimensions.font12,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-                SizedBox(height: Dimensions.height20),
-
-                // Username Field
-                CustomTextField(
-                  labelText: "Username",
-                  controller: usernameController,
-                ),
-                SizedBox(height: Dimensions.height5),
-                Text(
-                  "Can be edited once every 3 months",
-                  style: TextStyle(
-                    color: AppColors.grey4,
-                    fontSize: Dimensions.font12,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-                SizedBox(height: Dimensions.height20),
-
-
-                // Contact Number
-                CustomTextField(
-                  labelText: "Contact Number",
-                  controller: numberController,
-                  keyboardType: TextInputType.phone,
-                ),
-                SizedBox(height: Dimensions.height20),
-
-                // Playing Position
-                GestureDetector(
-                  onTap: () => _showBottomPicker(
-                    title: "Select Playing Position",
-                    options: [
-                      'GK', 'RB', 'LB', 'CB',
-                      'CDM', 'CM', 'CAM', 'RW', 'LW', 'ST'
-                    ],
-                    onSelected: (val) {
-                      setState(() {
-                        positionController.text = val;
-                      });
-                    },
-                  ),
-                  child: _buildPickerContainer(
-                    title: "Playing Position",
-                    value: positionController.text,
-                  ),
-                ),
-                SizedBox(height: Dimensions.height20),
-
-                // Club Name
-                CustomTextField(
-                  labelText: "Current Club / Free Agent",
-                  controller: clubController,
-                ),
-                SizedBox(height: Dimensions.height20),
-
-                // Height & Weight
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _showBottomPicker(
-                          title: "Select Height",
-                          options: [
-                            '160 cm',
-                            '165 cm',
-                            '170 cm',
-                            '175 cm',
-                            '180 cm',
-                            '185 cm',
-                            '190 cm',
-                            '200 cm',
-                            '210 cm',
-                            '< 220 cm',
-                          ],
-                          onSelected: (val) {
-                            setState(() {
-                              heightController.text = val;
-                            });
-                          },
-                        ),
-                        child: _buildPickerContainer(
-                          title: "Height (cm / ft)",
-                          value: heightController.text,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _showBottomPicker(
-                          title: "Select Weight",
-                          options: [
-                            '60 kg','65 kg','70 kg','75 kg','80 kg','85 kg',
-                            '90 kg','120 lbs','150 lbs',
-                          ],
-                          onSelected: (val) {
-                            setState(() {
-                              weightController.text = val;
-                            });
-                          },
-                        ),
-                        child: _buildPickerContainer(
-                          title: "Weight (kg / lbs)",
-                          value: weightController.text,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: Dimensions.height20),
-
-                // Country & State
-                CountryState(
-                  selectedCountry: selectedCountry,
-                  selectedState: selectedState,
-                  onCountryChanged: (country) {
-                    setState(() {
-                      selectedCountry = country;
-                      selectedState = null;
-                    });
-                  },
-                  onStateChanged: (state) {
-                    setState(() {
-                      selectedState = state;
-                    });
-                  },
-                ),
-                SizedBox(height: Dimensions.height20),
-
-                // Bio
-                CustomTextField(
-                  labelText: "Player Bio / Description",
-                  controller: bioController,
-                  maxLines: 4,
-                ),
-                SizedBox(height: Dimensions.height30),
-
-                CustomButton(
-                  text: "Save Changes",
-                  onPressed: () {
-                    if (formKey.currentState!.validate()) {
-                      authController.updateUserProfile(body());
-                    }
-                  },
-                ),
-                SizedBox(height: Dimensions.height50),
-              ],
-            ),
-          ),
-        );
-      }),
-    );
-  }
-
-  // Bottom picker (reuse from your other screen)
   void _showBottomPicker({
     required String title,
     required List<String> options,
@@ -321,9 +201,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       child: Text(
         value.isEmpty ? title : value,
         style: TextStyle(
-          color: value.isEmpty
-              ? AppColors.black.withOpacity(0.5)
-              : AppColors.black,
+          color: value.isEmpty ? AppColors.black.withOpacity(0.5) : AppColors.black,
           fontSize: Dimensions.font15,
           fontFamily: 'Poppins',
         ),
@@ -336,33 +214,148 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required List<String> options,
     required Function(String) onSelected,
   }) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: Dimensions.width20,
-        vertical: Dimensions.height20,
-      ),
-      child: SingleChildScrollView(
+    return SafeArea(
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: Dimensions.width20, vertical: Dimensions.height20),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontFamily: 'BebasNeue',
-                fontSize: Dimensions.font20,
-                color: AppColors.primary,
-              ),
-            ),
+            Text(title, style: TextStyle(fontFamily: 'BebasNeue', fontSize: Dimensions.font20, color: AppColors.primary)),
             SizedBox(height: Dimensions.height10),
-            ...options.map(
-                  (option) => ListTile(
-                title: Text(option),
-                onTap: () => onSelected(option),
-              ),
-            ),
+            ...options.map((opt) => ListTile(title: Text(opt), onTap: () => onSelected(opt))).toList(),
+            SizedBox(height: Dimensions.height10),
           ],
         ),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: const CustomAppbar(title: 'Edit Profile'),
+      body: Obx(() {
+        final user = userController.user.value;
+        if (user == null) return const Center(child: CircularProgressIndicator());
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: Dimensions.width20, vertical: Dimensions.height20),
+          child: Form(
+            key: formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Basic info
+                Text('Basic Information', style: TextStyle(fontSize: Dimensions.font16, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                SizedBox(height: Dimensions.height10),
+                CustomTextField(labelText: 'Full name', controller: nameController),
+                SizedBox(height: Dimensions.height10),
+                CustomTextField(labelText: 'Username', controller: usernameController),
+                SizedBox(height: Dimensions.height10),
+                CustomTextField(labelText: 'Bio', controller: bioController, keyboardType: TextInputType.text,maxLines: 3,),
+                SizedBox(height: Dimensions.height10),
+
+                // Country/State selector (optional)
+                // CountryState(
+                //   selectedCountry: selectedCountry,
+                //   selectedState: selectedState,
+                //   onCountryChanged: (c) => setState(() => selectedCountry = c),
+                //   onStateChanged: (s) => setState(() => selectedState = s),
+                // ),
+
+
+                SizedBox(height: Dimensions.height20),
+
+                // Role-specific blocks
+                if (user.role == 'player') ...[
+                  Text('Player Details', style: TextStyle(fontSize: Dimensions.font16, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                  SizedBox(height: Dimensions.height10),
+
+                  // position (picker)
+                  GestureDetector(
+                    onTap: () => _showBottomPicker(title: 'Select Position', options: positions, onSelected: (v) => setState(() => positionController.text = v)),
+                    child: _buildPickerContainer(title: 'Position', value: positionController.text),
+                  ),
+                  SizedBox(height: Dimensions.height10),
+
+                  // current club (text input)
+                  CustomTextField(labelText: 'Current club (type name)', controller: currentClubController),
+                  SizedBox(height: Dimensions.height10),
+
+                  // preferred foot (picker)
+                  GestureDetector(
+                    onTap: () => _showBottomPicker(title: 'Preferred foot', options: feet, onSelected: (v) => setState(() => preferredFootController.text = v)),
+                    child: _buildPickerContainer(title: 'Preferred foot', value: preferredFootController.text),
+                  ),
+                  SizedBox(height: Dimensions.height10),
+
+                  // height & weight
+                  Row(
+                    children: [
+                      Expanded(child: CustomTextField(labelText: 'Height (cm)', controller: heightController, keyboardType: TextInputType.number)),
+                      SizedBox(width: 10),
+                      Expanded(child: CustomTextField(labelText: 'Weight (kg)', controller: weightController, keyboardType: TextInputType.number)),
+                    ],
+                  ),
+                  SizedBox(height: Dimensions.height10),
+
+                  // CustomTextField(labelText: 'Bio / Summary', controller: bioController, maxLines: 3),
+                  // SizedBox(height: Dimensions.height20),
+                ],
+
+                if (user.role == 'agent') ...[
+                  Text('Agent Details', style: TextStyle(fontSize: Dimensions.font16, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                  SizedBox(height: Dimensions.height10),
+                  CustomTextField(labelText: 'Agency name', controller: agencyNameController),
+                  SizedBox(height: Dimensions.height10),
+                  CustomTextField(labelText: 'Registration ID', controller: registrationIdController),
+                  SizedBox(height: Dimensions.height10),
+                  CustomTextField(labelText: 'Experience / Summary', controller: experienceController, maxLines: 3),
+                  SizedBox(height: Dimensions.height20),
+                ],
+
+                if (user.role == 'club') ...[
+                  Text('Club Details', style: TextStyle(fontSize: Dimensions.font16, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                  SizedBox(height: Dimensions.height10),
+                  CustomTextField(labelText: 'Club name', controller: clubNameController),
+                  SizedBox(height: Dimensions.height10),
+                  CustomTextField(labelText: 'Manager', controller: managerController),
+                  SizedBox(height: Dimensions.height10),
+
+                  // club type (picker)
+                  GestureDetector(
+                    onTap: () => _showBottomPicker(title: 'Club type', options: clubTypes, onSelected: (v) => setState(() => clubTypeController.text = v)),
+                    child: _buildPickerContainer(title: 'Club type', value: clubTypeController.text),
+                  ),
+                  SizedBox(height: Dimensions.height10),
+
+                  CustomTextField(labelText: 'Year founded', controller: yearFoundedController, keyboardType: TextInputType.number),
+                  SizedBox(height: Dimensions.height20),
+                ],
+
+                // For all roles show Save button
+                CustomButton(
+                  text: 'Save changes',
+                  onPressed: () {
+                    if (formKey.currentState!.validate()) {
+                      final body = _buildBody();
+                      if (body.isEmpty) {
+                        // nothing changed
+                        Get.back();
+                        CustomSnackBar.showToast(message: 'No changes to save');
+                        return;
+                      }
+                      authController.updateUserProfile(body);
+                    }
+                  },
+                ),
+                SizedBox(height: Dimensions.height30),
+              ],
+            ),
+          ),
+        );
+      }),
     );
   }
 }
