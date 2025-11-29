@@ -184,11 +184,49 @@ class PostController extends GetxController {
     return post?.likes.contains(_currentUserId) ?? false;
   }
 
-  Future<void> toggleLike(String postId) async {
-    final currentlyLiked = isPostLiked(postId);
+  void _updatePostLikes(String postId, bool isLiking) {
+    final currentUserId = _currentUserId; // Make sure this getter works!
+    if (currentUserId.isEmpty) return;
 
-    // 1. Optimistic UI Update (Immediate visual feedback)
-    _updatePostLikes(postId, !currentlyLiked);
+    final postIndex = posts.indexWhere((p) => p.id == postId);
+
+    if (postIndex != -1) {
+      final post = posts[postIndex];
+      final newLikes = List<dynamic>.from(post.likes);
+
+      if (isLiking) {
+        if (!newLikes.contains(currentUserId)) {
+          newLikes.add(currentUserId);
+        }
+      } else {
+        newLikes.remove(currentUserId);
+      }
+
+      // 💡 CRITICAL CHANGE: Update BOTH likes list AND isLiked flag
+      posts[postIndex] = PostModel(
+        id: post.id,
+        type: post.type,
+        text: post.text,
+        author: post.author,
+        video: post.video,
+        image: post.image,
+        likes: newLikes,
+        comments: post.comments,
+        isLiked: isLiking, // <--- UPDATE THE FLAG HERE
+      );
+    }
+  }
+
+  Future<void> toggleLike(String postId) async {
+    // Check the current state from the model (relying on server/optimistic flag)
+    final post = posts.firstWhereOrNull((p) => p.id == postId);
+    final currentlyLiked = post?.isLiked ?? false;
+
+    // The state we want to achieve
+    final shouldBeLiked = !currentlyLiked;
+
+    // 1. OPTIMISTIC UI UPDATE
+    _updatePostLikes(postId, shouldBeLiked);
 
     // 2. Determine which API call to make
     final apiCall = currentlyLiked
@@ -201,15 +239,18 @@ class PostController extends GetxController {
       if (response.statusCode != 200) {
         // 3. Revert Optimistic UI on failure
         print("Like/Unlike failed. Status: ${response.statusCode}");
-        _updatePostLikes(postId, currentlyLiked); // Revert the UI state
+        // Revert the state
+        _updatePostLikes(postId, currentlyLiked);
       }
-      // Note: If successful, we don't need to do anything, the UI is already correct.
+      // If successful, the UI is already updated optimistically.
+      // NOTE: You could optionally parse the response body's new 'likes' list
+      // and 'isLiked' flag and update the model again here to ensure
+      // perfect server synchronization, but the optimistic update is usually enough.
 
-    } catch (e,s) {
+    } catch (e) {
       // 4. Handle connection or server errors
-      print("Network error during like/unlike: $e,$s");
+      print("Network error during like/unlike: $e");
       _updatePostLikes(postId, currentlyLiked); // Revert the UI state
-      CustomSnackBar.failure(message: 'Action not done pls try again later');
     }
   }
 
@@ -226,39 +267,6 @@ class PostController extends GetxController {
     }
   }
 
-  // Helper to find and update the post in the observable list
-  void _updatePostLikes(String postId, bool isLiked) {
-    if (_currentUserId.isEmpty) return;
-
-    final postIndex = posts.indexWhere((p) => p.id == postId);
-    if (postIndex != -1) {
-      final post = posts[postIndex];
-      // Create a mutable list from the immutable list of likes
-      final newLikes = List<dynamic>.from(post.likes);
-
-      if (isLiked) {
-        // Add user ID if not present
-        if (!newLikes.contains(_currentUserId)) {
-          newLikes.add(_currentUserId);
-        }
-      } else {
-        // Remove user ID
-        newLikes.remove(_currentUserId);
-      }
-
-      // Update the RxList item directly with the new likes list
-      posts[postIndex] = PostModel(
-        id: post.id,
-        type: post.type,
-        text: post.text,
-        author: post.author,
-        video: post.video,
-        image: post.image,
-        likes: newLikes, // Inject the updated list
-        comments: post.comments,
-      );
-    }
-  }
 
   Future<void> loadRecommendedPosts(String type) async {
     loader.showLoader();

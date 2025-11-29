@@ -71,9 +71,8 @@ class ReelsInteractionOverlay extends StatelessWidget {
 
                   // Likes
                   Obx(() {
-                    // Find the updated post model from the list
                     final currentPost = postController.posts.firstWhereOrNull((p) => p.id == post.id) ?? post;
-                    final isLiked = postController.isPostLiked(currentPost.id);
+                    final bool isLiked = currentPost.isLiked;
 
                     return GestureDetector(
                       onTap: () => postController.toggleLike(currentPost.id),
@@ -84,6 +83,7 @@ class ReelsInteractionOverlay extends StatelessWidget {
                       ),
                     );
                   }),
+
                   const SizedBox(height: 20),
 
                   // Comments

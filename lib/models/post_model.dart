@@ -113,6 +113,8 @@ class ImageModel {
 }*/
 
 
+import 'dart:ffi';
+
 class PostModel {
   final String id;
   final String type;
@@ -122,6 +124,7 @@ class PostModel {
   final ContentDetails? image;
   final List<dynamic> likes;
   final List<dynamic> comments;
+  final bool isLiked;
 
   PostModel({
     required this.id,
@@ -132,6 +135,7 @@ class PostModel {
     this.image,
     this.likes = const [],
     this.comments = const [],
+    this.isLiked = false,
   });
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
@@ -144,6 +148,7 @@ class PostModel {
       image: json['image'] != null ? ContentDetails.fromJson(json['image']) : null,
       likes: json['likes'] ?? [],
       comments: json['comments'] ?? [],
+      isLiked: json['isLiked'] ?? false,
     );
   }
 }

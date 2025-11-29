@@ -10,7 +10,7 @@ class PostRepo {
 
 
   Future<Response> likePost(String postId) async {
-    return await apiClient.put(
+    return await apiClient.putData(
       AppConstants.LIKE_POST(postId),
       {},
     );
@@ -18,7 +18,7 @@ class PostRepo {
 
 
   Future<Response> unlikePost(String postId) async {
-    return await apiClient.put(
+    return await apiClient.putData(
       AppConstants.UNLIKE_POST(postId),
       {},
     );
