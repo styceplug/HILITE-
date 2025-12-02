@@ -7,7 +7,7 @@ import '../utils/dimensions.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool isLoading;
   final bool isDisabled;
   final EdgeInsets? padding;

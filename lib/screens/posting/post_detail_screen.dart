@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/post_controller.dart';
 import 'package:hilite/utils/dimensions.dart';
 import 'package:hilite/widgets/app_loading_overlay.dart';
 import 'package:hilite/widgets/custom_appbar.dart';
@@ -17,10 +18,10 @@ class PostDetailsScreen extends StatefulWidget {
 }
 
 class _PostDetailsScreenState extends State<PostDetailsScreen> {
+  PostController postController = Get.find<PostController>();
   late TextEditingController _titleController;
   late TextEditingController _descController;
   VideoPlayerController? _videoController;
-  bool _isUploading = false;
   late XFile file;
   late bool isVideo;
 
@@ -53,16 +54,6 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     _descController.dispose();
     _videoController?.dispose();
     super.dispose();
-  }
-
-  Future<void> _uploadPost() async {
-    setState(() => _isUploading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Post uploaded successfully!')),
-    );
-    Get.back();
   }
 
   @override
@@ -120,15 +111,28 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
               hintText: 'Post Description',
             ),
             SizedBox(height: Dimensions.height20),
-            CustomButton(
+            Obx(() => CustomButton(
               text: 'Upload Post',
-              onPressed: () {
-                _isUploading ? null : _uploadPost;
+              // Get the current loading state from the controller
+              isLoading: postController.isLoading.value,
+              onPressed: postController.isLoading.value
+                  ? null // Disable if uploading
+                  : () {
+                // Call the controller function with all necessary arguments
+                postController.uploadMediaPost(
+                  file: file,
+                  isVideo: isVideo,
+                  title: _titleController.text,
+                  description: _descController.text,
+                  text: _descController.text, // Using description as the main text
+                  isPublic: true, // Hardcoded for now, can be a checkbox state
+                );
               },
-              isLoading: _isUploading,
+              // Keep the button disabled if form fields are empty
               isDisabled:
-                  _titleController.text.isEmpty || _descController.text.isEmpty,
-            ),
+              _titleController.text.isEmpty || _descController.text.isEmpty,
+            )),
+            SizedBox(height: Dimensions.height20),
           ],
         ),
       ),

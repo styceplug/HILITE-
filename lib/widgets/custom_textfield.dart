@@ -13,8 +13,10 @@ class CustomTextField extends StatelessWidget {
   final bool enabled;
   final Widget? suffixIcon;
   final TextInputType keyboardType;
+  final Color? textColor;
   final int? maxLines;
   final void Function(String)? onChanged;
+  final String? Function(String?)? validator;
 
   const CustomTextField({
     super.key,
@@ -26,10 +28,12 @@ class CustomTextField extends StatelessWidget {
     this.obscureText = false,
     this.enabled = true,
     this.suffixIcon,
+    this.textColor,
     this.keyboardType = TextInputType.text,
     this.maxLines,
     this.onChanged,
     this.autofillHints,
+    this.validator,
   });
 
   @override
@@ -38,14 +42,14 @@ class CustomTextField extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     // Use theme-based colors
-    final Color textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final Color effectiveTextColor = textColor ?? Colors.black;
     final Color fillColor = theme.inputDecorationTheme.fillColor ??
         (isDark ? Colors.white10 : const Color(0xFFDBD0C8).withOpacity(0.1));
     final Color borderColor = theme.dividerColor;
     final Color focusColor = theme.colorScheme.primary.withOpacity(0.6);
     final Color enabledBorderColor = theme.colorScheme.secondary;
 
-    return TextField(
+    return TextFormField(
       onChanged: onChanged,
       controller: controller,
       obscureText: obscureText,
@@ -54,17 +58,18 @@ class CustomTextField extends StatelessWidget {
       autofillHints: autofillHints,
       keyboardType: keyboardType,
       style: TextStyle(color: textColor,fontFamily: 'Poppins'),
+      validator: validator,
       decoration: InputDecoration(
         filled: true,
         fillColor: fillColor,
         labelText: labelText,
-        labelStyle: hintStyle ?? TextStyle(color: textColor.withOpacity(0.5),fontFamily: 'Poppins'),
+        labelStyle: hintStyle ?? TextStyle(color: textColor?.withOpacity(0.5),fontFamily: 'Poppins'),
         hintText: hintText,
         prefixIcon: prefixIcon != null
-            ? Icon(prefixIcon, color: textColor.withOpacity(0.6))
+            ? Icon(prefixIcon, color: textColor?.withOpacity(0.6))
             : null,
         suffixIcon: suffixIcon,
-        hintStyle: hintStyle ?? TextStyle(color: textColor.withOpacity(0.5),fontFamily: 'Poppins'),
+        hintStyle: hintStyle ?? TextStyle(color: textColor?.withOpacity(0.5),fontFamily: 'Poppins'),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Dimensions.radius20),
           borderSide: BorderSide(color: borderColor),

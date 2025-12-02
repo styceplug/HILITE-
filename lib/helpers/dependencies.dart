@@ -1,9 +1,12 @@
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/post_controller.dart';
+import 'package:hilite/controllers/trial_controller.dart';
 import 'package:hilite/controllers/user_controller.dart';
+import 'package:hilite/controllers/wallet_controller.dart';
 import 'package:hilite/data/api/api_checker.dart';
 import 'package:hilite/data/repo/post_repo.dart';
+import 'package:hilite/data/repo/trial_repo.dart';
 import 'package:hilite/data/repo/user_repo.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -50,6 +53,7 @@ Future<void> init() async {
     ),
   );
   Get.lazyPut(() => PostRepo(apiClient: Get.find()));
+  Get.lazyPut(() => TrialRepo(apiClient: Get.find()));
 
   //controllers
   Get.lazyPut(() => AppController(appRepo: Get.find()));
@@ -61,5 +65,7 @@ Future<void> init() async {
     () => UserController(userRepo: Get.find(), sharedPreferences: Get.find()),
   );
   Get.lazyPut(() => GlobalLoaderController());
+  Get.lazyPut(() => WalletController());
   Get.lazyPut(() => PostController(postRepo: Get.find()));
+  Get.lazyPut(() => TrialController(trialRepo: Get.find()), fenix: true);
 }

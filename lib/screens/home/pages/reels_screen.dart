@@ -41,54 +41,60 @@ class _ReelsScreenState extends State<ReelsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Obx(() {
-        if (controller.posts.isEmpty) {
-          controller.loadRecommendedPosts(currentType);;
-        }
+    return RefreshIndicator(
+      onRefresh: (){
+        controller.loadRecommendedPosts(currentType);
+        return Future.delayed(const Duration(seconds: 1));
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Obx(() {
+          if (controller.posts.isEmpty) {
+            controller.loadRecommendedPosts(currentType);;
+          }
 
-        return Stack(
-          children: [
-            // 1. The Vertical Feed
-            PageView.builder(
-              controller: pageController,
-              scrollDirection: Axis.vertical,
-              itemCount: controller.posts.length,
-              onPageChanged: (index) => controller.onPageChanged(index),
-              itemBuilder: (_, index) {
-                final post = controller.posts[index];
-                if (post.type == 'video') {
-                  return ReelsVideoItem(
-                      index: index,
-                      post: post,
-                      controller: controller
-                  );
-                } else if (post.type == 'image') {
-                  return _buildImageItem(post);
-                } else {
-                  return _buildTextItem(post);
-                }
-              },
-            ),
-
-            // 2. Top Tabs (Trials / Images / Videos)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 10,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _tabBtn("Trials", "text"),
-                  _tabBtn("Images", "image"),
-                  _tabBtn("Videos", "video"),
-                ],
+          return Stack(
+            children: [
+              // 1. The Vertical Feed
+              PageView.builder(
+                controller: pageController,
+                scrollDirection: Axis.vertical,
+                itemCount: controller.posts.length,
+                onPageChanged: (index) => controller.onPageChanged(index),
+                itemBuilder: (_, index) {
+                  final post = controller.posts[index];
+                  if (post.type == 'video') {
+                    return ReelsVideoItem(
+                        index: index,
+                        post: post,
+                        controller: controller
+                    );
+                  } else if (post.type == 'image') {
+                    return _buildImageItem(post);
+                  } else {
+                    return _buildTextItem(post);
+                  }
+                },
               ),
-            ),
-          ],
-        );
-      }),
+
+              // 2. Top Tabs (Trials / Images / Videos)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 10,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _tabBtn("Trials", "text"),
+                    _tabBtn("Images", "image"),
+                    _tabBtn("Videos", "video"),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }),
+      ),
     );
   }
 

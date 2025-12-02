@@ -89,8 +89,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  if (user.role != 'fan') _buildStat('Posts', '${user.posts}'),
-                  if (user.role != 'fan') _divider(),
+                  if (user.role != 'fan')
                   _buildStat('Followers', '${user.followers}'),
                   _divider(),
                   _buildStat('Following', '${user.following}'),

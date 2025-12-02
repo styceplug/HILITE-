@@ -22,7 +22,6 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-
 class _ProfileScreenState extends State<ProfileScreen> {
   UserController userController = Get.find<UserController>();
 
@@ -65,13 +64,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Row(
                 children: [
                   InkWell(
-                    onTap: () => Get.toNamed(AppRoutes.recommendedAccountsScreen),
+                    onTap:
+                        () => Get.toNamed(AppRoutes.recommendedAccountsScreen),
                     child: Icon(Iconsax.people, size: Dimensions.iconSize24),
                   ),
                   const Spacer(),
                   InkWell(
                     onTap: () => Get.toNamed(AppRoutes.settingsScreen),
-                    child: Icon(Iconsax.more_circle, size: Dimensions.iconSize24),
+                    child: Icon(
+                      Iconsax.more_circle,
+                      size: Dimensions.iconSize24,
+                    ),
                   ),
                 ],
               ),
@@ -87,15 +90,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SizedBox(height: Dimensions.height20),
 
               /// 🧾 Name & Role
-              if(user.role=='club')
-              Text(
-                club?.clubName ?? '',
-                style: TextStyle(
-                  fontSize: Dimensions.font18,
-                  fontWeight: FontWeight.w600,
+              if (user.role == 'club')
+                Text(
+                  club?.clubName ?? '',
+                  style: TextStyle(
+                    fontSize: Dimensions.font18,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              if(user.role != 'club')
+              if (user.role != 'club')
                 Text(
                   user.name,
                   style: TextStyle(
@@ -115,33 +118,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SizedBox(height: Dimensions.height10),
 
               /// 📖 Bio
-
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
-                  child: Text(
-                    user.bio ?? '',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: Dimensions.font13,
-                      fontWeight: FontWeight.w400,
-                      color: AppColors.black.withOpacity(0.8),
-                      height: 1.4,
-                    ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
+                child: Text(
+                  user.bio ?? '',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: Dimensions.font13,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.black.withOpacity(0.8),
+                    height: 1.4,
                   ),
                 ),
+              ),
 
               SizedBox(height: Dimensions.height20),
-
-
 
               /// 📊 Stats
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   if (user.role != 'fan')
-                    _buildStat('Posts', '${user.posts}'),
-                  if (user.role != 'fan') _divider(),
-                  _buildStat('Followers', '${user.followers}'),
+                    _buildStat('Followers', '${user.followers}'),
                   _divider(),
                   _buildStat('Following', '${user.following}'),
                 ],
@@ -178,11 +176,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           SizedBox(width: Dimensions.width20),
                           _buildInfoTag('Founded: ${club?.yearFounded ?? '-'}'),
                           SizedBox(width: Dimensions.width20),
-
                         ],
                       ),
                       SizedBox(height: Dimensions.width20),
-
                     ],
                   ),
                 ),
@@ -197,15 +193,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
 
               /// ✏️ Edit Profile Button
-
-                CustomButton(
-                  text: 'Edit Profile',
-                  onPressed: () {
-                    Get.toNamed(AppRoutes.editProfileScreen);
-                  },
-                  backgroundColor: AppColors.primary,
-                  borderRadius: BorderRadius.circular(Dimensions.radius10),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: CustomButton(
+                      text: 'Edit Profile',
+                      onPressed: () {
+                        Get.toNamed(AppRoutes.editProfileScreen);
+                      },
+                      backgroundColor: AppColors.primary,
+                      borderRadius: BorderRadius.circular(Dimensions.radius10),
+                    ),
+                  ),
+                  if (user.role == 'club' || user.role == 'agent')
+                    SizedBox(width: Dimensions.width10),
+                  CustomButton(
+                    text: 'Create Trial',
+                    onPressed: () {
+                      Get.toNamed(AppRoutes.createTrialScreen);
+                    },
+                    backgroundColor: AppColors.secondary,
+                    borderColor: AppColors.primary,
+                    borderRadius: BorderRadius.circular(Dimensions.radius10),
+                  ),
+                ],
+              ),
 
               SizedBox(height: Dimensions.height30),
               Divider(color: AppColors.grey4),
@@ -214,11 +226,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               /// 📦 Placeholder Boxes (for future content)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildBox(),
-                  _buildBox(),
-                  _buildBox(),
-                ],
+                children: [_buildBox(), _buildBox(), _buildBox()],
               ),
             ],
           ),

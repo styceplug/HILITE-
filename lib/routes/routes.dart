@@ -17,9 +17,12 @@ import 'package:hilite/screens/settings/settings_screen.dart';
 import 'package:hilite/screens/splash/no_internet_screen.dart';
 import 'package:hilite/screens/splash/onboarding_screen.dart';
 import 'package:hilite/screens/splash/update_app_screen.dart';
+import 'package:hilite/screens/trials/trials_screen_list.dart';
 
 import '../screens/splash/splash.dart';
 import '../screens/splash/splash_screen.dart';
+import '../screens/trials/create_trails_screen.dart';
+import '../screens/trials/trial_details_screen.dart';
 
 class AppRoutes {
 
@@ -53,6 +56,13 @@ class AppRoutes {
   static const String referralScreen = '/referral-screen';
   static const String postDetailScreen = '/post-detail-screen';
   static const String recommendedAccountsScreen = '/recommended-accounts-screen';
+
+  //trials
+  static const String createTrialScreen = '/create-trial-screen';
+  static const String trialDetailScreen = '/trial-detail-screen';
+  static const String trialListScreen = '/trial-list-screen';
+
+
 
 
 
@@ -208,6 +218,26 @@ class AppRoutes {
       page: () =>  ReferralScreen(),
       transition: Transition.fadeIn,
     ),
+
+    //trials
+    GetPage(
+      name: createTrialScreen,
+      page: () => const CreateTrialScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: trialDetailScreen,
+      page: () =>  TrialDetailScreen(trialId: '',),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: trialListScreen,
+      page: () =>  TrialListScreen(),
+      transition: Transition.fadeIn,
+    ),
+
+
+
 
 
   ];

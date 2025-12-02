@@ -34,6 +34,20 @@ class AppConstants {
   static  String GET_OTHERS_PROFILE(String targetId) => '/v1/user/external/$targetId/profile';
   static  String UNLIKE_POST(String postId) => '/v1/post/retrieve/$postId/unlike';
   static  String LIKE_POST(String postId) => '/v1/post/retrieve/$postId/like';
+  static  String GET_POST_COMMENTS(String postId) => '/v1/post/retrieve/$postId/comment';
+  static  String POST_NEW_COMMENTS(String postId) => '/v1/post/retrieve/$postId/comment';
+  static const String UPLOAD_IMAGE_POST = '/v1/post/upload/image';
+  static const String UPLOAD_VIDEO_POST = '/v1/post/upload/video';
+
+
+  //trials
+  static const String POST_TRIAL = '/v1/trial';
+  static const String GET_TRIALS = '/v1/trial';
+  static  String GET_SINGLE_TRIALS(String trialId) => '/v1/trial/$trialId';
+  static  String EDIT_TRIALS(String trialId) => '/v1/trial/$trialId';
+  static  String DELETE_TRIALS(String trialId) => '/v1/trial/$trialId';
+  static  String REGISTER_FOR_TRIALS(String trialId) => '/v1/trial/$trialId/register';
+
 
 
 

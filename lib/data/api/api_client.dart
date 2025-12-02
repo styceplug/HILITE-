@@ -172,10 +172,26 @@ class ApiClient extends GetConnect implements GetxService {
       print('📩 Multipart Response Status: ${response.statusCode}');
       print('📩 Multipart Body: ${response.body}');
 
-      final parsedBody = jsonDecode(response.body);
+      dynamic parsedBody = {}; // Initialize as empty map/dynamic
+
+// 💡 CRITICAL FIX: Only attempt to decode JSON for success or expected error codes (e.g., 4xx)
+      if (response.statusCode < 400 || response.statusCode == 400) {
+        try {
+          parsedBody = jsonDecode(response.body);
+        } catch (e) {
+          // If decoding fails (e.g., empty body or invalid JSON), log it but proceed
+          print("Warning: Failed to decode JSON body for status ${response.statusCode}.");
+          parsedBody = {'error': 'Failed to decode response body'};
+        }
+      } else {
+        // For 500 errors, the body is usually not JSON (HTML/Plain Text)
+        // We treat the raw body as the error message content.
+        parsedBody = {'error': response.body};
+      }
+
       final result = Response(
         statusCode: response.statusCode,
-        body: parsedBody,
+        body: parsedBody, // Now safely a map/dynamic
         statusText: response.reasonPhrase,
       );
 

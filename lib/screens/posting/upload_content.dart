@@ -111,9 +111,15 @@ class _UploadContentState extends State<UploadContent> {
 
   Future<void> _pickFromGallery() async {
     try {
-      final result = await _picker.pickMultipleMedia();
-      if (result.isNotEmpty) {
-        _navigateToPostDetails(result.first);
+      // 💡 Changed pickMultipleMedia to pickMedia (simpler for single upload flow)
+      final result = await _picker.pickMedia();
+
+      if (result != null) {
+        // 💡 FIX: Update the state with the last picked item
+        setState(() {
+          _lastGalleryItem = result;
+        });
+        _navigateToPostDetails(result);
       }
     } catch (e) {
       debugPrint('Gallery pick error: $e');

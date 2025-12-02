@@ -1,168 +1,32 @@
-
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/user_controller.dart';
+import 'package:hilite/controllers/wallet_controller.dart';
 import 'package:hilite/helpers/global_loader_controller.dart';
 import 'package:hilite/models/post_model.dart';
 import 'package:hilite/widgets/snackbars.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-
+import 'package:camera/camera.dart';
 import '../data/repo/post_repo.dart';
-
-/*
-class PostController extends GetxController {
-  final PostRepo postRepo;
-  PostController({required this.postRepo});
-
-  // Data State
-  var posts = <PostModel>[].obs;
-  var isLoading = false.obs;
-
-  // Video Management State
-  final Map<int, VideoPlayerController> videoControllers = {};
-
-  // We keep track of initialized indexes to update UI smoothly
-  var initializedIndexes = <int>{}.obs;
-
-  int _currentIndex = 0;
-
-  @override
-  void onClose() {
-    _disposeAllVideos();
-    super.onClose();
-  }
-
-  // -----------------------------
-  // Data Loading
-  // -----------------------------
-  Future<void> loadRecommendedPosts(String type) async {
-    isLoading.value = true;
-    _disposeAllVideos();
-    posts.clear();
-
-    try {
-      final response = await postRepo.getRecommendedPosts(contentType: type);
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = response.body['data'] as List;
-        posts.value = data.map((e) => PostModel.fromJson(e)).toList();
-      }
-    } catch (e) {
-      print("Error loading posts: $e");
-    } finally {
-      isLoading.value = false;
-    }
-
-    // Initialize the first video immediately if data exists
-    if (posts.isNotEmpty && type == "video") {
-      onPageChanged(0);
-    }
-  }
-
-  // -----------------------------
-  // Smart Video Lifecycle (The Core Optimization)
-  // -----------------------------
-  void onPageChanged(int index) {
-    _currentIndex = index;
-
-    // 1. Play Current
-    _playController(index);
-
-    // 2. Preload Next (Buffer)
-    if (index + 1 < posts.length) {
-      _initializeController(index + 1).then((_) {
-        // Ensure it doesn't play automatically, just buffers
-        videoControllers[index + 1]?.pause();
-      });
-    }
-
-    // 3. Keep Previous (Paused, for quick back nav)
-    if (index - 1 >= 0) {
-      videoControllers[index - 1]?.pause();
-    }
-
-    // 4. Garbage Collection (Dispose videos far away)
-    // We only keep [index - 1], [index], [index + 1]
-    videoControllers.keys.toList().forEach((key) {
-      if (key < index - 1 || key > index + 1) {
-        _disposeController(key);
-      }
-    });
-  }
-
-  Future<void> _initializeController(int index) async {
-    // If already initialized, just return
-    if (videoControllers.containsKey(index)) return;
-
-    final post = posts[index];
-    if (post.type != 'video' || post.video?.url == null) return;
-
-    final controller = VideoPlayerController.network(post.video!.url!);
-    videoControllers[index] = controller;
-
-    try {
-      await controller.initialize();
-      controller.setLooping(true);
-      initializedIndexes.add(index); // Notify UI
-    } catch (e) {
-      print("Error init video $index: $e");
-      // Clean up if init failed
-      videoControllers.remove(index);
-    }
-  }
-
-  void _playController(int index) async {
-    // Ensure initialized
-    if (!videoControllers.containsKey(index)) {
-      await _initializeController(index);
-    }
-
-    final controller = videoControllers[index];
-    if (controller != null && controller.value.isInitialized) {
-      controller.play();
-    }
-  }
-
-  void _disposeController(int index) {
-    if (videoControllers.containsKey(index)) {
-      videoControllers[index]?.dispose();
-      videoControllers.remove(index);
-      initializedIndexes.remove(index);
-    }
-  }
-
-  void _disposeAllVideos() {
-    videoControllers.forEach((_, controller) => controller.dispose());
-    videoControllers.clear();
-    initializedIndexes.clear();
-  }
-
-  // -----------------------------
-  // User Actions
-  // -----------------------------
-  void togglePlayPause(int index) {
-    final controller = videoControllers[index];
-    if (controller != null && controller.value.isInitialized) {
-      controller.value.isPlaying ? controller.pause() : controller.play();
-      // Force UI update to show play/pause icon
-      update(['video_overlay_$index']);
-    }
-  }
-
-  void stopAll() {
-    videoControllers.values.forEach((element) => element.pause());
-  }
-}*/
-
 import 'dart:io';
-
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import '../models/comment_model.dart';
+import '../models/gift_model.dart';
+import '../routes/routes.dart';
+import '../widgets/comment_bottom_sheet.dart';
+import '../widgets/gift_bottom_modal.dart';
 
 class PostController extends GetxController {
   final PostRepo postRepo;
+
   PostController({required this.postRepo});
 
   var posts = <PostModel>[].obs;
   GlobalLoaderController loader = Get.find<GlobalLoaderController>();
-
+  RxList<CommentModel> comments = <CommentModel>[].obs;
+  RxBool isLoading = false.obs;
+  UserController userController = Get.find<UserController>();
 
   // Map Index -> VideoController
   final Map<int, VideoPlayerController> videoControllers = {};
@@ -176,6 +40,253 @@ class PostController extends GetxController {
   void onClose() {
     _disposeAll();
     super.onClose();
+  }
+
+  void showGiftSheet(String postId) {
+    // 1. Pause the currently playing video
+    pauseAll();
+
+    // 2. Show the bottom sheet
+    Get.bottomSheet(
+      GiftSelectionBottomSheet(postId: postId),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.7),
+    );
+  }
+
+
+// 💡 Conceptual method to handle the gift submission
+  Future<void> sendGift(String postId, GiftModel gift) async {
+    final WalletController walletController = Get.find<WalletController>();
+
+    if (!walletController.canAfford(gift.coins)) {
+      // Should be caught by the UI, but good to double-check
+      return;
+    }
+
+    // Set loading state if needed for API call
+
+    try {
+      // 1. Call API to send gift (PostRepo needs this method)
+      // final response = await postRepo.sendGift(postId, gift.name, gift.coins);
+
+      // 2. If API succeeds, deduct coins locally and update UI
+      walletController.deductCoins(gift.coins);
+
+      // 3. (Optional) Show confirmation
+      // CustomSnackBar.success(message: 'Sent ${gift.name} to the post creator!');
+
+    } catch (e) {
+      // Handle error
+      // CustomSnackBar.failure(message: 'Failed to send gift. Try again.');
+    } finally {
+      // Hide loading state
+    }
+  }
+
+
+  Future<void> uploadMediaPost({
+    required XFile file,
+    required bool isVideo,
+    required String title,
+    required String description,
+    required String text, // Use text field for main text content
+    required bool isPublic,
+  }) async {
+    if (isLoading.value) return; // Prevent double-tap upload
+
+    // Simple validation (can be more complex)
+    if (title.isEmpty || description.isEmpty) {
+      // CustomSnackBar.failure(message: 'Title and description are required.');
+      return;
+    }
+
+    isLoading.value = true;
+
+    try {
+      final response = isVideo
+          ? await postRepo.uploadVideoPost(
+        videoFile: file,
+        title: title,
+        description: description,
+        text: text,
+        isPublic: isPublic,
+      )
+          : await postRepo.uploadImagePost(
+        imageFile: file,
+        title: title,
+        description: description,
+        text: text,
+        isPublic: isPublic,
+      );
+
+      if (response.statusCode == 201) {
+        // Post successful!
+        CustomSnackBar.success(message: 'Post uploaded successfully!');
+
+        // Navigate back to the main feed/home screen
+        Get.offAllNamed(AppRoutes.homeScreen);
+
+
+      } else {
+        // Handle upload failure error
+        String message = response.body?['message'] ?? 'Upload failed. Server error.';
+        // CustomSnackBar.failure(message: message);
+        print('Upload Failed: $message');
+      }
+
+    } catch (e) {
+      // Handle network or exception error
+      // CustomSnackBar.failure(message: 'Network error during upload.');
+      print('Upload Exception: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> submitComment(String postId, String content) async {
+    if (content.trim().isEmpty) return;
+
+    final currentUser = userController.user.value;
+    if (currentUser == null || currentUser.id.isEmpty) {
+      return;
+    }
+
+    final commentUser = CommentUserModel(
+      id: currentUser.id,
+      name: currentUser.name,
+      username: currentUser.username,
+      profilePicture: currentUser.profilePicture,
+    );
+
+    final tempComment = CommentModel(
+      id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+      postId: postId,
+      content: content.trim(),
+      createdAt: DateTime.now(),
+      likes: [],
+      replies: [],
+      user: commentUser,
+    );
+
+    comments.insert(0, tempComment);
+
+    try {
+      final response = await postRepo.postNewComment(
+        postId: postId,
+        content: content.trim(),
+      );
+
+      if (response.statusCode == 200) {
+        // 3. Server Success: Replace the temporary comment with the final server-provided data
+        final serverCommentData = response.body['data'];
+
+        // 💡 NEW LOGIC: Use the server's ID and timestamp, but keep the local user object
+
+        // Create a final CommentModel, using the local user data (commentUser)
+        // and merging the new server-provided ID and timestamps.
+        final finalComment = CommentModel(
+          id: serverCommentData['_id'] ?? tempComment.id,
+          // Use server ID
+          postId: serverCommentData['post'] ?? postId,
+          // CRITICAL: Reuse the rich user data object we created locally
+          user: tempComment.user,
+          content: serverCommentData['content'] ?? tempComment.content,
+          likes: serverCommentData['likes'] ?? [],
+          replies: serverCommentData['replies'] ?? [],
+          createdAt:
+              DateTime.tryParse(serverCommentData['createdAt']) ??
+              tempComment.createdAt,
+        );
+
+        // Find the temporary comment index (using its temporary ID)
+        final tempIndex = comments.indexWhere((c) => c.id == tempComment.id);
+
+        if (tempIndex != -1) {
+          // Replace the temporary model with the final, persistent model
+          comments[tempIndex] = finalComment;
+        }
+
+        _incrementPostCommentCount(postId);
+      } else {
+        print("Comment post failed. Status: ${response.statusCode}");
+
+        comments.removeWhere((c) => c.id == tempComment.id);
+      }
+    } catch (e) {
+      print('🔥 Exception during comment submission: $e');
+      comments.removeWhere((c) => c.id == tempComment.id);
+    }
+  }
+
+  void _incrementPostCommentCount(String postId) {
+    final postIndex = posts.indexWhere((p) => p.id == postId);
+    if (postIndex != -1) {
+      final post = posts[postIndex];
+
+      posts[postIndex] = PostModel(
+        id: post.id,
+        type: post.type,
+        text: post.text,
+        author: post.author,
+        video: post.video,
+        image: post.image,
+        likes: post.likes,
+
+        comments: [
+          ...post.comments,
+          {'id': 'temp'},
+        ],
+        isLiked: post.isLiked,
+      );
+    }
+  }
+
+  void showCommentsForPost(String postId) async {
+    pauseAll();
+
+    await fetchComments(postId);
+
+    Get.bottomSheet(
+      CommentsBottomSheet(postId: postId),
+      isScrollControlled: true, // Allows the sheet to take up more screen space
+      backgroundColor: Colors.transparent, // Required for rounded corners
+      barrierColor: Colors.black.withOpacity(0.7),
+    );
+  }
+
+  Future<void> fetchComments(String postId) async {
+    if (isLoading.value) return;
+
+    isLoading.value = true;
+    comments.clear();
+
+    try {
+      final response = await postRepo.getPostComments(postId);
+
+      if (response.statusCode == 200 && response.body != null) {
+        final List<dynamic> commentData = response.body['data'] ?? [];
+
+        // Map the JSON list to CommentModel list
+        final List<CommentModel> fetchedComments =
+            commentData.map((json) {
+              return CommentModel.fromJson(json as Map<String, dynamic>);
+            }).toList();
+
+        comments.assignAll(fetchedComments);
+        print('✅ Fetched ${comments.length} comments for post $postId');
+      } else {
+        // Handle API error (e.g., 400 Invalid Post ID)
+        print('Error fetching comments: ${response.statusCode}');
+        // Optionally show a CustomSnackBar error
+      }
+    } catch (e) {
+      print('🔥 Exception during comment fetch: $e');
+      // Optionally show a CustomSnackBar error
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   bool isPostLiked(String postId) {
@@ -229,9 +340,10 @@ class PostController extends GetxController {
     _updatePostLikes(postId, shouldBeLiked);
 
     // 2. Determine which API call to make
-    final apiCall = currentlyLiked
-        ? postRepo.unlikePost(postId)
-        : postRepo.likePost(postId);
+    final apiCall =
+        currentlyLiked
+            ? postRepo.unlikePost(postId)
+            : postRepo.likePost(postId);
 
     try {
       final response = await apiCall;
@@ -246,7 +358,6 @@ class PostController extends GetxController {
       // NOTE: You could optionally parse the response body's new 'likes' list
       // and 'isLiked' flag and update the model again here to ensure
       // perfect server synchronization, but the optimistic update is usually enough.
-
     } catch (e) {
       // 4. Handle connection or server errors
       print("Network error during like/unlike: $e");
@@ -254,19 +365,20 @@ class PostController extends GetxController {
     }
   }
 
-
   String get _currentUserId {
     try {
       // Assuming your UserController holds the logged-in user's ID
       final userController = Get.find<UserController>();
-      return userController.user.value?.id ?? ''; // Adjust based on your user model
+      return userController.user.value?.id ??
+          ''; // Adjust based on your user model
     } catch (e) {
-      print("Error: UserController not found or user ID missing. Cannot perform optimistic like.");
+      print(
+        "Error: UserController not found or user ID missing. Cannot perform optimistic like.",
+      );
       // Fallback or handle this setup error
       return '';
     }
   }
-
 
   Future<void> loadRecommendedPosts(String type) async {
     loader.showLoader();
@@ -313,7 +425,6 @@ class PostController extends GetxController {
   }
 
   Future<void> _initController(int index) async {
-
     if (index >= posts.length || posts[index].type != 'video') {
       print('Controller init skipped: Invalid index or not a video post.');
       return;
@@ -360,7 +471,9 @@ class PostController extends GetxController {
     if (index + 1 < posts.length) {
       _preloadNext(index + 1);
       // Init controller but pause it
-      _initController(index + 1).then((_) => videoControllers[index + 1]?.pause());
+      _initController(
+        index + 1,
+      ).then((_) => videoControllers[index + 1]?.pause());
     }
 
     // 3. Keep Previous (Paused, for quick back nav)

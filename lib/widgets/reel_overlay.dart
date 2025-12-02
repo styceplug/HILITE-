@@ -6,6 +6,7 @@ import 'package:hilite/utils/dimensions.dart';
 import 'package:iconsax/iconsax.dart';
 
 import '../models/post_model.dart';
+import '../utils/colors.dart';
 
 class ReelsInteractionOverlay extends StatelessWidget {
   final PostModel post;
@@ -15,6 +16,9 @@ class ReelsInteractionOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     PostController postController = Get.find<PostController>();
+
+
+
 
 
     return Container(
@@ -51,11 +55,34 @@ class ReelsInteractionOverlay extends StatelessWidget {
                      SizedBox(height: Dimensions.height5),
 
 
-                    if (post.video?.description != null)
-                      Text(
-                        post.video!.description!,
-                        style:  TextStyle(color: Colors.white70, fontSize: Dimensions.font14),
-                      ),
+                    Builder(
+                      builder: (context) {
+                        String? descriptionText;
+
+                        // A. Prioritize the main post 'text' field if it exists
+                        if (post.text != null && post.text!.isNotEmpty) {
+                          descriptionText = post.text;
+                        }
+                        // B. If no main 'text', check the content-specific description
+                        else if (post.type == 'video' && post.video?.description != null) {
+                          descriptionText = post.video!.description;
+                        }
+                        else if (post.type == 'image' && post.image?.description != null) {
+                          descriptionText = post.image!.description;
+                        }
+
+                        // 3. Display the description if found
+                        if (descriptionText != null && descriptionText.isNotEmpty) {
+                          return Text(
+                            descriptionText,
+                            style: TextStyle(color: Colors.white70, fontSize: Dimensions.font14),
+                          );
+                        }
+
+                        // Return an empty SizedBox if no text is available
+                        return const SizedBox.shrink();
+                      },
+                    ),
                     SizedBox(height: Dimensions.height100)
                   ],
                 ),
@@ -86,19 +113,34 @@ class ReelsInteractionOverlay extends StatelessWidget {
 
                   const SizedBox(height: 20),
 
-                  // Comments
-                  _InteractionIcon(
-                      icon: Iconsax.message,
-                      label: "${post.comments.length}"
-                  ),
+                  Obx(() {
+                    // Find the updated post model from the observable list.
+                    final currentPost = postController.posts.firstWhereOrNull((p) => p.id == post.id) ?? post;
+
+                    return GestureDetector(
+                      onTap: () {
+                        // 🚀 Call the function that handles fetching and displaying the UI
+                        postController.showCommentsForPost(currentPost.id);
+                      },
+                      child: _InteractionIcon(
+                          icon: Iconsax.message,
+                          label: "${currentPost.comments.length}"
+                      ),
+                    );
+                  }),
                   const SizedBox(height: 20),
 
                   // Gift / Share
-                  const _InteractionIcon(
-                      icon: Icons.card_giftcard,
-                      label: "Gift",
-                      color: Colors.amber
-                  ),
+                   GestureDetector(
+                     onTap: (){
+                       postController.showGiftSheet(post.id);
+                     },
+                     child: _InteractionIcon(
+                        icon: Icons.card_giftcard,
+                        label: "Gift",
+                        color: Colors.amber
+                                       ),
+                   ),
                   SizedBox(height: Dimensions.height150),
                 ],
               ),
