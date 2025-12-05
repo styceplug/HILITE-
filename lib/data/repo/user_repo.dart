@@ -19,6 +19,12 @@ class UserRepo {
 
   static const String USER_KEY = "user_data";
 
+  Future<Response> getPersonalPosts(String type) async {
+    return await apiClient.getData(
+      '${AppConstants.GET_MY_POSTS}?type=$type',
+    );
+  }
+
   Future<Response> getUserProfile() async {
     try {
       return await apiClient.getData(AppConstants.GET_PROFILE);

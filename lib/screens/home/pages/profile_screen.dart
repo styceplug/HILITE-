@@ -13,6 +13,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../controllers/user_controller.dart';
+import '../../../models/post_model.dart';
 import '../../../widgets/profile_avatar.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -29,7 +30,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // userController.getUserProfile();
+      userController.getPersonalPosts('video');
       // userController.loadCachedUser();
     });
   }
@@ -207,6 +208,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   if (user.role == 'club' || user.role == 'agent')
                     SizedBox(width: Dimensions.width10),
+                  if (user.role == 'club' || user.role == 'agent')
                   CustomButton(
                     text: 'Create Trial',
                     onPressed: () {
@@ -223,16 +225,138 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Divider(color: AppColors.grey4),
               SizedBox(height: Dimensions.height20),
 
-              /// 📦 Placeholder Boxes (for future content)
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [_buildBox(), _buildBox(), _buildBox()],
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildTabItem(controller, 'video', 'Videos'),
+                  _buildTabItem(controller, 'image', 'Photos'),
+                  _buildTabItem(controller, 'text', 'Posts'),
+                ],
               ),
+              SizedBox(height: Dimensions.height20),
+
+              /// 🖼️ Content Grid
+              controller.isPostsLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildContentGrid(controller),
+
+              SizedBox(height: Dimensions.height30),
             ],
           ),
         );
       },
     );
+  }
+
+  Widget _buildTabItem(UserController controller, String type, String label) {
+    bool isSelected = controller.currentPostType == type;
+    return InkWell(
+      onTap: () => controller.getPersonalPosts(type),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: Dimensions.font16,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? AppColors.primary : AppColors.grey4,
+            ),
+          ),
+          SizedBox(height: 5),
+          if (isSelected)
+            Container(
+              height: 3,
+              width: 40,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 📱 Helper: The Grid Logic
+  Widget _buildContentGrid(UserController controller) {
+    if (controller.myPosts.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.only(top: Dimensions.height30),
+        child: Text("No ${controller.currentPostType} found."),
+      );
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      // IMPORTANT: Allows grid inside SingleChildScrollView
+      physics: const NeverScrollableScrollPhysics(),
+      // Disables internal scrolling
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3, // 3 items per row like Instagram
+        crossAxisSpacing: 5,
+        mainAxisSpacing: 5,
+        childAspectRatio: 1, // Square tiles
+      ),
+      itemCount: controller.myPosts.length,
+      itemBuilder: (context, index) {
+        var post = controller.myPosts[index];
+        return GestureDetector(
+          onTap: () {
+            // 🔗 Navigate based on type
+            if (controller.currentPostType == 'video') {
+              // Navigate to video player
+              // Get.toNamed(AppRoutes.videoPlayer, arguments: post);
+            } else {
+              // Navigate to post detail
+            }
+          },
+          child: _buildTileItem(post, controller.currentPostType),
+        );
+      },
+    );
+  }
+
+  Widget _buildTileItem(PersonalPostModel post, String type) {
+    if (type == 'text') {
+      return Container(
+        padding: const EdgeInsets.all(8),
+        color: AppColors.grey2,
+        child: Center(
+          child: Text(
+            post.text ?? '',
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: Dimensions.font12),
+          ),
+        ),
+      );
+    } else if (type == 'image') {
+      // Use your CachedNetworkImage or Image.network here
+      return Container(
+        decoration: BoxDecoration(
+          color: AppColors.grey2,
+          image: DecorationImage(
+            image: NetworkImage(post.mediaUrl ?? ''), // Fallback if null
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    } else {
+      // VIDEO TYPE
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          // Thumbnail Background
+          Container(color: AppColors.black),
+
+          // If you have a thumbnail URL:
+          // Image.network(post.thumbnail ?? '', fit: BoxFit.cover),
+          Center(
+            child: Icon(Icons.play_circle_fill, color: Colors.white, size: 30),
+          ),
+        ],
+      );
+    }
   }
 
   /// 🧩 Stat Widget

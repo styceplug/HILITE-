@@ -50,6 +50,8 @@ class AppConstants {
 
 
 
+  static const String GET_MY_POSTS = '/v1/user/personal/posts';
+
 
 
 

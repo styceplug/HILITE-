@@ -7,6 +7,7 @@ import 'package:hilite/widgets/snackbars.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/repo/user_repo.dart';
+import '../models/post_model.dart';
 import '../models/user_model.dart';
 
 class UserController extends GetxController {
@@ -20,6 +21,10 @@ class UserController extends GetxController {
   var recommendedUsers = <UserModel>[].obs;
   Rxn<UserModel> othersProfile = Rxn<UserModel>();
   RxList<UserModel> filteredUsers = <UserModel>[].obs;
+
+  bool isPostsLoading = false;
+  List<PersonalPostModel> myPosts = [];
+  String currentPostType = 'video';
 
   RxString searchQuery = ''.obs;
   RxString selectedRole = ''.obs;
@@ -409,6 +414,28 @@ class UserController extends GetxController {
       loader.hideLoader();
     }
   }
+
+  Future<void> getPersonalPosts(String type) async {
+    currentPostType = type;
+    isPostsLoading = true;
+    update();
+
+    Response response = await userRepo.getPersonalPosts(type);
+
+    if (response.statusCode == 200) {
+      myPosts = [];
+      List<dynamic> data = response.body['data'];
+
+      myPosts.addAll(data.map((e) => PersonalPostModel.fromJson(e)));
+
+    } else {
+      print("Error fetching posts: ${response.statusText}");
+    }
+
+    isPostsLoading = false;
+    update();
+  }
+
 
 
 

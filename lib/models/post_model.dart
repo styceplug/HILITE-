@@ -186,3 +186,34 @@ class ContentDetails {
     );
   }
 }
+
+class PersonalPostModel {
+  String? id;
+  String? type; // 'text', 'image', 'video'
+  String? text;
+  String? mediaUrl;
+  String? thumbnail;
+
+  PersonalPostModel({this.id, this.type, this.text, this.mediaUrl, this.thumbnail});
+
+  PersonalPostModel.fromJson(Map<String, dynamic> json) {
+    id = json['_id'];
+    type = json['type'];
+    text = json['text'];
+
+    // 🔧 FIX: Handle the nested JSON structure correctly
+    if (type == 'image' && json['image'] != null) {
+      // The API returns "image": { "url": "..." }
+      mediaUrl = json['image']['url'];
+    }
+    else if (type == 'video' && json['video'] != null) {
+      // Assuming video follows the same pattern
+      mediaUrl = json['video']['url'];
+      thumbnail = json['video']['thumbnail'];
+    }
+    // Fallback if the API changes structure or sends 'file'
+    else {
+      mediaUrl = json['mediaUrl'] ?? json['file'];
+    }
+  }
+}
