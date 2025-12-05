@@ -111,11 +111,9 @@ class _UploadContentState extends State<UploadContent> {
 
   Future<void> _pickFromGallery() async {
     try {
-      // 💡 Changed pickMultipleMedia to pickMedia (simpler for single upload flow)
       final result = await _picker.pickMedia();
 
       if (result != null) {
-        // 💡 FIX: Update the state with the last picked item
         setState(() {
           _lastGalleryItem = result;
         });
