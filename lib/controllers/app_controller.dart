@@ -46,6 +46,8 @@ class AppController extends GetxController {
     await checkLoginAndNavigate();
     postController.loadRecommendedPosts("video");
     await userController.getUserProfile();
+    userController.getPersonalPosts('video');
+    userController.getPersonalPosts('image');
   }
 
 

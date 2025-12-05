@@ -19,10 +19,29 @@ class UserRepo {
 
   static const String USER_KEY = "user_data";
 
-  Future<Response> getPersonalPosts(String type) async {
+  Future<Response> getExternalUserPosts(String targetId, String type) async {
     return await apiClient.getData(
-      '${AppConstants.GET_MY_POSTS}?type=$type',
+      '/v1/user/external/$targetId/posts?type=$type',
     );
+  }
+
+  Future<Response> getPersonalPosts(String type) async {
+    return await apiClient.getData('${AppConstants.GET_MY_POSTS}?type=$type');
+  }
+
+  Future<void> savePostsToCache(String type, List<dynamic> data) async {
+    String key = '${AppConstants.GET_MY_POSTS}_$type';
+    await sharedPreferences.setString(key, jsonEncode(data));
+  }
+
+  List<dynamic> getCachedPosts(String type) {
+    String key = '${AppConstants.GET_MY_POSTS}_$type';
+    String? jsonString = sharedPreferences.getString(key);
+
+    if (jsonString != null && jsonString.isNotEmpty) {
+      return jsonDecode(jsonString);
+    }
+    return [];
   }
 
   Future<Response> getUserProfile() async {

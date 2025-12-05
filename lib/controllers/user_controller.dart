@@ -23,8 +23,23 @@ class UserController extends GetxController {
   RxList<UserModel> filteredUsers = <UserModel>[].obs;
 
   bool isPostsLoading = false;
-  List<PersonalPostModel> myPosts = [];
+  // List<PersonalPostModel> myPosts = [];
   String currentPostType = 'video';
+  Map<String, List<PersonalPostModel>> postCache = {
+    'text': [],
+    'image': [],
+    'video': [],
+  };
+  bool isFirstLoad = false;
+  Map<String, List<PersonalPostModel>> externalPostCache = {
+    'text': [],
+    'image': [],
+    'video': [],
+  };
+
+  bool isExternalPostsLoading = false;
+  String currentExternalPostType = 'text';
+
 
   RxString searchQuery = ''.obs;
   RxString selectedRole = ''.obs;
@@ -36,6 +51,45 @@ class UserController extends GetxController {
     super.onInit();
     loadCachedUser();
   }
+
+
+
+  void clearExternalCache() {
+    externalPostCache = {
+      'text': [],
+      'image': [],
+      'video': [],
+    };
+    currentExternalPostType = 'text';
+    update();
+  }
+
+  Future<void> getExternalUserPosts(String targetId, String type) async {
+    currentExternalPostType = type;
+
+    // Check if we already fetched this type for this session
+    if (externalPostCache[type]!.isNotEmpty) {
+      isExternalPostsLoading = false;
+      update();
+    } else {
+      isExternalPostsLoading = true;
+      update();
+    }
+
+    Response response = await userRepo.getExternalUserPosts(targetId, type);
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = response.body['data'];
+      // Parse using the same model (since structure is identical)
+      externalPostCache[type] = data.map((e) => PersonalPostModel.fromJson(e)).toList();
+    } else {
+      print("Error fetching external posts: ${response.statusText}");
+    }
+
+    isExternalPostsLoading = false;
+    update();
+  }
+
 
   Future<void> saveUser(UserModel userModel) async {
     user.value = userModel;
@@ -245,7 +299,6 @@ class UserController extends GetxController {
     print("🔎 Filters applied: ${filteredUsers.length} results");
   }
 
-// 🆕 Optional: Debounced search for better performance
   Timer? _searchDebounce;
 
   void onSearchChanged(String value) {
@@ -259,7 +312,6 @@ class UserController extends GetxController {
     });
   }
 
-// 🗑️ Clear all filters
   void clearAllFilters() {
     searchQuery.value = '';
     selectedRole.value = '';
@@ -268,7 +320,6 @@ class UserController extends GetxController {
     applyFilters();
   }
 
-// 🔄 Dispose timer when controller is disposed
   @override
   void onClose() {
     _searchDebounce?.cancel();
@@ -415,25 +466,35 @@ class UserController extends GetxController {
     }
   }
 
+
+
   Future<void> getPersonalPosts(String type) async {
     currentPostType = type;
-    isPostsLoading = true;
-    update();
+
+    var localData = userRepo.getCachedPosts(type);
+    if (localData.isNotEmpty) {
+      postCache[type] = localData.map((e) => PersonalPostModel.fromJson(e)).toList();
+      isFirstLoad = false;
+      update();
+    } else {
+      isFirstLoad = true;
+      update();
+    }
 
     Response response = await userRepo.getPersonalPosts(type);
 
     if (response.statusCode == 200) {
-      myPosts = [];
-      List<dynamic> data = response.body['data'];
+      List<dynamic> serverData = response.body['data'];
 
-      myPosts.addAll(data.map((e) => PersonalPostModel.fromJson(e)));
+      userRepo.savePostsToCache(type, serverData);
 
+      postCache[type] = serverData.map((e) => PersonalPostModel.fromJson(e)).toList();
+
+      isFirstLoad = false;
+      update();
     } else {
-      print("Error fetching posts: ${response.statusText}");
+      print(response.body);
     }
-
-    isPostsLoading = false;
-    update();
   }
 
 

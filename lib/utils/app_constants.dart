@@ -53,6 +53,10 @@ class AppConstants {
   static const String GET_MY_POSTS = '/v1/user/personal/posts';
 
 
+  static const String GET_NOTIFICATIONS = '/v1/notification';
+  static const String MARK_NOTIFICATIONS_AS_READ = '/v1/notification';
+
+
 
 
 

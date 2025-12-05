@@ -209,8 +209,7 @@ class PersonalPostModel {
     else if (type == 'video' && json['video'] != null) {
       // Assuming video follows the same pattern
       mediaUrl = json['video']['url'];
-      thumbnail = json['video']['thumbnail'];
-    }
+      thumbnail = json['video']['thumbnailUrl'] ?? json['video']['thumbnail'];    }
     // Fallback if the API changes structure or sends 'file'
     else {
       mediaUrl = json['mediaUrl'] ?? json['file'];

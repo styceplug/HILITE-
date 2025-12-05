@@ -14,7 +14,9 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../controllers/user_controller.dart';
 import '../../../models/post_model.dart';
+import '../../../widgets/post_grid_shimmer.dart';
 import '../../../widgets/profile_avatar.dart';
+import '../../../widgets/reels_video_item.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -236,9 +238,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SizedBox(height: Dimensions.height20),
 
               /// 🖼️ Content Grid
-              controller.isPostsLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _buildContentGrid(controller),
+              Builder(
+                builder: (context) {
+                  if (controller.isFirstLoad && controller.postCache[controller.currentPostType]!.isEmpty) {
+                    return const PostGridShimmer();
+                  }
+
+                  if (controller.postCache[controller.currentPostType]!.isEmpty) {
+                    return Center(child: Text("No ${controller.currentPostType} posts yet."));
+                  }
+
+                  return _buildContentGrid(controller);
+                },
+              ),
 
               SizedBox(height: Dimensions.height30),
             ],
@@ -279,7 +291,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// 📱 Helper: The Grid Logic
   Widget _buildContentGrid(UserController controller) {
-    if (controller.myPosts.isEmpty) {
+
+    List<PersonalPostModel> currentPosts = controller.postCache[controller.currentPostType] ?? [];
+    if (controller.postCache.isEmpty) {
       return Padding(
         padding: EdgeInsets.only(top: Dimensions.height30),
         child: Text("No ${controller.currentPostType} found."),
@@ -291,21 +305,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // IMPORTANT: Allows grid inside SingleChildScrollView
       physics: const NeverScrollableScrollPhysics(),
       // Disables internal scrolling
+      padding: EdgeInsets.zero,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3, // 3 items per row like Instagram
         crossAxisSpacing: 5,
         mainAxisSpacing: 5,
         childAspectRatio: 1, // Square tiles
       ),
-      itemCount: controller.myPosts.length,
+      itemCount: currentPosts.length,
       itemBuilder: (context, index) {
-        var post = controller.myPosts[index];
+        var post = currentPosts[index];
         return GestureDetector(
           onTap: () {
             // 🔗 Navigate based on type
             if (controller.currentPostType == 'video') {
-              // Navigate to video player
-              // Get.toNamed(AppRoutes.videoPlayer, arguments: post);
+              Get.to(() => ProfileReelsPlayer(
+                videos: currentPosts,
+                initialIndex: index,
+              ));
             } else {
               // Navigate to post detail
             }
@@ -317,6 +334,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildTileItem(PersonalPostModel post, String type) {
+    // 1. TEXT
     if (type == 'text') {
       return Container(
         padding: const EdgeInsets.all(8),
@@ -330,28 +348,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       );
-    } else if (type == 'image') {
-      // Use your CachedNetworkImage or Image.network here
+    }
+
+    // 2. IMAGE
+    else if (type == 'image') {
+      // 🛡️ Safety Check: If url is null or empty, show a placeholder instead of crashing
+      if (post.mediaUrl == null || post.mediaUrl!.isEmpty) {
+        return Container(
+          color: AppColors.grey2,
+          child: const Icon(Icons.broken_image, color: Colors.grey),
+        );
+      }
+
       return Container(
         decoration: BoxDecoration(
           color: AppColors.grey2,
           image: DecorationImage(
-            image: NetworkImage(post.mediaUrl ?? ''), // Fallback if null
+            image: NetworkImage(post.mediaUrl!),
             fit: BoxFit.cover,
           ),
         ),
       );
-    } else {
-      // VIDEO TYPE
+    }
+
+    // 3. VIDEO
+    else {
       return Stack(
         fit: StackFit.expand,
         children: [
-          // Thumbnail Background
           Container(color: AppColors.black),
+          // If you have a thumbnail, render it here safely
+          if (post.thumbnail != null && post.thumbnail!.isNotEmpty)
+            Image.network(post.thumbnail!, fit: BoxFit.cover),
 
-          // If you have a thumbnail URL:
-          // Image.network(post.thumbnail ?? '', fit: BoxFit.cover),
-          Center(
+          const Center(
             child: Icon(Icons.play_circle_fill, color: Colors.white, size: 30),
           ),
         ],
