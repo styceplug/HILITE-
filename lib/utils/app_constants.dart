@@ -4,7 +4,8 @@ class AppConstants {
   static const String APP_NAME = 'HILITE';
 
 
-  static const String BASE_URL = 'https://hilite-oq2v.onrender.com/api';
+  // static const String BASE_URL = 'https://hilite-oq2v.onrender.com/api';
+  static const String BASE_URL = 'http://72.62.60.218:5000/api';
 
   //TOKEN
   static const authToken = 'authToken';
@@ -55,6 +56,7 @@ class AppConstants {
 
   static const String GET_NOTIFICATIONS = '/v1/notification';
   static const String MARK_NOTIFICATIONS_AS_READ = '/v1/notification';
+  static const String POST_DEVICE_TOKEN = '/v1/user/personal/profile/device-token';
 
 
 

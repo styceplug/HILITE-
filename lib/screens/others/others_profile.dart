@@ -50,11 +50,12 @@ class _OthersProfileState extends State<OthersProfileScreen> {
         builder: (controller) {
           var user = userController.othersProfile.value;
 
-          final isFollowing = userController.othersProfile.value!.isFollowed;
 
           if (user == null) {
             return const Center(child: CircularProgressIndicator());
           }
+          final isFollowing = userController.othersProfile.value!.isFollowed;
+
 
           var player = user.playerDetails;
           var club = user.clubDetails;

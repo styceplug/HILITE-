@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "522058165852",
+    "project_id": "hilite-fd1fe",
+    "storage_bucket": "hilite-fd1fe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:522058165852:android:3200fb1bfaad70442a0099",
+        "android_client_info": {
+          "package_name": "com.project.hilite.hilite"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZJMYfgGx0TQjVtWD4Qo5s4J4wBYtBDO4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

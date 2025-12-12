@@ -19,6 +19,13 @@ class UserRepo {
 
   static const String USER_KEY = "user_data";
 
+  Future<Response> updateDeviceToken(String token, String platform) async {
+    return await apiClient.putData(AppConstants.POST_DEVICE_TOKEN, {
+      "deviceToken": token,
+      "platform": platform,
+    });
+  }
+
   Future<Response> getExternalUserPosts(String targetId, String type) async {
     return await apiClient.getData(
       '/v1/user/external/$targetId/posts?type=$type',

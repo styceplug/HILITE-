@@ -7,8 +7,11 @@ import 'package:hilite/screens/authentication/role_forms/scout_club_form.dart';
 import 'package:hilite/screens/authentication/select_category_screen.dart';
 import 'package:hilite/screens/authentication/verify_profile.dart';
 import 'package:hilite/screens/home/home_screen.dart';
+import 'package:hilite/screens/others/competitions_screen.dart';
+import 'package:hilite/screens/others/notification_screen.dart';
 import 'package:hilite/screens/others/others_profile.dart';
 import 'package:hilite/screens/others/recommended_accounts.dart';
+import 'package:hilite/screens/others/trials_screen.dart';
 import 'package:hilite/screens/posting/post_detail_screen.dart';
 import 'package:hilite/screens/posting/upload_content.dart';
 import 'package:hilite/screens/settings/edit_profile.dart';
@@ -56,6 +59,13 @@ class AppRoutes {
   static const String referralScreen = '/referral-screen';
   static const String postDetailScreen = '/post-detail-screen';
   static const String recommendedAccountsScreen = '/recommended-accounts-screen';
+
+
+  static const String competitionsScreen = '/competitions-screen';
+  static const String notificationsScreen = '/notifications-screen';
+  static const String trialsScreen = '/trials-screen';
+
+
 
   //trials
   static const String createTrialScreen = '/create-trial-screen';
@@ -218,6 +228,24 @@ class AppRoutes {
       page: () =>  ReferralScreen(),
       transition: Transition.fadeIn,
     ),
+
+
+    GetPage(
+      name: competitionsScreen,
+      page: () =>  CompetitionsScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: notificationsScreen,
+      page: () =>  NotificationScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: trialsScreen,
+      page: () =>  TrialsScreen(),
+      transition: Transition.fadeIn,
+    ),
+
 
     //trials
     GetPage(

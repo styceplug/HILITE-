@@ -6,7 +6,7 @@ import 'package:hilite/controllers/post_controller.dart';
 import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/models/post_model.dart';
 import 'package:hilite/screens/home/pages/live_score_screen.dart';
-import 'package:hilite/screens/home/pages/new_post.dart';
+import 'package:hilite/screens/home/pages/activities_screen.dart';
 import 'package:hilite/screens/home/pages/profile_screen.dart';
 import 'package:hilite/screens/home/pages/reels_screen.dart';
 
@@ -42,6 +42,7 @@ class AppController extends GetxController {
 
   Future<void> initializeApp() async {
     print('Initializing....');
+    await userController.saveDeviceToken();
     await checkFirstTimeUse();
     await checkLoginAndNavigate();
     postController.loadRecommendedPosts("video");

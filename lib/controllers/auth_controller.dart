@@ -66,6 +66,7 @@ class AuthController extends GetxController implements GetxService {
             message:
                 '$message: Welcome back ${isEmail ? input.split('@')[0] : input}',
           );
+          userController.saveDeviceToken();
           Get.offAllNamed(AppRoutes.homeScreen);
         } else {
           CustomSnackBar.failure(
@@ -143,6 +144,7 @@ class AuthController extends GetxController implements GetxService {
 
       if (response.body['code'] == '00' || response.statusCode == 200) {
         CustomSnackBar.success(message: 'Registration Successful');
+        userController.saveDeviceToken();
         Get.offAllNamed(AppRoutes.verifyProfileScreen);
       } else {
         CustomSnackBar.failure(
@@ -170,6 +172,7 @@ class AuthController extends GetxController implements GetxService {
       Response response = await authRepo.registerOthers(body);
 
       if (response.statusCode == 201 && response.body['code'] == '00') {
+        userController.saveDeviceToken();
         CustomSnackBar.success(
           message: response.body['message'] ?? 'Registration Successful',
         );

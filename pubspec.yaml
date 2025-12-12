@@ -40,6 +40,8 @@ dependencies:
   visibility_detector: ^0.4.0+2
   flutter_cache_manager: ^3.3.1
   shimmer: ^3.0.0
+  firebase_messaging: ^16.0.4
+  firebase_core: ^4.2.1
 #  sqflite: 2.3.3+1
 
 dev_dependencies:

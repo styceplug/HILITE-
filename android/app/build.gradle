@@ -1,10 +1,7 @@
 plugins {
     id "com.android.application"
-
-//    id 'com.google.gms.google-services'
-
+    id 'com.google.gms.google-services'
     id "kotlin-android"
-
     id "dev.flutter.flutter-gradle-plugin"
 }
 def keystoreProperties = new Properties()
@@ -77,16 +74,16 @@ flutter {
 }
 
 dependencies {
-//    implementation 'com.google.android.gms:play-services-auth:20.4.1'
+    implementation 'com.google.android.gms:play-services-auth:20.4.1'
 //    implementation 'com.android.support:multidex:1.0.3'
     implementation 'androidx.multidex:multidex:2.0.1'
-//    implementation platform('com.google.firebase:firebase-bom:32.7.3')
-//    implementation 'com.google.firebase:firebase-messaging'
+    implementation platform('com.google.firebase:firebase-bom:32.7.3')
+    implementation 'com.google.firebase:firebase-messaging'
     // implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
     implementation 'androidx.media3:media3-exoplayer:1.1.0'
-    // implementation 'androidx.media3:media3-ui:1.1.0'
-    // implementation 'androidx.media3:media3-common:1.1.0'
-    // implementation 'androidx.media3:media3-datasource-okhttp:1.1.0'
+     implementation 'androidx.media3:media3-ui:1.1.0'
+     implementation 'androidx.media3:media3-common:1.1.0'
+     implementation 'androidx.media3:media3-datasource-okhttp:1.1.0'
      coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
 
     // Other dependencies

@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -8,6 +9,7 @@ import 'package:hilite/utils/dimensions.dart';
 import 'package:hilite/widgets/app_loading_overlay.dart';
 
 import 'controllers/app_controller.dart';
+import 'firebase_options.dart';
 import 'helpers/dependencies.dart' as VersionService;
 import 'helpers/dependencies.dart' as dep;
 import 'helpers/global_loader_controller.dart';
@@ -28,6 +30,9 @@ Future<void> main() async {
   );
 
   await VersionService.init();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await dep.init();
   Get.put(GlobalLoaderController(), permanent: true);
   HardwareKeyboard.instance.clearState();

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:get/get.dart';
 import 'package:hilite/helpers/global_loader_controller.dart';
 import 'package:hilite/widgets/snackbars.dart';
@@ -53,6 +54,55 @@ class UserController extends GetxController {
   }
 
 
+  Future<void> saveDeviceToken() async {
+    try {
+      FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+      // 1. Request Permission
+      NotificationSettings settings = await messaging.requestPermission(
+        alert: true, badge: true, sound: true,
+      );
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+
+        // 🍎 iOS SPECIFIC FIX: Wait for APNs Token
+        if (Platform.isIOS) {
+          String? apnsToken = await messaging.getAPNSToken();
+
+          // Retry logic: Wait up to 3 seconds if token is null
+          if (apnsToken == null) {
+            await Future.delayed(const Duration(seconds: 3));
+            apnsToken = await messaging.getAPNSToken();
+          }
+
+          // If still null, we are likely on a Simulator or config is wrong
+          if (apnsToken == null) {
+            print("❌ APNs Token is null. Are you on a Simulator? Push won't work.");
+            return; // Stop here to prevent the crash
+          }
+        }
+
+        // 2. Now it's safe to get the FCM Token
+        String? token = await messaging.getToken();
+
+        if (token != null) {
+          String platform = Platform.isAndroid ? 'android' : 'ios';
+          print("📱 Device Token: $token");
+
+          // 3. Send to Backend
+          Response response = await userRepo.updateDeviceToken(token, platform);
+
+          if (response.statusCode == 200) {
+            print("✅ Device Token Synced Successfully");
+          } else {
+            print("⚠️ Failed to sync token: ${response.body}");
+          }
+        }
+      }
+    } catch (e) {
+      print("❌ Error saving device token: $e");
+    }
+  }
 
   void clearExternalCache() {
     externalPostCache = {
@@ -89,7 +139,6 @@ class UserController extends GetxController {
     isExternalPostsLoading = false;
     update();
   }
-
 
   Future<void> saveUser(UserModel userModel) async {
     user.value = userModel;
