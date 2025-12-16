@@ -7,6 +7,7 @@ import 'package:hilite/screens/authentication/role_forms/scout_club_form.dart';
 import 'package:hilite/screens/authentication/select_category_screen.dart';
 import 'package:hilite/screens/authentication/verify_profile.dart';
 import 'package:hilite/screens/home/home_screen.dart';
+import 'package:hilite/screens/others/competition_details_screen.dart';
 import 'package:hilite/screens/others/competitions_screen.dart';
 import 'package:hilite/screens/others/notification_screen.dart';
 import 'package:hilite/screens/others/others_profile.dart';
@@ -28,8 +29,6 @@ import '../screens/trials/create_trails_screen.dart';
 import '../screens/trials/trial_details_screen.dart';
 
 class AppRoutes {
-
-
   //general
   static const String splashScreen = '/splash-screen';
   static const String splash = '/splash';
@@ -45,7 +44,6 @@ class AppRoutes {
   static const String verifyProfileScreen = '/verify-profile-screen';
   static const String editProfileScreen = '/edit-profile-screen';
 
-
   //forms
   static const String footballerForm = '/footballer-form';
   static const String scoutClubForm = '/scout-club-form';
@@ -58,33 +56,18 @@ class AppRoutes {
   static const String uploadContent = '/upload-content';
   static const String referralScreen = '/referral-screen';
   static const String postDetailScreen = '/post-detail-screen';
-  static const String recommendedAccountsScreen = '/recommended-accounts-screen';
-
+  static const String recommendedAccountsScreen =
+      '/recommended-accounts-screen';
 
   static const String competitionsScreen = '/competitions-screen';
   static const String notificationsScreen = '/notifications-screen';
   static const String trialsScreen = '/trials-screen';
-
-
+  static const String competitionDetailsScreen = '/competition-details-screen';
 
   //trials
   static const String createTrialScreen = '/create-trial-screen';
   static const String trialDetailScreen = '/trial-detail-screen';
   static const String trialListScreen = '/trial-list-screen';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   static final routes = [
     //general
@@ -225,27 +208,29 @@ class AppRoutes {
     ),
     GetPage(
       name: referralScreen,
-      page: () =>  ReferralScreen(),
+      page: () => ReferralScreen(),
       transition: Transition.fadeIn,
     ),
 
-
     GetPage(
       name: competitionsScreen,
-      page: () =>  CompetitionsScreen(),
+      page: () => CompetitionsScreen(),
       transition: Transition.fadeIn,
     ),
     GetPage(
       name: notificationsScreen,
-      page: () =>  NotificationScreen(),
+      page: () => NotificationScreen(),
       transition: Transition.fadeIn,
     ),
     GetPage(
       name: trialsScreen,
-      page: () =>  TrialsScreen(),
+      page: () => TrialsScreen(),
       transition: Transition.fadeIn,
     ),
-
+    GetPage(
+      name: competitionDetailsScreen,
+      page: () => CompetitionDetailsScreen(competitionId: ''),
+    ),
 
     //trials
     GetPage(
@@ -255,18 +240,13 @@ class AppRoutes {
     ),
     GetPage(
       name: trialDetailScreen,
-      page: () =>  TrialDetailScreen(trialId: '',),
+      page: () => TrialDetailScreen(trialId: ''),
       transition: Transition.fadeIn,
     ),
     GetPage(
       name: trialListScreen,
-      page: () =>  TrialListScreen(),
+      page: () => TrialListScreen(),
       transition: Transition.fadeIn,
     ),
-
-
-
-
-
   ];
 }

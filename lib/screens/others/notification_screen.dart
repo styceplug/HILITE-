@@ -22,7 +22,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppbar(
-        title: 'Activities',
+        title: 'Notifications',
+        leadingIcon: BackButton(),
         actionIcon: InkWell(
           onTap: () {
             Get.find<NotificationController>().markAllAsRead();
@@ -44,30 +45,27 @@ class _NotificationScreenState extends State<NotificationScreen> {
             height: Dimensions.screenHeight,
             width: Dimensions.screenWidth,
             padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
-            child: Expanded(
-              child:
-              controller.notificationList.isEmpty
-                  ? Center(
-                child: EmptyState(
-                  message: 'No notifications',
-                  imageAsset: 'no-alarm',
-                ),
-              )
-                  : RefreshIndicator(
-                onRefresh: () async {
-                  await controller.getNotifications();
+            child: controller.notificationList.isEmpty
+                ? Center(
+              child: EmptyState(
+                message: 'No notifications',
+                imageAsset: 'no-alarm',
+              ),
+            )
+                : RefreshIndicator(
+              onRefresh: () async {
+                await controller.getNotifications();
+              },
+              child: ListView.builder(
+                itemCount: controller.notificationList.length,
+                itemBuilder: (context, index) {
+                  var notification =
+                  controller.notificationList[index];
+                  return itemCard(
+                    notification: notification,
+                    controller: controller,
+                  );
                 },
-                child: ListView.builder(
-                  itemCount: controller.notificationList.length,
-                  itemBuilder: (context, index) {
-                    var notification =
-                    controller.notificationList[index];
-                    return itemCard(
-                      notification: notification,
-                      controller: controller,
-                    );
-                  },
-                ),
               ),
             ),
           );

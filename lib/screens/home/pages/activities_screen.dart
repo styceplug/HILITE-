@@ -30,15 +30,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
     return Scaffold(
       appBar: CustomAppbar(
         title: 'Activities',
-        actionIcon: InkWell(
-          onTap: () {
-            Get.find<NotificationController>().markAllAsRead();
-          },
-          child: Text(
-            'Mark all as read',
-            style: TextStyle(color: AppColors.black),
-          ),
-        ),
       ),
       body: GetBuilder<NotificationController>(
         init: NotificationController(notificationRepo: Get.find()),

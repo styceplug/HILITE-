@@ -50,6 +50,11 @@ class AppConstants {
   static  String REGISTER_FOR_TRIALS(String trialId) => '/v1/trial/$trialId/register';
 
 
+  //competition
+  static const String GET_COMPETITION = '/v1/competition';
+  static  String GET_COMPETITION_DETAILS(String competitionId) => '/v1/competition/$competitionId';
+
+
 
   static const String GET_MY_POSTS = '/v1/user/personal/posts';
 
