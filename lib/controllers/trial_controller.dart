@@ -48,14 +48,27 @@ class TrialController extends GetxController {
   }
 
   Future<void> fetchTrialDetails(String trialId) async {
+    if (trialId.isEmpty) return; // Guard clause
+
     currentTrialDetails.value = null;
     isProcessing.value = true;
+
     try {
       final response = await trialRepo.getTrialDetails(trialId);
-      if (response.statusCode == 200 && response.body['data'] is Map) {
-        currentTrialDetails.value = TrialModel.fromJson(response.body['data']);
+
+      if (response.statusCode == 200) {
+        var data = response.body['data'];
+
+        // FIX: Handle if server returns a List instead of Map (Edge case)
+        if (data is Map<String, dynamic>) {
+          currentTrialDetails.value = TrialModel.fromJson(data);
+        } else if (data is List && data.isNotEmpty) {
+          currentTrialDetails.value = TrialModel.fromJson(data[0]);
+        } else {
+          CustomSnackBar.failure(message: 'Invalid data format from server');
+        }
       } else {
-        CustomSnackBar.failure(message: 'Failed to load trial details, please try again');
+        CustomSnackBar.failure(message: 'Failed to load trial details');
       }
     } catch (e) {
       print('Error fetching trial details: $e');
@@ -63,7 +76,6 @@ class TrialController extends GetxController {
       isProcessing.value = false;
     }
   }
-
 
 
   Future<bool> createTrial({

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hilite/utils/dimensions.dart';
 import 'package:intl/intl.dart';
 import '../controllers/post_controller.dart';
 import '../controllers/user_controller.dart';
@@ -134,36 +135,45 @@ class _GiftGridItem extends StatelessWidget {
   final UserController userController;
 
   const _GiftGridItem({
+    super.key, // Added super.key best practice
     required this.gift,
     required this.recipientId,
     required this.walletController,
     required this.userController,
   });
 
+  // Helper to determine border/glow color if none is provided in the model
+  Color _getTierColor(int price) {
+    if (price <= 300) return Colors.green;
+    if (price <= 2000) return Colors.blue;
+    if (price <= 8000) return Colors.purple;
+    return Colors.amber;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      // 1. Check Affordability Reactively
+      // 1. Check Affordability
       String balanceStr = userController.user.value?.tokenBalance ?? "0";
       double currentBalance = double.tryParse(balanceStr) ?? 0;
       bool canAfford = currentBalance >= gift.coins;
 
+      // 2. Determine Display Color (Use model color OR fallback to Tier Color)
+      Color displayColor = gift.color ?? _getTierColor(gift.coins);
+
       return GestureDetector(
         onTap: () {
           if (canAfford) {
-            Get.back(); // Close the modal immediately
-
-            // 2. Call the API
+            Get.back(); // Close modal
             walletController.giftTokens(recipientId, gift.coins.toDouble());
           } else {
-            // Optional: Shake animation or toast
             Get.snackbar(
                 "Low Balance",
                 "You need ${gift.coins - currentBalance} more tokens.",
                 backgroundColor: Colors.redAccent,
                 colorText: Colors.white,
                 snackPosition: SnackPosition.BOTTOM,
-                margin: EdgeInsets.all(20)
+                margin: const EdgeInsets.all(20)
             );
           }
         },
@@ -172,18 +182,18 @@ class _GiftGridItem extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: canAfford
-                ? const Color(0xFF2C2C2C) // Active color
-                : Colors.white.withOpacity(0.02), // Disabled color
+                ? const Color(0xFF2C2C2C)
+                : Colors.white.withOpacity(0.02),
             borderRadius: BorderRadius.circular(15),
             border: Border.all(
-              color: canAfford
-                  ? gift.color.withOpacity(0.3)
-                  : Colors.transparent,
+              // FIX: Use displayColor which is guaranteed not null
+              color: canAfford ? displayColor.withOpacity(0.5) : Colors.transparent,
               width: 1.5,
             ),
             boxShadow: canAfford ? [
               BoxShadow(
-                  color: gift.color.withOpacity(0.1),
+                // FIX: Use displayColor here too
+                  color: displayColor.withOpacity(0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4)
               )
@@ -192,10 +202,19 @@ class _GiftGridItem extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
+              // IMAGE HANDLING
+              Image.asset(
                 gift.icon,
-                color: canAfford ? gift.color : Colors.grey[700],
-                size: 32,
+                // Logic:
+                // 1. If NOT affordable -> Grey tint (Disabled look)
+                // 2. If Affordable AND model has color -> Tint with model color
+                // 3. If Affordable AND no model color -> Show ORIGINAL Image (null color)
+                color: !canAfford
+                    ? Colors.grey[800]
+                    : gift.color, // Passing null here lets the original PNG colors show!
+                height: 40, // Hardcoded or Dimensions.height40
+                width: 40,
+                fit: BoxFit.contain,
               ),
               const SizedBox(height: 8),
               Text(

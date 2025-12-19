@@ -108,7 +108,9 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
                       title: 'Competitions',
                       subtitle: 'Check open competitions here',
                       color: AppColors.success,
-                      onTap: (){Get.toNamed(AppRoutes.competitionsScreen);}
+                      onTap: (){
+                        Get.toNamed(AppRoutes.competitionsScreen);
+                      }
                     ),
                   ],
                 ),

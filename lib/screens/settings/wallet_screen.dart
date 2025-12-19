@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../controllers/user_controller.dart';
 import '../../controllers/wallet_controller.dart';
+import '../../widgets/top_up_bottom_sheet.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({Key? key}) : super(key: key);
@@ -33,8 +34,14 @@ class WalletScreen extends StatelessWidget {
             // 1. Balance Card
             Obx(() {
               var user = userController.user.value;
-              // Handle String vs Int/Double safely
-              var balance = user?.tokenBalance ?? "0";
+
+              // 1. Safely parse the balance to a number
+              var rawBalance = user?.tokenBalance ?? 0;
+              double parsedBalance = double.tryParse(rawBalance.toString()) ?? 0;
+
+              // 2. Format with commas
+              final formatter = NumberFormat("#,###");
+              String formattedBalance = formatter.format(parsedBalance);
 
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -60,14 +67,19 @@ class WalletScreen extends StatelessWidget {
                         const Icon(Icons.token, color: Colors.amber, size: 28),
                         const SizedBox(width: 10),
                         Text(
-                          "$balance",
+                          formattedBalance, // <--- UPDATED HERE
                           style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: () => _showTopUpDialog(context, walletController),
+                      onPressed: () {
+                        Get.bottomSheet(
+                          const TopUpBottomSheet(),
+                          isScrollControlled: true,
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.blue[800],
@@ -80,7 +92,6 @@ class WalletScreen extends StatelessWidget {
                 ),
               );
             }),
-
             const SizedBox(height: 25),
 
             // 2. Transaction History Header
@@ -137,11 +148,17 @@ class WalletScreen extends StatelessWidget {
                       subtitle = DateFormat.yMMMd().add_jm().format(txn.createdAt);
                     }
 
+                    final tokenFormatter = NumberFormat("#,###");
+                    final nairaFormatter = NumberFormat.currency(symbol: "₦", decimalDigits: 0);
+
+                    double ngnValue = txn.tokens * 10;
+
                     return Card(
                       elevation: 0,
                       color: Colors.grey[50],
                       margin: const EdgeInsets.only(bottom: 10),
                       child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         leading: CircleAvatar(
                           backgroundColor: isCredit ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
                           child: Icon(
@@ -152,16 +169,35 @@ class WalletScreen extends StatelessWidget {
                         ),
                         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                        trailing: Text(
-                          "${isCredit ? '+' : '-'}${txn.tokens.toInt()}",
-                          style: TextStyle(
-                              color: isCredit ? Colors.green : Colors.red,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16
-                          ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min, // Important for ListTile trailing
+                          children: [
+                            // Token Amount
+                            Text(
+                              "${isCredit ? '+' : '-'}${tokenFormatter.format(txn.tokens)}",
+                              style: TextStyle(
+                                  color: isCredit ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            // NGN Equivalent
+                            Text(
+                              "≈ ${nairaFormatter.format(ngnValue)}",
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );
+
                   },
                 );
               }),

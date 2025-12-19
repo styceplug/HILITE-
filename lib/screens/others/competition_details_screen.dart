@@ -4,6 +4,7 @@ import 'package:hilite/widgets/custom_button.dart';
 import 'package:intl/intl.dart';
 
 import '../../controllers/competition_controller.dart';
+import '../../controllers/user_controller.dart';
 import '../../models/competition_model.dart';
 import '../../utils/colors.dart';
 import '../../utils/dimensions.dart';
@@ -20,6 +21,22 @@ class CompetitionDetailsScreen extends StatefulWidget {
 }
 
 class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
+
+  CompetitionController competitionController = Get.find<CompetitionController>();
+
+  bool amIRegistered(CompetitionModel comp) {
+    String myId = Get.find<UserController>().user.value?.id ?? "";
+    if (comp.registered == null) return false;
+
+    for (var item in comp.registered!) {
+      // Check if item is Object (RegisteredClub)
+      if (item is RegisteredClub && item.sId == myId) return true;
+      // Check if item is String (ID)
+      if (item is String && item == myId) return true;
+    }
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -232,17 +249,54 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
         builder: (controller) {
           if (controller.competitionDetail == null) return SizedBox.shrink();
 
-          return Container(
-            height: Dimensions.height100*1.2,
-            padding: EdgeInsets.symmetric(
-              horizontal: Dimensions.width20,
-              vertical: Dimensions.height30,
+          var user = Get.find<UserController>().user.value;
+          bool isClub = user?.role == 'club';
+          bool isRegistered = amIRegistered(controller.competitionDetail!);
+
+          return  Container(
+            height: Dimensions.height10*9,
+            padding:  EdgeInsets.symmetric(horizontal: Dimensions.width20, vertical: Dimensions.height20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black12, spreadRadius: 1)],
             ),
-            child: CustomButton(
-              padding: EdgeInsets.symmetric(vertical: Dimensions.height5),
-              text:
-                  'Register Team (\$${controller.competitionDetail?.registrationFee})',
-              onPressed: () {},
+            child: isRegistered
+                ? Container(
+              decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(10)),
+              alignment: Alignment.center,
+              child: const Text("Team Registered", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+            )
+                : !isClub
+                ? ElevatedButton(
+              onPressed: null, // DISABLED
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey[300],
+                disabledBackgroundColor: Colors.grey[300],
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Center(
+                child: Text(
+                  "Registration Open to Clubs Only",
+                  style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+                ),
+              ),
+            )
+                : ElevatedButton(
+              onPressed: () {
+                _showRegisterDialog(controller);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Center(
+                child: controller.isRegistering
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text(
+                  "Register Team (\$${controller.competitionDetail?.registrationFee ?? 0})",
+                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
             ),
           );
         },
@@ -299,6 +353,21 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showRegisterDialog(CompetitionController controller) {
+    Get.defaultDialog(
+        title: "Confirm Registration",
+        middleText: "Register your club for \$${controller.competitionDetail?.registrationFee ?? 0}?",
+        textConfirm: "Pay & Register",
+        textCancel: "Cancel",
+        confirmTextColor: Colors.white,
+        buttonColor: AppColors.primary,
+        onConfirm: () {
+          Get.back(); // Close dialog
+          controller.registerForCompetition(controller.competitionDetail!.sId!);
+        }
     );
   }
 }

@@ -253,7 +253,7 @@ class AppRoutes {
     ),
     GetPage(
       name: trialDetailScreen,
-      page: () => TrialDetailScreen(trialId: ''),
+      page: () => TrialDetailScreen(),
       transition: Transition.fadeIn,
     ),
     GetPage(

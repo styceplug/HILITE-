@@ -75,8 +75,15 @@ class RegisteredPlayer {
   final String name;
   final String username;
   final String role;
+  final String? profilePicture; // <--- Add this
 
-  RegisteredPlayer({required this.id, required this.name, required this.username, required this.role});
+  RegisteredPlayer({
+    required this.id,
+    required this.name,
+    required this.username,
+    required this.role,
+    this.profilePicture, // <--- Add this
+  });
 
   factory RegisteredPlayer.fromJson(Map<String, dynamic> json) {
     return RegisteredPlayer(
@@ -84,6 +91,7 @@ class RegisteredPlayer {
       name: json['name'] ?? '',
       username: json['username'] ?? '',
       role: json['role'] ?? 'player',
+      profilePicture: json['profilePicture'], // <--- Map it here
     );
   }
 }

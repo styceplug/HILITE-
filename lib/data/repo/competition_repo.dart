@@ -17,4 +17,11 @@ class CompetitionRepo {
       AppConstants.GET_COMPETITION_DETAILS(competitionId),
     );
   }
+
+  Future<Response> registerForCompetition(String competitionId) async {
+    return await apiClient.postData(
+      '/v1/competition/$competitionId/register',
+      {},
+    );
+  }
 }
