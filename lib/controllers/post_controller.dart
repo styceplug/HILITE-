@@ -42,48 +42,8 @@ class PostController extends GetxController {
     super.onClose();
   }
 
-  void showGiftSheet(String postId) {
-    // 1. Pause the currently playing video
-    pauseAll();
-
-    // 2. Show the bottom sheet
-    Get.bottomSheet(
-      GiftSelectionBottomSheet(postId: postId),
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withOpacity(0.7),
-    );
-  }
 
 
-// 💡 Conceptual method to handle the gift submission
-  Future<void> sendGift(String postId, GiftModel gift) async {
-    final WalletController walletController = Get.find<WalletController>();
-
-    if (!walletController.canAfford(gift.coins)) {
-      // Should be caught by the UI, but good to double-check
-      return;
-    }
-
-    // Set loading state if needed for API call
-
-    try {
-      // 1. Call API to send gift (PostRepo needs this method)
-      // final response = await postRepo.sendGift(postId, gift.name, gift.coins);
-
-      // 2. If API succeeds, deduct coins locally and update UI
-      walletController.deductCoins(gift.coins);
-
-      // 3. (Optional) Show confirmation
-      // CustomSnackBar.success(message: 'Sent ${gift.name} to the post creator!');
-
-    } catch (e) {
-      // Handle error
-      // CustomSnackBar.failure(message: 'Failed to send gift. Try again.');
-    } finally {
-      // Hide loading state
-    }
-  }
 
 
   Future<void> uploadMediaPost({

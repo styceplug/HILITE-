@@ -7,6 +7,7 @@ import 'package:iconsax/iconsax.dart';
 
 import '../models/post_model.dart';
 import '../utils/colors.dart';
+import 'gift_bottom_modal.dart';
 
 class ReelsInteractionOverlay extends StatelessWidget {
   final PostModel post;
@@ -130,10 +131,14 @@ class ReelsInteractionOverlay extends StatelessWidget {
                   }),
                   const SizedBox(height: 20),
 
-                  // Gift / Share
                    GestureDetector(
                      onTap: (){
-                       postController.showGiftSheet(post.id);
+                       Get.bottomSheet(
+                         GiftSelectionBottomSheet(
+                           recipientId: post.author?.id ?? "",
+                         ),
+                         isScrollControlled: true,
+                       );
                      },
                      child: _InteractionIcon(
                         icon: Icons.card_giftcard,

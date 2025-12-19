@@ -32,114 +32,120 @@ class _SettingsScreenState extends State<SettingsScreen> {
         leadingIcon: Icon(Iconsax.setting),
       ),
       body: Container(
-        height: Dimensions.screenHeight,
+        // height: Dimensions.screenHeight,
         width: Dimensions.screenWidth,
         padding: EdgeInsets.symmetric(
           horizontal: Dimensions.width20,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Account section
-            Text(
-              "Account",
-              style: TextStyle(
-                fontSize: Dimensions.font14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.grey4,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Account section
+              Text(
+                "Account",
+                style: TextStyle(
+                  fontSize: Dimensions.font14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.grey4,
+                ),
               ),
-            ),
-            SizedBox(height: Dimensions.height10),
-            if(userController.user.value?.role == 'player')
-            settingTile(
-              icon: Iconsax.user,
-              title: "Edit Profile",
-              onTap: () {
-                Get.toNamed(AppRoutes.editProfileScreen);
-
-              },
-            ),
-            settingTile(
-              icon: Iconsax.lock,
-              title: "Change Password",
-              onTap: () {
-                Get.toNamed(AppRoutes.forgotPasswordScreen);
-              },
-            ),
-            settingTile(
-              icon: Iconsax.profile_tick,
-              title: "Verify Account",
-              onTap: () {},
-            ),
-            settingTile(
-              icon: Iconsax.link,
-              title: "Referral Program",
-              onTap: () {Get.toNamed(AppRoutes.referralScreen);},
-            ),
-
-            SizedBox(height: Dimensions.height30),
-
-            // Preferences section
-            Text(
-              "Preferences",
-              style: TextStyle(
-                fontSize: Dimensions.font14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.grey4,
+              SizedBox(height: Dimensions.height10),
+              if(userController.user.value?.role == 'player')
+                settingTile(
+                  icon: Iconsax.user,
+                  title: "Edit Profile",
+                  onTap: () {
+                    Get.toNamed(AppRoutes.editProfileScreen);
+                  },
+                ),
+              settingTile(
+                icon: Iconsax.lock,
+                title: "Change Password",
+                onTap: () {
+                  Get.toNamed(AppRoutes.forgotPasswordScreen);
+                },
               ),
-            ),
-            SizedBox(height: Dimensions.height10),
-
-            switchTile(
-              icon: Iconsax.notification,
-              title: "Push Notifications",
-              value: notificationsEnabled,
-              onChanged: (v) => setState(() => notificationsEnabled = v),
-            ),
-            
-            SizedBox(height: Dimensions.height30),
-
-            // Support section
-            Text(
-              "Support",
-              style: TextStyle(
-                fontSize: Dimensions.font14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.grey4,
+              settingTile(
+                icon: Iconsax.profile_tick,
+                title: "Verify Account",
+                onTap: () {},
               ),
-            ),
-            SizedBox(height: Dimensions.height10),
+              settingTile(
+                icon: Iconsax.link,
+                title: "Referral Program",
+                onTap: () {
+                  Get.toNamed(AppRoutes.referralScreen);
+                },
+              ),
+              settingTile(icon: Iconsax.wallet, title: 'Wallet', onTap: () {
+                Get.toNamed(AppRoutes.walletScreen);
+              }),
 
-            settingTile(
-              icon: Iconsax.message_question,
-              title: "Help & Support",
-              onTap: () {},
-            ),
-            settingTile(
-              icon: Iconsax.security_safe,
-              title: "Privacy Policy",
-              onTap: () {},
-            ),
-            settingTile(
-              icon: Iconsax.info_circle,
-              title: "About HiLite",
-              onTap: () {},
-            ),
+              SizedBox(height: Dimensions.height30),
 
-            const Spacer(),
+              // Preferences section
+              Text(
+                "Preferences",
+                style: TextStyle(
+                  fontSize: Dimensions.font14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.grey4,
+                ),
+              ),
+              SizedBox(height: Dimensions.height10),
 
-            // Logout
-            CustomButton(
-              text: "Log Out",
-              onPressed: () {
-                authController.logout();
-                Get.offAllNamed(AppRoutes.loginScreen);
-              },
-              backgroundColor: AppColors.error,
-              borderRadius: BorderRadius.circular(Dimensions.radius10),
-            ),
-            SizedBox(height: Dimensions.height50),
-          ],
+              switchTile(
+                icon: Iconsax.notification,
+                title: "Push Notifications",
+                value: notificationsEnabled,
+                onChanged: (v) => setState(() => notificationsEnabled = v),
+              ),
+
+              SizedBox(height: Dimensions.height30),
+
+              // Support section
+              Text(
+                "Support",
+                style: TextStyle(
+                  fontSize: Dimensions.font14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.grey4,
+                ),
+              ),
+              SizedBox(height: Dimensions.height10),
+
+              settingTile(
+                icon: Iconsax.message_question,
+                title: "Help & Support",
+                onTap: () {},
+              ),
+              settingTile(
+                icon: Iconsax.security_safe,
+                title: "Privacy Policy",
+                onTap: () {},
+              ),
+              settingTile(
+                icon: Iconsax.info_circle,
+                title: "About HiLite",
+                onTap: () {},
+              ),
+
+              SizedBox(height: Dimensions.height30,),
+
+              // Logout
+              CustomButton(
+                text: "Log Out",
+                onPressed: () {
+                  authController.logout();
+                  Get.offAllNamed(AppRoutes.loginScreen);
+                },
+                backgroundColor: AppColors.error,
+                borderRadius: BorderRadius.circular(Dimensions.radius10),
+              ),
+              SizedBox(height: Dimensions.height50),
+            ],
+          ),
         ),
       ),
     );

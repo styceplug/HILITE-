@@ -18,6 +18,7 @@ import 'package:hilite/screens/posting/upload_content.dart';
 import 'package:hilite/screens/settings/edit_profile.dart';
 import 'package:hilite/screens/settings/referral_screen.dart';
 import 'package:hilite/screens/settings/settings_screen.dart';
+import 'package:hilite/screens/settings/wallet_screen.dart';
 import 'package:hilite/screens/splash/no_internet_screen.dart';
 import 'package:hilite/screens/splash/onboarding_screen.dart';
 import 'package:hilite/screens/splash/update_app_screen.dart';
@@ -60,6 +61,7 @@ class AppRoutes {
       '/recommended-accounts-screen';
 
   static const String competitionsScreen = '/competitions-screen';
+  static const String walletScreen = '/wallet-screen';
   static const String notificationsScreen = '/notifications-screen';
   static const String trialsScreen = '/trials-screen';
   static const String competitionDetailsScreen = '/competition-details-screen';
@@ -70,6 +72,17 @@ class AppRoutes {
   static const String trialListScreen = '/trial-list-screen';
 
   static final routes = [
+
+    GetPage(
+      name: walletScreen,
+      page: () {
+        return const WalletScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+
+
+
     //general
     GetPage(
       name: splashScreen,

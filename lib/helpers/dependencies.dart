@@ -11,6 +11,7 @@ import 'package:hilite/data/repo/competition_repo.dart';
 import 'package:hilite/data/repo/post_repo.dart';
 import 'package:hilite/data/repo/trial_repo.dart';
 import 'package:hilite/data/repo/user_repo.dart';
+import 'package:hilite/data/repo/wallet_repo.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../controllers/app_controller.dart';
@@ -60,6 +61,7 @@ Future<void> init() async {
   Get.lazyPut(() => TrialRepo(apiClient: Get.find()));
   Get.lazyPut(() => NotificationRepo(apiClient: Get.find()));
   Get.lazyPut(() => CompetitionRepo(apiClient: Get.find()));
+  Get.lazyPut(() => WalletRepo(apiClient: Get.find()),fenix: true);
 
   //controllers
   Get.lazyPut(() => AppController(appRepo: Get.find()));
@@ -71,7 +73,7 @@ Future<void> init() async {
     () => UserController(userRepo: Get.find(), sharedPreferences: Get.find()),
   );
   Get.lazyPut(() => GlobalLoaderController());
-  Get.lazyPut(() => WalletController());
+  Get.lazyPut(() => WalletController(walletRepo: Get.find()));
   Get.lazyPut(() => PostController(postRepo: Get.find()));
   Get.lazyPut(() => NotificationController(notificationRepo: Get.find()));
   Get.lazyPut(() => TrialController(trialRepo: Get.find()), fenix: true);

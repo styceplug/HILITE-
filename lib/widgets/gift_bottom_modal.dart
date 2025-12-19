@@ -1,53 +1,58 @@
-// --- New file: lib/widgets/gift_selection_bottom_sheet.dart ---
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import '../controllers/post_controller.dart';
+import '../controllers/user_controller.dart';
 import '../controllers/wallet_controller.dart';
 import '../models/gift_model.dart';
 
 
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import '../screens/settings/wallet_screen.dart';
+
+
 class GiftSelectionBottomSheet extends StatelessWidget {
-  final String postId;
+  final String recipientId;
 
+  final UserController userController = Get.find<UserController>();
   final WalletController walletController = Get.find<WalletController>();
-  final PostController postController = Get.find<PostController>();
 
-  GiftSelectionBottomSheet({required this.postId, super.key});
+  GiftSelectionBottomSheet({required this.recipientId, super.key});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75, // 75% screen height
+      height: MediaQuery.of(context).size.height * 0.60, // Adjusted height
       decoration: const BoxDecoration(
-        color: Colors.black87,
+        color: Color(0xFF1A1A1A), // Dark theme background
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
-
-          _buildHeader(),
+          _buildHeader(context),
 
           const Divider(color: Colors.white10, height: 1),
 
-          // 2. Gift Grid
+          // Gift Grid
           Expanded(
             child: GridView.builder(
-              padding: const EdgeInsets.all(15),
+              padding: const EdgeInsets.all(20),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3, // 3 items per row
-                childAspectRatio: 0.8, // Taller items for icon and text
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
+                crossAxisCount: 3,
+                childAspectRatio: 0.85,
+                crossAxisSpacing: 15,
+                mainAxisSpacing: 15,
               ),
               itemCount: giftList.length,
               itemBuilder: (context, index) {
                 final gift = giftList[index];
                 return _GiftGridItem(
                   gift: gift,
-                  postId: postId,
+                  recipientId: recipientId,
                   walletController: walletController,
-                  postController: postController,
+                  userController: userController,
                 );
               },
             ),
@@ -57,13 +62,12 @@ class GiftSelectionBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Title
           const Text(
             'Send a Gift',
             style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
@@ -72,34 +76,48 @@ class GiftSelectionBottomSheet extends StatelessWidget {
           // Balance Card & Deposit Button
           Row(
             children: [
-              // Balance Card (Reactive)
-              Obx(() => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.white10,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.toll, color: Colors.amber, size: 18), // Coin Icon
-                    const SizedBox(width: 5),
-                    Text(
-                      walletController.userCoins.toString(),
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              )),
+              // Reactive Balance Card
+              Obx(() {
+                // Parse balance safely from String to Double/Int
+                String balanceStr = userController.user.value?.tokenBalance ?? "0";
+                double balance = double.tryParse(balanceStr) ?? 0;
 
-              const SizedBox(width: 10),
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white10)
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.token, color: Colors.amber, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        NumberFormat.compact().format(balance), // e.g. 1.5K
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+              const SizedBox(width: 15),
 
               // Deposit Button
               GestureDetector(
                 onTap: () {
-                  // TODO: Navigate to deposit screen
-                  print('Navigate to Deposit Screen');
+                  Get.back(); // Close sheet
+                  Get.to(() => const WalletScreen()); // Navigate to wallet
                 },
-                child: const Icon(Icons.add_circle, color: Colors.greenAccent, size: 30),
+                child: Container(
+                  padding: EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.greenAccent.withOpacity(0.2)
+                  ),
+                  child: const Icon(Icons.add, color: Colors.greenAccent, size: 24),
+                ),
               ),
             ],
           ),
@@ -109,82 +127,106 @@ class GiftSelectionBottomSheet extends StatelessWidget {
   }
 }
 
-
 class _GiftGridItem extends StatelessWidget {
   final GiftModel gift;
-  final String postId;
+  final String recipientId;
   final WalletController walletController;
-  final PostController postController;
+  final UserController userController;
 
   const _GiftGridItem({
     required this.gift,
-    required this.postId,
+    required this.recipientId,
     required this.walletController,
-    required this.postController,
+    required this.userController,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Check if user can afford the gift
-    final bool canAfford = walletController.canAfford(gift.coins);
+    return Obx(() {
+      // 1. Check Affordability Reactively
+      String balanceStr = userController.user.value?.tokenBalance ?? "0";
+      double currentBalance = double.tryParse(balanceStr) ?? 0;
+      bool canAfford = currentBalance >= gift.coins;
 
-    return GestureDetector(
-      onTap: () {
-        if (canAfford) {
-          // TODO: Implement gift submission logic in PostController
-          postController.sendGift(postId, gift);
-          Get.back(); // Close modal after selection
-        } else {
-          // Show error or redirect to deposit
-          // CustomSnackBar.failure(message: "Not enough coins for ${gift.name}!");
-          print("Cannot afford ${gift.name}");
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(canAfford ? 0.05 : 0.02),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: canAfford ? gift.color.withOpacity(0.5) : Colors.grey.withOpacity(0.2),
-            width: 1,
+      return GestureDetector(
+        onTap: () {
+          if (canAfford) {
+            Get.back(); // Close the modal immediately
+
+            // 2. Call the API
+            walletController.giftTokens(recipientId, gift.coins.toDouble());
+          } else {
+            // Optional: Shake animation or toast
+            Get.snackbar(
+                "Low Balance",
+                "You need ${gift.coins - currentBalance} more tokens.",
+                backgroundColor: Colors.redAccent,
+                colorText: Colors.white,
+                snackPosition: SnackPosition.BOTTOM,
+                margin: EdgeInsets.all(20)
+            );
+          }
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: canAfford
+                ? const Color(0xFF2C2C2C) // Active color
+                : Colors.white.withOpacity(0.02), // Disabled color
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(
+              color: canAfford
+                  ? gift.color.withOpacity(0.3)
+                  : Colors.transparent,
+              width: 1.5,
+            ),
+            boxShadow: canAfford ? [
+              BoxShadow(
+                  color: gift.color.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4)
+              )
+            ] : [],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                gift.icon,
+                color: canAfford ? gift.color : Colors.grey[700],
+                size: 32,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                gift.name,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: canAfford ? Colors.white : Colors.grey[600],
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.token, color: canAfford ? Colors.amber : Colors.grey[700], size: 12),
+                  const SizedBox(width: 4),
+                  Text(
+                    gift.coins.toString(),
+                    style: TextStyle(
+                        color: canAfford ? Colors.amber : Colors.grey[700],
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Gift Icon
-            Icon(
-              gift.icon,
-              color: canAfford ? gift.color : Colors.grey,
-              size: 40,
-            ),
-            const SizedBox(height: 5),
-            // Gift Name
-            Text(
-              gift.name,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: canAfford ? Colors.white : Colors.grey,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 5),
-            // Coin Cost
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.toll, color: Colors.amber, size: 14),
-                const SizedBox(width: 3),
-                Text(
-                  gift.coins.toString(),
-                  style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+      );
+    });
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hilite/widgets/custom_button.dart';
 import 'package:intl/intl.dart';
 
 import '../../controllers/competition_controller.dart';
@@ -9,19 +10,23 @@ import '../../utils/dimensions.dart';
 
 class CompetitionDetailsScreen extends StatefulWidget {
   final String competitionId;
-  const CompetitionDetailsScreen({Key? key, required this.competitionId}) : super(key: key);
+
+  const CompetitionDetailsScreen({Key? key, required this.competitionId})
+    : super(key: key);
 
   @override
-  State<CompetitionDetailsScreen> createState() => _CompetitionDetailsScreenState();
+  State<CompetitionDetailsScreen> createState() =>
+      _CompetitionDetailsScreenState();
 }
 
 class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch details when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Get.find<CompetitionController>().getCompetitionDetails(widget.competitionId);
+      Get.find<CompetitionController>().getCompetitionDetails(
+        widget.competitionId,
+      );
     });
   }
 
@@ -30,8 +35,6 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
     return Scaffold(
       body: GetBuilder<CompetitionController>(
         builder: (controller) {
-
-
           var competition = controller.competitionDetail;
 
           if (competition == null) {
@@ -39,9 +42,12 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
           }
 
           // Format Date
-          String formattedDate = competition.date != null
-              ? DateFormat('EEEE, MMM dd, yyyy').format(DateTime.parse(competition.date!))
-              : "Date TBA";
+          String formattedDate =
+              competition.date != null
+                  ? DateFormat(
+                    'EEEE, MMM dd, yyyy',
+                  ).format(DateTime.parse(competition.date!))
+                  : "Date TBA";
 
           return CustomScrollView(
             slivers: [
@@ -51,17 +57,29 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
                 pinned: true,
                 backgroundColor: AppColors.primary,
                 flexibleSpace: FlexibleSpaceBar(
-                  background: competition.banner != null
-                      ? Image.network(
-                    competition.banner!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (c, o, s) => Container(color: Colors.grey),
-                  )
-                      : Container(color: AppColors.primary, child: Icon(Icons.sports_soccer, size: 80, color: Colors.white)),
+                  background:
+                      competition.banner != null
+                          ? Image.network(
+                            competition.banner!,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (c, o, s) => Container(color: Colors.grey),
+                          )
+                          : Container(
+                            color: AppColors.primary,
+                            child: Icon(
+                              Icons.sports_soccer,
+                              size: 80,
+                              color: Colors.white,
+                            ),
+                          ),
                 ),
                 leading: Container(
                   margin: EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
                   child: BackButton(color: Colors.black),
                 ),
               ),
@@ -76,7 +94,10 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
                       // Title
                       Text(
                         competition.name ?? "Unknown Competition",
-                        style: TextStyle(fontSize: Dimensions.font26, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: Dimensions.font26,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       SizedBox(height: Dimensions.height10),
 
@@ -86,12 +107,19 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
                           CircleAvatar(
                             radius: 15,
                             backgroundColor: Colors.grey[300],
-                            child: Icon(Icons.person, size: 15, color: Colors.grey),
+                            child: Icon(
+                              Icons.person,
+                              size: 15,
+                              color: Colors.grey,
+                            ),
                           ),
                           SizedBox(width: 10),
                           Text(
                             "Hosted by ${competition.creator?.name ?? 'Organizer'}",
-                            style: TextStyle(color: AppColors.grey2, fontSize: Dimensions.font14),
+                            style: TextStyle(
+                              color: AppColors.grey4,
+                              fontSize: Dimensions.font14,
+                            ),
                           ),
                         ],
                       ),
@@ -100,19 +128,35 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
                       // Key Stats Row (Prize & Fee)
                       Row(
                         children: [
-                          _buildStatCard("Prize Pool", "\$${competition.prize}", Icons.emoji_events, Colors.amber),
+                          _buildStatCard(
+                            "Prize Pool",
+                            "\$${competition.prize}",
+                            Icons.emoji_events,
+                            Colors.amber,
+                          ),
                           SizedBox(width: Dimensions.width15),
-                          _buildStatCard("Entry Fee", "\$${competition.registrationFee}", Icons.payments, Colors.green),
+                          _buildStatCard(
+                            "Entry Fee",
+                            "\$${competition.registrationFee}",
+                            Icons.payments,
+                            Colors.green,
+                          ),
                         ],
                       ),
                       SizedBox(height: Dimensions.height20),
 
                       // Info Section (Location & Date)
-                      _buildInfoRow(Icons.location_on, competition.location ?? "No location"),
+                      _buildInfoRow(
+                        Icons.location_on,
+                        competition.location ?? "No location",
+                      ),
                       SizedBox(height: 10),
                       _buildInfoRow(Icons.calendar_month, formattedDate),
                       SizedBox(height: 10),
-                      _buildInfoRow(Icons.groups, "${competition.clubsNeeded} Teams Needed"),
+                      _buildInfoRow(
+                        Icons.groups,
+                        "${competition.clubsNeeded} Teams Needed",
+                      ),
 
                       SizedBox(height: Dimensions.height20),
                       Divider(thickness: 1, color: Colors.grey[200]),
@@ -121,7 +165,10 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
                       // Description
                       Text(
                         "About Competition",
-                        style: TextStyle(fontSize: Dimensions.font18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: Dimensions.font18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       SizedBox(height: 10),
                       Text(
@@ -136,12 +183,19 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
                       // Registered Clubs Section
                       Text(
                         "Registered Teams (${competition.registered?.length ?? 0})",
-                        style: TextStyle(fontSize: Dimensions.font18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: Dimensions.font18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       SizedBox(height: 10),
 
-                      if (competition.registered == null || competition.registered!.isEmpty)
-                        Text("No teams registered yet. Be the first!", style: TextStyle(color: AppColors.grey2)),
+                      if (competition.registered == null ||
+                          competition.registered!.isEmpty)
+                        Text(
+                          "No teams registered yet. Be the first!",
+                          style: TextStyle(color: AppColors.grey4),
+                        ),
 
                       if (competition.registered != null)
                         ...competition.registered!.map((item) {
@@ -149,17 +203,23 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
                             return ListTile(
                               contentPadding: EdgeInsets.zero,
                               leading: CircleAvatar(
-                                backgroundColor: AppColors.primary.withOpacity(0.1),
-                                child: Text(item.name?[0] ?? "T", style: TextStyle(color: AppColors.primary)),
+                                backgroundColor: AppColors.primary.withOpacity(
+                                  0.1,
+                                ),
+                                child: Text(
+                                  item.name?[0] ?? "T",
+                                  style: TextStyle(color: AppColors.primary),
+                                ),
                               ),
                               title: Text(item.name ?? "Unknown Team"),
                               subtitle: Text("@${item.username ?? ''}"),
                             );
                           }
-                          return SizedBox.shrink(); // Hide if it's just an ID string (shouldn't happen on this screen)
+                          return SizedBox.shrink();
                         }).toList(),
 
-                      SizedBox(height: Dimensions.height40 * 2), // Spacing for bottom button
+                      SizedBox(height: Dimensions.height40 * 3),
+                      // Spacing for bottom button
                     ],
                   ),
                 ),
@@ -169,38 +229,33 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
         },
       ),
       bottomSheet: GetBuilder<CompetitionController>(
-          builder: (controller) {
-            if (controller.competitionDetail == null) return SizedBox.shrink();
+        builder: (controller) {
+          if (controller.competitionDetail == null) return SizedBox.shrink();
 
-            return Container(
-              height: 80,
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black12, spreadRadius: 1)],
-              ),
-              child: ElevatedButton(
-                onPressed: () {
-                  // Handle Registration Logic
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: Center(
-                  child: Text(
-                    "Register Team (\$${controller.competitionDetail?.registrationFee})",
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            );
-          }
+          return Container(
+            height: Dimensions.height100*1.2,
+            padding: EdgeInsets.symmetric(
+              horizontal: Dimensions.width20,
+              vertical: Dimensions.height30,
+            ),
+            child: CustomButton(
+              padding: EdgeInsets.symmetric(vertical: Dimensions.height5),
+              text:
+                  'Register Team (\$${controller.competitionDetail?.registrationFee})',
+              onPressed: () {},
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Expanded(
       child: Container(
         padding: EdgeInsets.all(15),
@@ -214,8 +269,18 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
           children: [
             Icon(icon, color: color, size: 24),
             SizedBox(height: 8),
-            Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-            Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
           ],
         ),
       ),
@@ -225,7 +290,7 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: AppColors.grey2),
+        Icon(icon, size: 20, color: AppColors.grey4),
         SizedBox(width: 12),
         Expanded(
           child: Text(
