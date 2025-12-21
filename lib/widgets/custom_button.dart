@@ -6,7 +6,7 @@ import '../utils/dimensions.dart';
 
 
 class CustomButton extends StatelessWidget {
-  final String text;
+  final String? text;
   final VoidCallback? onPressed;
   final bool isLoading;
   final bool isDisabled;
@@ -19,7 +19,7 @@ class CustomButton extends StatelessWidget {
 
   const CustomButton({
     super.key,
-    required this.text,
+    this.text,
     required this.onPressed,
     this.isLoading = false,
     this.isDisabled = false,
@@ -76,7 +76,7 @@ class CustomButton extends StatelessWidget {
             ],
             Flexible(
               child: Text(
-                text,
+                text ?? '',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,

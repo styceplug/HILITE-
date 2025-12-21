@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:hilite/helpers/push_notification.dart';
 import 'package:hilite/routes/routes.dart';
 import 'package:hilite/utils/app_constants.dart';
 import 'package:hilite/utils/colors.dart';
@@ -33,6 +34,7 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await NotificationService().initialize();
   await dep.init();
   Get.put(GlobalLoaderController(), permanent: true);
   HardwareKeyboard.instance.clearState();

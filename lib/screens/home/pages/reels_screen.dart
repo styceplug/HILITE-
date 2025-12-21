@@ -85,7 +85,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _tabBtn("Trials", "text"),
+                    // _tabBtn("Trials", "text"),
                     _tabBtn("Images", "image"),
                     _tabBtn("Videos", "video"),
                   ],

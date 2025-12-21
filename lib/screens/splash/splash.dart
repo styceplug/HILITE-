@@ -33,7 +33,7 @@ class _SplashState extends State<Splash> {
       body: Container(
         height: Dimensions.screenHeight,
         width: Dimensions.screenWidth,
-        padding: EdgeInsets.only(bottom: Dimensions.height50),
+        padding: EdgeInsets.only(bottom: Dimensions.height70),
         decoration: const BoxDecoration(
           gradient: AppColors.blueWhiteGradient,
         ),
@@ -69,7 +69,8 @@ class _SplashState extends State<Splash> {
               Spacer(),
               BouncingDotsIndicator(
                 color: AppColors.primary,
-              )
+              ),
+
             ],
           ),
         ),

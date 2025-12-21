@@ -12,18 +12,20 @@ import 'gift_bottom_modal.dart';
 class ReelsInteractionOverlay extends StatelessWidget {
   final PostModel post;
 
-  const ReelsInteractionOverlay({Key? key, required this.post}) : super(key: key);
+  const ReelsInteractionOverlay({Key? key, required this.post})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     PostController postController = Get.find<PostController>();
 
-
-
-
-
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.fromLTRB(
+        Dimensions.width15,
+        0,
+        Dimensions.width15,
+        Dimensions.height10,
+      ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.black54, Colors.transparent],
@@ -46,15 +48,14 @@ class ReelsInteractionOverlay extends StatelessWidget {
                   children: [
                     Text(
                       post.author?.username.capitalizeFirst ?? '',
-                      style:  TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: Dimensions.font20,
+                        fontSize: Dimensions.font22,
                       ),
                     ),
 
-                     SizedBox(height: Dimensions.height5),
-
+                    SizedBox(height: Dimensions.height5),
 
                     Builder(
                       builder: (context) {
@@ -65,18 +66,25 @@ class ReelsInteractionOverlay extends StatelessWidget {
                           descriptionText = post.text;
                         }
                         // B. If no main 'text', check the content-specific description
-                        else if (post.type == 'video' && post.video?.description != null) {
+                        else if (post.type == 'video' &&
+                            post.video?.description != null) {
                           descriptionText = post.video!.description;
-                        }
-                        else if (post.type == 'image' && post.image?.description != null) {
+                        } else if (post.type == 'image' &&
+                            post.image?.description != null) {
                           descriptionText = post.image!.description;
                         }
 
                         // 3. Display the description if found
-                        if (descriptionText != null && descriptionText.isNotEmpty) {
+                        if (descriptionText != null &&
+                            descriptionText.isNotEmpty) {
                           return Text(
                             descriptionText,
-                            style: TextStyle(color: Colors.white70, fontSize: Dimensions.font14),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: Dimensions.font16,
+                            ),
                           );
                         }
 
@@ -84,7 +92,7 @@ class ReelsInteractionOverlay extends StatelessWidget {
                         return const SizedBox.shrink();
                       },
                     ),
-                    SizedBox(height: Dimensions.height100)
+                    SizedBox(height: Dimensions.height150),
                   ],
                 ),
               ),
@@ -94,20 +102,31 @@ class ReelsInteractionOverlay extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Profile Pic
-                  _ProfileAvatar(url: post.author?.profilePicture,argument: post.author?.id),
+                  _ProfileAvatar(
+                    url: post.author?.profilePicture,
+                    argument: post.author?.id,
+                  ),
                   const SizedBox(height: 20),
 
                   // Likes
                   Obx(() {
-                    final currentPost = postController.posts.firstWhereOrNull((p) => p.id == post.id) ?? post;
+                    final currentPost =
+                        postController.posts.firstWhereOrNull(
+                          (p) => p.id == post.id,
+                        ) ??
+                        post;
                     final bool isLiked = currentPost.isLiked;
 
                     return GestureDetector(
                       onTap: () => postController.toggleLike(currentPost.id),
                       child: _InteractionIcon(
-                          icon: isLiked ? Iconsax.heart5 : Iconsax.heart, // Filled vs. Outline
-                          label: "${currentPost.likes.length}",
-                          color: isLiked ? Colors.red : Colors.white // Change color if liked
+                        icon: isLiked ? Iconsax.heart5 : Iconsax.heart,
+                        // Filled vs. Outline
+                        label: "${currentPost.likes.length}",
+                        color:
+                            isLiked
+                                ? Colors.red
+                                : Colors.white, // Change color if liked
                       ),
                     );
                   }),
@@ -116,7 +135,11 @@ class ReelsInteractionOverlay extends StatelessWidget {
 
                   Obx(() {
                     // Find the updated post model from the observable list.
-                    final currentPost = postController.posts.firstWhereOrNull((p) => p.id == post.id) ?? post;
+                    final currentPost =
+                        postController.posts.firstWhereOrNull(
+                          (p) => p.id == post.id,
+                        ) ??
+                        post;
 
                     return GestureDetector(
                       onTap: () {
@@ -124,28 +147,28 @@ class ReelsInteractionOverlay extends StatelessWidget {
                         postController.showCommentsForPost(currentPost.id);
                       },
                       child: _InteractionIcon(
-                          icon: Iconsax.message,
-                          label: "${currentPost.comments.length}"
+                        icon: Iconsax.message,
+                        label: "${currentPost.comments.length}",
                       ),
                     );
                   }),
                   const SizedBox(height: 20),
 
-                   GestureDetector(
-                     onTap: (){
-                       Get.bottomSheet(
-                         GiftSelectionBottomSheet(
-                           recipientId: post.author?.id ?? "",
-                         ),
-                         isScrollControlled: true,
-                       );
-                     },
-                     child: _InteractionIcon(
-                        icon: Icons.card_giftcard,
-                        label: "Gift",
-                        color: Colors.amber
-                                       ),
-                   ),
+                  GestureDetector(
+                    onTap: () {
+                      Get.bottomSheet(
+                        GiftSelectionBottomSheet(
+                          recipientId: post.author?.id ?? "",
+                        ),
+                        isScrollControlled: true,
+                      );
+                    },
+                    child: _InteractionIcon(
+                      icon: Icons.card_giftcard,
+                      label: "Gift",
+                      color: Colors.amber,
+                    ),
+                  ),
                   SizedBox(height: Dimensions.height150),
                 ],
               ),
@@ -164,16 +187,26 @@ class _InteractionIcon extends StatelessWidget {
   final Color color;
 
   const _InteractionIcon({
-    Key? key, required this.icon, required this.label, this.color = Colors.white
+    Key? key,
+    required this.icon,
+    required this.label,
+    this.color = Colors.white,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, color: color, size: Dimensions.iconSize30*1.2),
+        Icon(icon, color: color, size: Dimensions.iconSize30 * 1.2),
         const SizedBox(height: 5),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }
@@ -182,14 +215,18 @@ class _InteractionIcon extends StatelessWidget {
 class _ProfileAvatar extends StatelessWidget {
   final String? url;
   final String? argument;
-  const _ProfileAvatar({Key? key, this.url,this.argument}) : super(key: key);
+
+  const _ProfileAvatar({Key? key, this.url, this.argument}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: (){
+      onTap: () {
         if (argument != null && argument!.isNotEmpty) {
-          Get.toNamed(AppRoutes.othersProfileScreen, arguments: {'targetId': argument});
+          Get.toNamed(
+            AppRoutes.othersProfileScreen,
+            arguments: {'targetId': argument},
+          );
           PostController postController = Get.find<PostController>();
           postController.pauseAll();
         } else {
@@ -202,13 +239,11 @@ class _ProfileAvatar extends StatelessWidget {
           border: Border.all(color: Colors.white, width: 2),
         ),
         child: CircleAvatar(
-          radius: Dimensions.radius20*1.4,
-          backgroundImage: (url != null && url!.isNotEmpty)
-              ? NetworkImage(url!)
-              : null,
-          child: (url == null || url!.isEmpty)
-              ? const Icon(Icons.person)
-              : null,
+          radius: Dimensions.radius20 * 1.1,
+          backgroundImage:
+              (url != null && url!.isNotEmpty) ? NetworkImage(url!) : null,
+          child:
+              (url == null || url!.isEmpty) ? const Icon(Icons.person) : null,
         ),
       ),
     );

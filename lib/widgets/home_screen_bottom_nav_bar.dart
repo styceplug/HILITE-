@@ -18,11 +18,11 @@ class HomeScreenBottomNavBar extends StatelessWidget {
       () => ClipRect(
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.6),
+            color: Colors.black,
             // borderRadius: BorderRadius.circular(Dimensions.radius30),
           ),
           padding: EdgeInsets.only(
-            bottom: Dimensions.height40,
+            bottom: Dimensions.height10*7,
             left: Dimensions.width15,
             right: Dimensions.width15,
             top: Dimensions.height15,

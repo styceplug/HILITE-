@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/app_controller.dart';
+import 'package:hilite/routes/routes.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzData;
 import 'package:permission_handler/permission_handler.dart';
@@ -163,7 +165,9 @@ class NotificationService {
     if (data.containsKey('type')) {
       String type = data['type'];
       if(type == 'follow') {
-        // Navigate to profile
+        Get.offAllNamed(AppRoutes.homeScreen);
+        AppController appController = Get.find<AppController>();
+        appController.changeCurrentAppPage(2);
       } else if (type == 'comment') {
         // Navigate to post details
       }

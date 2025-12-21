@@ -1,5 +1,6 @@
 import 'dart:io';
-
+import 'package:http_parser/http_parser.dart'; // REQUIRED for MediaType
+import 'package:mime/mime.dart'; // Optional, but good for auto-detection
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get_connect/http/src/response/response.dart';
@@ -38,29 +39,29 @@ class PostRepo {
     required String title,
     required String description,
     required bool isPublic,
+    required MediaType mediaType, // <--- 1. ADD THIS PARAMETER
   }) {
     final request = http.MultipartRequest('POST', Uri.parse(apiClient.baseUrl! + uri));
 
-    // Add all field data
+    // Add fields
     request.fields.addAll({
       'text': text,
-      'title': title, // Used for video
-      'description': description, // Used for video
-      // Use the field name expected by the server for image metadata
+      'title': title,
+      'description': description,
       'imageTitle': title,
       'imageDescription': description,
       'isPublic': isPublic.toString(),
     });
 
-    // Add the file
+    // 2. Add File with EXPLICIT ContentType
     request.files.add(
       http.MultipartFile.fromBytes(
         fileFieldName,
         File(file.path).readAsBytesSync(),
         filename: file.name,
+        contentType: mediaType, // <--- CRITICAL FIX
       ),
     );
-
 
     return request;
   }
@@ -73,6 +74,13 @@ class PostRepo {
     required String description,
     required bool isPublic,
   }) async {
+
+    // Default to jpeg, or detect
+    MediaType contentType = MediaType('image', 'jpeg');
+    if (imageFile.path.endsWith('.png')) {
+      contentType = MediaType('image', 'png');
+    }
+
     final request = _buildBaseRequest(
       uri: AppConstants.UPLOAD_IMAGE_POST,
       file: imageFile,
@@ -81,6 +89,7 @@ class PostRepo {
       title: title,
       description: description,
       isPublic: isPublic,
+      mediaType: contentType,
     );
 
     return await apiClient.postMultipartData(
@@ -97,6 +106,17 @@ class PostRepo {
     required String description,
     required bool isPublic,
   }) async {
+
+    // Determine mime type (Basic logic)
+    // You can also use lookupMimeType(videoFile.path) from package:mime
+    MediaType contentType = MediaType('video', 'mp4');
+
+    if (videoFile.path.endsWith('.mov')) {
+      contentType = MediaType('video', 'quicktime');
+    } else if (videoFile.path.endsWith('.avi')) {
+      contentType = MediaType('video', 'x-msvideo');
+    }
+
     final request = _buildBaseRequest(
       uri: AppConstants.UPLOAD_VIDEO_POST,
       file: videoFile,
@@ -105,12 +125,14 @@ class PostRepo {
       title: title,
       description: description,
       isPublic: isPublic,
+      mediaType: contentType, // Pass it here
     );
 
     return await apiClient.postMultipartData(
       AppConstants.UPLOAD_VIDEO_POST,
       request,
-    );}
+    );
+  }
 
   Future<Response> getPostComments(String postId) async {
     return await apiClient.getData(

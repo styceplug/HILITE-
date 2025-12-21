@@ -8,6 +8,15 @@ import 'package:hilite/utils/dimensions.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'dart:async';
+import 'dart:io';
+import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+
 class UploadContent extends StatefulWidget {
   const UploadContent({super.key});
 
@@ -21,10 +30,11 @@ class _UploadContentState extends State<UploadContent> {
   bool _isRecording = false;
   bool _isFrontCamera = false;
   bool _isFlashOn = false;
-  bool _isVideoMode = false;
+  bool _isVideoMode = false; // This only controls the CAMERA UI
 
   final ImagePicker _picker = ImagePicker();
   XFile? _lastGalleryItem;
+  bool _lastItemIsVideo = false; // Track if the gallery item is video
 
   @override
   void initState() {
@@ -43,6 +53,8 @@ class _UploadContentState extends State<UploadContent> {
   Future<void> _initializeCamera() async {
     try {
       final cameras = await availableCameras();
+      if (cameras.isEmpty) return;
+
       final selectedCamera = _isFrontCamera ? cameras.last : cameras.first;
 
       _cameraController = CameraController(
@@ -87,37 +99,51 @@ class _UploadContentState extends State<UploadContent> {
       if (_isRecording) {
         final file = await _cameraController!.stopVideoRecording();
         setState(() => _isRecording = false);
-        _navigateToPostDetails(file);
+        // From Camera: Use _isVideoMode to determine type
+        _navigateToPostDetails(file, isVideo: true);
       } else {
         await _cameraController!.startVideoRecording();
         setState(() => _isRecording = true);
-        // Optional auto-stop after 30s
         Timer(const Duration(seconds: 30), () async {
-          if (_isRecording) await _captureMedia();
+          if (_isRecording) {
+            final file = await _cameraController!.stopVideoRecording();
+            setState(() => _isRecording = false);
+            _navigateToPostDetails(file, isVideo: true);
+          }
         });
       }
     } else {
       final file = await _cameraController!.takePicture();
-      _navigateToPostDetails(file);
+      // From Camera: Use _isVideoMode (false)
+      _navigateToPostDetails(file, isVideo: false);
     }
   }
 
-  void _navigateToPostDetails(XFile file) {
-    Get.toNamed(AppRoutes.postDetailScreen,arguments: {
-      'file':file,
-      'isVideo':_isVideoMode
+  // 🛠️ FIXED: Added optional isVideo parameter to override camera state
+  void _navigateToPostDetails(XFile file, {required bool isVideo}) {
+    Get.toNamed(AppRoutes.postDetailScreen, arguments: {
+      'file': file,
+      'isVideo': isVideo // Pass the explicit type
     });
   }
 
+  // 🛠️ FIXED: Logic to detect file type from Gallery
   Future<void> _pickFromGallery() async {
     try {
+      // pickMedia() allows selecting ONE image OR ONE video
       final result = await _picker.pickMedia();
 
       if (result != null) {
+        // Simple logic to check extension
+        final String extension = result.path.split('.').last.toLowerCase();
+        final bool isVideo = ['mp4', 'mov', 'avi', 'mkv', 'flv'].contains(extension);
+
         setState(() {
           _lastGalleryItem = result;
+          _lastItemIsVideo = isVideo;
         });
-        _navigateToPostDetails(result);
+
+        _navigateToPostDetails(result, isVideo: isVideo);
       }
     } catch (e) {
       debugPrint('Gallery pick error: $e');
@@ -132,6 +158,10 @@ class _UploadContentState extends State<UploadContent> {
 
   @override
   Widget build(BuildContext context) {
+    // Determine dimensions (assuming usage of a package or MediaQuery)
+    final width = MediaQuery.of(context).size.width;
+    final height = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -140,9 +170,9 @@ class _UploadContentState extends State<UploadContent> {
           children: [
             // 🟢 Camera Preview
             if (_isCameraInitialized)
-              Container(
-                width: Dimensions.screenWidth,
-                height: Dimensions.screenHeight,
+              SizedBox(
+                width: width,
+                height: height,
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
                   child: CameraPreview(_cameraController!),
@@ -254,7 +284,10 @@ class _UploadContentState extends State<UploadContent> {
             ? const Icon(Icons.photo, color: Colors.white)
             : ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.file(
+          // 🛠️ FIXED: If it's a video, show an Icon, otherwise show the image
+          child: _lastItemIsVideo
+              ? const Center(child: Icon(Icons.videocam, color: Colors.white))
+              : Image.file(
             File(_lastGalleryItem!.path),
             fit: BoxFit.cover,
           ),

@@ -88,8 +88,8 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
   Widget? _getImageWidget() {
     if (selectedImage != null) {
       return Container(
-        height: Dimensions.height100 * 1.5,
-        width: Dimensions.width100 * 1.5,
+        height: Dimensions.height100,
+        width: Dimensions.width100,
         decoration: BoxDecoration(
           color: AppColors.error,
           shape: BoxShape.circle,
@@ -102,8 +102,8 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
       );
     } else if (avatarUrl != null && avatarUrl!.isNotEmpty) {
       return Container(
-        height: Dimensions.height100 * 1.5,
-        width: Dimensions.width100 * 1.5,
+        height: Dimensions.height100 ,
+        width: Dimensions.width100 ,
         decoration: BoxDecoration(
           // color: AppColors.error,
           shape: BoxShape.circle,

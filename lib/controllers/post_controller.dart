@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/app_controller.dart';
 import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/controllers/wallet_controller.dart';
 import 'package:hilite/helpers/global_loader_controller.dart';
@@ -87,6 +88,10 @@ class PostController extends GetxController {
 
         // Navigate back to the main feed/home screen
         Get.offAllNamed(AppRoutes.homeScreen);
+        AppController appController = Get.find<AppController>();
+        appController.changeCurrentAppPage(0);
+
+        ;
 
 
       } else {

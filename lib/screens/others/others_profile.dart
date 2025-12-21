@@ -10,6 +10,7 @@ import '../../utils/colors.dart';
 import '../../utils/dimensions.dart';
 import '../../widgets/custom_appbar.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/gift_bottom_modal.dart';
 import '../../widgets/post_grid_shimmer.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/reels_video_item.dart';
@@ -45,7 +46,6 @@ class _OthersProfileState extends State<OthersProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppbar(leadingIcon: const BackButton()),
       body: GetBuilder<UserController>(
         builder: (controller) {
           var user = userController.othersProfile.value;
@@ -63,14 +63,41 @@ class _OthersProfileState extends State<OthersProfileScreen> {
 
           return SingleChildScrollView(
             padding: EdgeInsets.symmetric(
-              horizontal: Dimensions.width20,
-              vertical: Dimensions.height30,
+              vertical: Dimensions.height10*5,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 /// 👤 Profile Picture
-                ProfileAvatar(avatarUrl: user.profilePicture),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    BackButton(),
+                    ProfileAvatar(avatarUrl: user.profilePicture),
+                    InkWell(
+                      onTap: (){
+                        Get.bottomSheet(
+                          GiftSelectionBottomSheet(
+                            recipientId: user.id,
+                          ),
+                          isScrollControlled: true,
+                        );
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: Dimensions.width10,vertical: Dimensions.height10),
+                        margin: EdgeInsets.only(right: Dimensions.width15,top: Dimensions.height10),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.success,
+                        ),
+                        child: Icon(Iconsax.gift,color: AppColors.white,size: Dimensions.iconSize16,),
+                      ),
+                    ),
+
+                  ],
+                ),
                 SizedBox(height: Dimensions.height20),
 
                 /// 🧾 Name and Username
@@ -79,8 +106,8 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                       ? (user.clubDetails?.clubName ?? 'Unknown Club')
                       : (user.name.capitalizeFirst ?? 'Unknown'),
                   style: TextStyle(
-                    fontSize: Dimensions.font18,
-                    fontWeight: FontWeight.w600,
+                    fontSize: Dimensions.font20,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
@@ -92,25 +119,27 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                   ),
                 ),
 
-                SizedBox(height: Dimensions.height20),
+                SizedBox(height: Dimensions.height10),
 
                 /// 📊 Stats Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    // if (user.role != 'fan')
-                      _buildStat('Followers', '${user.followers}'),
-                    _divider(),
-                    _buildStat('Following', '${user.following}'),
-                  ],
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: Dimensions.width100),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      // if (user.role != 'fan')
+                        _buildStat('Followers', '${user.followers}'),
+                      _buildStat('Following', '${user.following}'),
+                    ],
+                  ),
                 ),
-                SizedBox(height: Dimensions.height20),
+                SizedBox(height: Dimensions.height10),
 
                 /// 🧾 Bio or Summary
                 if (user.bio?.isNotEmpty ?? false)
                   Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: Dimensions.width20,
+                      horizontal: Dimensions.width30,
                     ),
                     child: Text(
                       user.bio ?? '',
@@ -124,41 +153,21 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                     ),
                   ),
 
-                SizedBox(height: Dimensions.height20),
+                SizedBox(height: Dimensions.height15),
 
                 /// ⚽ Player Info
                 if (user.role == 'player') ...[
-                  Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildInfoTag('Position: ${player?.position ?? '-'}'),
-                          _buildInfoTag('Height: ${player?.height ?? '-'}cm'),
-                          _buildInfoTag('Weight: ${player?.weight ?? '-'}kg'),
-                        ],
-                      ),
-                      SizedBox(height: Dimensions.height20),
-                      CustomButton(
-                        text: 'Gift Creator',
-                        textStyle: TextStyle(
-                          color: AppColors.white,
-                          fontSize: Dimensions.font15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        onPressed: () {
-                          CustomSnackBar.processing(
-                            message: 'Direct messaging coming soon!',
-                          );
-                        },
-                        backgroundColor: AppColors.primary,
-                        borderRadius: BorderRadius.circular(
-                          Dimensions.radius10,
-                        ),
-                      ),
-                    ],
+                  Padding(
+                    padding: EdgeInsets.only(bottom: Dimensions.height15,left: Dimensions.width30,right: Dimensions.width30),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildInfoTag('Position: ${player?.position ?? '-'}'),
+                        _buildInfoTag('Height: ${player?.height ?? '-'}cm'),
+                        _buildInfoTag('Weight: ${player?.weight ?? '-'}kg'),
+                      ],
+                    ),
                   ),
-                  SizedBox(height: Dimensions.height20),
                 ],
 
                 /// 🏢 Club Info
@@ -166,7 +175,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Padding(
-                      padding: EdgeInsets.only(bottom: Dimensions.height20),
+                      padding: EdgeInsets.only(bottom: Dimensions.height15,left: Dimensions.width30,right: Dimensions.width30),
                       child: Row(
                         children: [
                           _buildInfoTag('Account Name: ${user.name ?? '-'}'),
@@ -187,68 +196,76 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                 if (user.role == 'agent') ...[
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildInfoTag('Agency: ${agent?.agencyName ?? '-'}'),
-                        SizedBox(width: Dimensions.height5),
-                        _buildInfoTag(
-                          'Experience: ${agent?.experience ?? '-'}',
-                        ),
-                        SizedBox(width: Dimensions.height5),
-                      ],
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: Dimensions.height15,left: Dimensions.width30,right: Dimensions.width30),
+                      child: Row(
+                        children: [
+                          _buildInfoTag('Agency: ${agent?.agencyName ?? '-'}'),
+                          SizedBox(width: Dimensions.height5),
+                          _buildInfoTag(
+                            'Experience: ${agent?.experience ?? '-'}',
+                          ),
+                          SizedBox(width: Dimensions.height5),
+                        ],
+                      ),
                     ),
                   ),
                 ],
 
-                // SizedBox(height: Dimensions.height20),
-
                 /// 🔘 Follow & Message Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Expanded(
-                      child: CustomButton(
-                        text: isFollowing ? 'Unfollow' : 'Follow',
-                        textStyle: TextStyle(
-                          color: AppColors.white,
-                          fontSize: Dimensions.font15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        onPressed:
-                            () =>
-                                !isFollowing
-                                    ? userController.followUser(user.id)
-                                    : userController.unfollowUser(user.id),
-                        backgroundColor: AppColors.primary,
-                        borderRadius: BorderRadius.circular(
-                          Dimensions.radius10,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: Dimensions.width20),
-                    Expanded(
-                      child: CustomButton(
-                        text: 'Message',
-                        textStyle: TextStyle(
-                          color: AppColors.black,
-                          fontSize: Dimensions.font15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        onPressed: () {
-                          CustomSnackBar.showToast(
-                            message: 'Direct messaging coming soon!',
-                          );
-                        },
-                        backgroundColor: AppColors.grey4,
-                        borderRadius: BorderRadius.circular(
-                          Dimensions.radius10,
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: Dimensions.width40),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        child: CustomButton(
+                          text: isFollowing ? 'Unfollow' : 'Follow',
+                          textStyle: TextStyle(
+                            color: AppColors.white,
+                            fontSize: Dimensions.font15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          onPressed:
+                              () =>
+                                  !isFollowing
+                                      ? userController.followUser(user.id)
+                                      : userController.unfollowUser(user.id),
+                          backgroundColor: AppColors.primary,
+                          borderRadius: BorderRadius.circular(
+                            Dimensions.radius10,
+                          ),
+                          padding: EdgeInsets.symmetric(horizontal: Dimensions.width20,vertical: Dimensions.height10),
                         ),
                       ),
-                    ),
-                  ],
+                      SizedBox(width: Dimensions.width20),
+                      Expanded(
+                        child: CustomButton(
+                          text: 'Message',
+                          textStyle: TextStyle(
+                            color: AppColors.black,
+                            fontSize: Dimensions.font15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          onPressed: () {
+                            CustomSnackBar.showToast(
+                              message: 'Direct messaging coming soon!',
+                            );
+                          },
+                          padding: EdgeInsets.symmetric(horizontal: Dimensions.width20,vertical: Dimensions.height10),
+                          backgroundColor: AppColors.grey4,
+                          borderRadius: BorderRadius.circular(
+                            Dimensions.radius10,
+                          ),
+                        ),
+                      ),
+                      
+
+                    ],
+                  ),
                 ),
 
-                SizedBox(height: Dimensions.height40),
+                SizedBox(height: Dimensions.height20),
 
                 /// 📑 TABS SECTION (Videos, Photos, Posts)
                 if (user.role != 'fan') ...[
@@ -257,7 +274,8 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                     children: [
                       _buildTabItem(controller, 'video', 'Videos'),
                       _buildTabItem(controller, 'image', 'Photos'),
-                      _buildTabItem(controller, 'text', 'Posts'),
+                     if (user.role == 'club')
+                      _buildTabItem(controller, 'fixtures', 'Fixtures'),
                     ],
                   ),
                   SizedBox(height: Dimensions.height20),
