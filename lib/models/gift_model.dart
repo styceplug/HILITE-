@@ -16,27 +16,34 @@ class GiftModel {
 }
 
 final List<GiftModel> giftList = [
-  // Low Tier (Quick Support: ₦500 - ₦3,000)
-  GiftModel(name: "Energy Drink", coins: 50, icon: AppConstants.getPngAsset('energy-drink')), // ₦500
-  GiftModel(name: "Ice Pack", coins: 150, icon: AppConstants.getPngAsset('ice')), // ₦1,500
-  GiftModel(name: "Socks Pack", coins: 250, icon: AppConstants.getPngAsset('socks')), // ₦2,500
-  GiftModel(name: "Muscle Rub", coins: 300, icon: AppConstants.getPngAsset('balm')), // ₦3,000
+  // --- TIER 1: The Basics (Entry Level) ---
+  GiftModel(name: "Whistle", coins: 100, icon: AppConstants.getPngAsset('whistle')),
+  GiftModel(name: "Cones", coins: 250, icon: AppConstants.getPngAsset('cones')),
+  GiftModel(name: "Socks", coins: 500, icon: AppConstants.getPngAsset('socks')),
+  GiftModel(name: "Muscle Spray", coins: 1000, icon: AppConstants.getPngAsset('muscle-spray')),
 
-  // Mid Tier (Solid Gifts: ₦5,000 - ₦20,000)
-  GiftModel(name: "Training Vest", coins: 500, icon: AppConstants.getPngAsset('vest')), // ₦5,000
-  GiftModel(name: "Club Cap", coins: 800, icon: AppConstants.getPngAsset('hat')), // ₦8,000
-  GiftModel(name: "Football", coins: 1500, icon: AppConstants.getPngAsset('football-award')), // ₦15,000
-  GiftModel(name: "Gloves", coins: 2000, icon: AppConstants.getPngAsset('gloves')), // ₦20,000
+  // --- TIER 2: Training Gear (Amateur) ---
+  GiftModel(name: "Training Bib", coins: 2500, icon: AppConstants.getPngAsset('training-bib')),
+  GiftModel(name: "First Aid", coins: 5000, icon: AppConstants.getPngAsset('first-aid')),
+  GiftModel(name: "Captain Armband", coins: 7500, icon: AppConstants.getPngAsset('captain-armband')),
+  GiftModel(name: "Corner Flag", coins: 10000, icon: AppConstants.getPngAsset('corner-flags')),
 
-  // High Tier (Major Support: ₦30,000 - ₦80,000)
-  GiftModel(name: "Jersey", coins: 3500, icon: AppConstants.getPngAsset('football-shirt')), // ₦35,000
-  GiftModel(name: "Boots", coins: 5000, icon: AppConstants.getPngAsset('football-boots')), // ₦50,000
-  GiftModel(name: "Gear Bag", coins: 6500, icon: AppConstants.getPngAsset('sport-bag')), // ₦65,000
-  GiftModel(name: "Training Kit", coins: 8000, icon: AppConstants.getPngAsset('kit')), // ₦80,000
+  // --- TIER 3: Match Day Kit (Professional) ---
+  GiftModel(name: "Football Shorts", coins: 15000, icon: AppConstants.getPngAsset('football-shorts')),
+  GiftModel(name: "Football", coins: 25000, icon: AppConstants.getPngAsset('football')),
+  GiftModel(name: "Gloves", coins: 40000, icon: AppConstants.getPngAsset('gloves')),
+  GiftModel(name: "Boots", coins: 60000, icon: AppConstants.getPngAsset('boots')),
 
-  // Premium (Whale Status: ₦100,000 - ₦1M)
-  GiftModel(name: "Goal Net", coins: 10000, icon: AppConstants.getPngAsset('goal')), // ₦100,000
-  GiftModel(name: "Recovery Pack", coins: 20000, icon: AppConstants.getPngAsset('recovery')), // ₦200,000
-  GiftModel(name: "Endorsement", coins: 50000, icon: AppConstants.getPngAsset('endorsement')), // ₦500,000
-  GiftModel(name: "Trophy", coins: 100000, icon: AppConstants.getPngAsset('winner')), // ₦1,000,000
+  // --- TIER 4: Infrastructure (World Class) ---
+  GiftModel(name: "Football Jersey", coins: 100000, icon: AppConstants.getPngAsset('football-jersey')),
+  GiftModel(name: "Kit Bag", coins: 150000, icon: AppConstants.getPngAsset('kit-bag')),
+  GiftModel(name: "Goal Post", coins: 250000, icon: AppConstants.getPngAsset('goal-post')),
+
+  // --- TIER 5: Legend Status (The "Flex" Items) ---
+  GiftModel(name: "Contract", coins: 500000, icon: AppConstants.getPngAsset('contract')),
+  GiftModel(name: "Endorsement", coins: 1000000, icon: AppConstants.getPngAsset('endorsement')),
 ];
+
+
+
+

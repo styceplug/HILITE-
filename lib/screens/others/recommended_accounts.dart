@@ -196,14 +196,14 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
     );
   }
 
-  // Filter Chips Widget
+
   Widget _buildFilterChips() {
     return Obx(() {
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            // Role Filter: Fans
+            // --- 1. Role Filter: Fans ---
             _buildFilterChip(
               label: 'Fans',
               icon: Icons.person_outline,
@@ -213,7 +213,7 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                   userController.selectedRole.value = '';
                 } else {
                   userController.selectedRole.value = 'fan';
-                  userController.selectedPosition.value = ''; // Clear position filter
+                  userController.selectedPosition.value = '';
                 }
                 userController.applyFilters();
               },
@@ -221,7 +221,7 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
 
             SizedBox(width: Dimensions.width10),
 
-            // Role Filter: Players
+            // --- 2. Role Filter: Players ---
             _buildFilterChip(
               label: 'Players',
               icon: Icons.sports_soccer,
@@ -237,9 +237,37 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
               },
             ),
 
+            // --- CONDITIONAL: Position Filter ---
+            // This is now placed immediately after "Players"
+            if (userController.selectedRole.value == 'player') ...[
+              SizedBox(width: Dimensions.width10),
+              // Animate the appearance of the position chip
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutBack,
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: child,
+                  );
+                },
+                child: _buildFilterChip(
+                  label: userController.selectedPosition.value.isEmpty
+                      ? 'Position'
+                      : userController.selectedPosition.value,
+                  icon: Icons.location_on,
+                  isSelected: userController.selectedPosition.value.isNotEmpty,
+                  onTap: () {
+                    _showPositionBottomSheet(context);
+                  },
+                ),
+              ),
+            ],
+
             SizedBox(width: Dimensions.width10),
 
-            // Role Filter: Agents
+            // --- 3. Role Filter: Agents ---
             _buildFilterChip(
               label: 'Agents',
               icon: Icons.business_center,
@@ -249,7 +277,7 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                   userController.selectedRole.value = '';
                 } else {
                   userController.selectedRole.value = 'agent';
-                  userController.selectedPosition.value = ''; // Clear position filter
+                  userController.selectedPosition.value = '';
                 }
                 userController.applyFilters();
               },
@@ -257,7 +285,7 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
 
             SizedBox(width: Dimensions.width10),
 
-            // Role Filter: Clubs
+            // --- 4. Role Filter: Clubs ---
             _buildFilterChip(
               label: 'Clubs',
               icon: Icons.shield,
@@ -267,33 +295,18 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                   userController.selectedRole.value = '';
                 } else {
                   userController.selectedRole.value = 'club';
-                  userController.selectedPosition.value = ''; // Clear position filter
+                  userController.selectedPosition.value = '';
                 }
                 userController.applyFilters();
               },
             ),
-
-            // Position Filter (only for players)
-            if (userController.selectedRole.value == 'player') ...[
-              SizedBox(width: Dimensions.width10),
-              _buildFilterChip(
-                label: userController.selectedPosition.value.isEmpty
-                    ? 'Position'
-                    : userController.selectedPosition.value,
-                icon: Icons.location_on,
-                isSelected: userController.selectedPosition.value.isNotEmpty,
-                onTap: () {
-                  _showPositionBottomSheet(context);
-                },
-              ),
-            ],
           ],
         ),
       );
     });
   }
 
-  // Custom Filter Chip
+
   Widget _buildFilterChip({
     required String label,
     required IconData icon,
@@ -615,7 +628,7 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
           children: [
             Icon(Icons.info_outline, color: AppColors.primary),
             const SizedBox(width: 10),
-            const Text('About Recommendations'),
+             Text('About Recommendations',style: TextStyle(fontSize: Dimensions.font20),),
           ],
         ),
         content: const Text(
@@ -694,7 +707,6 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
   }
 }
 
-// Enhanced Positions Bottom Sheet
 class PositionsBottomSheet extends StatelessWidget {
   final Function(String) onSelect;
   final String currentPosition;
@@ -707,28 +719,15 @@ class PositionsBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final positions = {
-      'GK', // Goalkeeper
-      'RB', // Right Back
-      'LB', // Left Back
-      'CB', // Center Back
-      'CDM', // Defensive Midfield
-      'CM', // Central Midfield
-      'CAM', // Attacking Midfield
-      'RW', // Right Wing
-      'LW', // Left Wing
-      'ST', //
-    };
-
     return Container(
+      height: MediaQuery.of(context).size.height * 0.85, // Takes up 85% of screen
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.all(20),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
+          const SizedBox(height: 12),
           // Drag Handle
           Container(
             width: 40,
@@ -738,93 +737,205 @@ class PositionsBottomSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
           ),
-          const SizedBox(height: 20),
 
-          // Title
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Select Position',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (currentPosition.isNotEmpty)
-                TextButton(
-                  onPressed: () {
-                    onSelect('');
-                    Get.back();
-                  },
-                  child: const Text('Clear'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Positions by Category
-          ...positions.map((entry) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    entry,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[600],
-                    ),
+                const Text(
+                  'Select Position',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: entry.split(',').map((pos) {
-                    final isSelected = currentPosition == pos;
-                    return InkWell(
-                      onTap: () {
-                        onSelect(pos);
-                        Get.back();
-                      },
-                      borderRadius: BorderRadius.circular(25),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primary
-                              : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(25),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.primary
-                                : Colors.grey[300]!,
-                          ),
-                        ),
-                        child: Text(
-                          pos,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected ? Colors.white : Colors.grey[800],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 12),
+                if (currentPosition.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: () {
+                      onSelect('');
+                      Get.back();
+                    },
+                    icon: const Icon(Icons.clear, size: 18),
+                    label: const Text('Clear'),
+                  ),
               ],
-            );
-          }).toList(),
+            ),
+          ),
 
-          const SizedBox(height: 20),
+          // THE FIELD
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+              decoration: BoxDecoration(
+                color: const Color(0xFF4CAF50), // Grass Green
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.green[800]!, width: 4),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  )
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(
+                  children: [
+                    _buildFieldMarkings(),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          // Attackers
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _PositionNode('LW', currentPosition, onSelect),
+                              Container(margin: const EdgeInsets.only(bottom: 20), child: _PositionNode('ST', currentPosition, onSelect)),
+                              _PositionNode('RW', currentPosition, onSelect),
+                            ],
+                          ),
+
+                          // Midfield (Upper)
+                          _PositionNode('CAM', currentPosition, onSelect),
+
+                          // Midfield (Lower)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _PositionNode('CM', currentPosition, onSelect),
+                              _PositionNode('CDM', currentPosition, onSelect),
+                            ],
+                          ),
+
+                          // Defenders
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _PositionNode('LB', currentPosition, onSelect),
+                              _PositionNode('CB', currentPosition, onSelect),
+                              _PositionNode('RB', currentPosition, onSelect),
+                            ],
+                          ),
+
+                          // Goalkeeper
+                          _PositionNode('GK', currentPosition, onSelect),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFieldMarkings() {
+    return Stack(
+      children: [
+        // Center Circle
+        Center(
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        // Center Line
+        Center(
+          child: Container(
+            height: 2,
+            width: double.infinity,
+            color: Colors.white.withOpacity(0.3),
+          ),
+        ),
+        // Goal Area (Bottom)
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            width: 120,
+            height: 60,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+            ),
+          ),
+        ),
+        // Goal Area (Top)
+        Align(
+          alignment: Alignment.topCenter,
+          child: Container(
+            width: 120,
+            height: 60,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PositionNode extends StatelessWidget {
+  final String label;
+  final String currentSelection;
+  final Function(String) onTap;
+
+  const _PositionNode(this.label, this.currentSelection, this.onTap);
+
+  @override
+  Widget build(BuildContext context) {
+    final isSelected = label == currentSelection;
+
+    return GestureDetector(
+      onTap: () {
+        onTap(label);
+        Get.back();
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 45,
+            height: 45,
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.white : Colors.white.withOpacity(0.85),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isSelected ? AppColors.primary : Colors.transparent,
+                width: isSelected ? 3 : 0,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                )
+              ],
+            ),
+            child: Center(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: isSelected ? AppColors.primary : Colors.grey[800],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

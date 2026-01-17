@@ -54,206 +54,247 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         print(user.bio);
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: Dimensions.width20,
-            vertical: Dimensions.height50,
-          ),
-          child: Column(
-            children: [
-              SizedBox(height: Dimensions.height20),
-
-              /// 🔝 Header Icons
-              Row(
+        return RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: ()async{
+            userController.getPersonalPosts('video');
+            userController.getPersonalPosts('image');
+          },
+          child: Container(
+            height: Dimensions.screenHeight,
+            width: Dimensions.screenWidth,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.symmetric(
+                horizontal: Dimensions.width20,
+                vertical: Dimensions.height50,
+              ),
+              child: Column(
                 children: [
-                  InkWell(
-                    onTap:
-                        () => Get.toNamed(AppRoutes.recommendedAccountsScreen),
-                    child: Icon(Iconsax.people, size: Dimensions.iconSize24),
-                  ),
-                  const Spacer(),
-                  InkWell(
-                    onTap: () => Get.toNamed(AppRoutes.settingsScreen),
-                    child: Icon(
-                      Iconsax.more_circle,
-                      size: Dimensions.iconSize24,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: Dimensions.height30),
+                  SizedBox(height: Dimensions.height20),
 
-              /// 🧑‍💼 Profile Avatar
-              ProfileAvatar(
-                avatarUrl: user.profilePicture,
-                onImageSelected: (XFile file) {
-                  userController.uploadProfilePicture(file);
-                },
-              ),
-              SizedBox(height: Dimensions.height20),
-
-              /// 🧾 Name & Role
-              if (user.role == 'club')
-                Text(
-                  club?.clubName ?? '',
-                  style: TextStyle(
-                    fontSize: Dimensions.font18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              if (user.role != 'club')
-                Text(
-                  user.name,
-                  style: TextStyle(
-                    fontSize: Dimensions.font18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-
-              Text(
-                '@${user.username}'.toLowerCase(),
-                style: TextStyle(
-                  fontSize: Dimensions.font14,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.black.withOpacity(0.7),
-                ),
-              ),
-              SizedBox(height: Dimensions.height10),
-
-              /// 📖 Bio
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
-                child: Text(
-                  user.bio ?? '',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: Dimensions.font13,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.black.withOpacity(0.8),
-                    height: 1.4,
-                  ),
-                ),
-              ),
-
-              SizedBox(height: Dimensions.height20),
-
-              /// 📊 Stats
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  if (user.role != 'fan')
-                    _buildStat('Followers', '${user.followers}'),
-                  _divider(),
-                  _buildStat('Following', '${user.following}'),
-                ],
-              ),
-
-              SizedBox(height: Dimensions.height30),
-
-              /// ⚽ Player Info
-              if (user.role == 'player') ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildInfoTag('Position: ${player?.position ?? '-'}'),
-                    _buildInfoTag('Height: ${player?.height ?? '-'}cm'),
-                    _buildInfoTag('Weight: ${player?.weight ?? '-'}kg'),
-                  ],
-                ),
-                SizedBox(height: Dimensions.height20),
-              ],
-
-              /// 🏢 Club Info
-              if (user.role == 'club') ...[
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Column(
+                  /// 🔝 Header Icons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          _buildInfoTag('Handler\'s Name: ${user.name ?? '-'}'),
-                          SizedBox(width: Dimensions.width20),
-                          _buildInfoTag('Club Type: ${club?.clubType ?? '-'}'),
-                          SizedBox(width: Dimensions.width20),
-                          _buildInfoTag('Manager: ${club?.manager ?? '-'}'),
-                          SizedBox(width: Dimensions.width20),
-                          _buildInfoTag('Founded: ${club?.yearFounded ?? '-'}'),
-                          SizedBox(width: Dimensions.width20),
-                        ],
+                      InkWell(
+                        onTap: () {
+                          Get.toNamed(AppRoutes.notificationsScreen);
+                        },
+                        child: Icon(
+                          CupertinoIcons.bell,
+                          size: Dimensions.iconSize30,
+                        ),
                       ),
-                      SizedBox(height: Dimensions.width20),
+
+                      ProfileAvatar(
+                        avatarUrl: user.profilePicture,
+                        onImageSelected: (XFile file) {
+                          userController.uploadProfilePicture(file);
+                        },
+                      ),
+
+                      InkWell(
+                        onTap: () => Get.toNamed(AppRoutes.settingsScreen),
+                        child: Icon(
+                          Iconsax.more_circle,
+                          size: Dimensions.iconSize24,
+                        ),
+                      ),
                     ],
                   ),
-                ),
-              ],
+                  SizedBox(height: Dimensions.height30),
 
-              /// 🤝 Agent Info
-              if (user.role == 'agent') ...[
-                _buildInfoTag('Agency: ${agent?.agencyName ?? '-'}'),
-                SizedBox(height: Dimensions.height5),
-                _buildInfoTag('Experience: ${agent?.experience ?? '-'}'),
-                SizedBox(height: Dimensions.height20),
-              ],
+                  /// 🧑‍💼 Profile Avatar
+                  SizedBox(height: Dimensions.height20),
 
-              /// ✏️ Edit Profile Button
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomButton(
-                      text: 'Edit Profile',
-                      onPressed: () {
-                        Get.toNamed(AppRoutes.editProfileScreen);
-                      },
-                      backgroundColor: AppColors.primary,
-                      borderRadius: BorderRadius.circular(Dimensions.radius10),
+                  /// 🧾 Name & Role
+                  if (user.role == 'club')
+                    Text(
+                      club?.clubName ?? '',
+                      style: TextStyle(
+                        fontSize: Dimensions.font18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  if (user.role != 'club')
+                    Text(
+                      user.name,
+                      style: TextStyle(
+                        fontSize: Dimensions.font18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+
+                  Text(
+                    '@${user.username}'.toLowerCase(),
+                    style: TextStyle(
+                      fontSize: Dimensions.font14,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.black.withOpacity(0.7),
                     ),
                   ),
-                  if (user.role == 'club' || user.role == 'agent')
-                    SizedBox(width: Dimensions.width10),
-                  if (user.role == 'club' || user.role == 'agent')
-                  CustomButton(
-                    text: 'Create Trial',
-                    onPressed: () {
-                      Get.toNamed(AppRoutes.createTrialScreen);
-                    },
-                    backgroundColor: AppColors.secondary,
-                    borderColor: AppColors.primary,
-                    borderRadius: BorderRadius.circular(Dimensions.radius10),
+                  SizedBox(height: Dimensions.height10),
+
+                  /// 📖 Bio
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
+                    child: Text(
+                      user.bio ?? '',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: Dimensions.font13,
+                        fontWeight: FontWeight.w400,
+                        color: AppColors.black.withOpacity(0.8),
+                        height: 1.4,
+                      ),
+                    ),
                   ),
+
+                  SizedBox(height: Dimensions.height20),
+
+                  /// 📊 Stats
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      if (user.role != 'fan')
+                        _buildStat('Followers', '${user.followers}'),
+                      _divider(),
+                      _buildStat('Following', '${user.following}'),
+                    ],
+                  ),
+
+                  SizedBox(height: Dimensions.height30),
+
+                  /// ⚽ Player Info
+                  if (user.role == 'player') ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildInfoTag('Position: ${player?.position ?? '-'}'),
+                        _buildInfoTag('Height: ${player?.height ?? '-'}cm'),
+                        _buildInfoTag('Weight: ${player?.weight ?? '-'}kg'),
+                      ],
+                    ),
+                    SizedBox(height: Dimensions.height20),
+                  ],
+
+                  /// 🏢 Club Info
+                  if (user.role == 'club') ...[
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              _buildInfoTag('Handler\'s Name: ${user.name ?? '-'}'),
+                              SizedBox(width: Dimensions.width20),
+                              _buildInfoTag('Club Type: ${club?.clubType ?? '-'}'),
+                              SizedBox(width: Dimensions.width20),
+                              _buildInfoTag('Manager: ${club?.manager ?? '-'}'),
+                              SizedBox(width: Dimensions.width20),
+                              _buildInfoTag('Founded: ${club?.yearFounded ?? '-'}'),
+                              SizedBox(width: Dimensions.width20),
+                            ],
+                          ),
+                          SizedBox(height: Dimensions.width20),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  /// 🤝 Agent Info
+                  if (user.role == 'agent') ...[
+                    _buildInfoTag('Agency: ${agent?.agencyName ?? '-'}'),
+                    SizedBox(height: Dimensions.height5),
+                    _buildInfoTag('Experience: ${agent?.experience ?? '-'}'),
+                    SizedBox(height: Dimensions.height20),
+                  ],
+
+                  /// ✏️ Edit Profile Button
+                  Row(
+                    children: [
+                      if (user.role == 'club' || user.role == 'agent') ...[
+
+                        CustomButton(
+                          text: 'Create Trial',
+                          onPressed: () {
+                            Get.toNamed(AppRoutes.createTrialScreen);
+                          },
+                          backgroundColor: AppColors.secondary,
+                          borderColor: AppColors.primary,
+                          borderRadius: BorderRadius.circular(
+                            Dimensions.radius10,
+                          ),
+                        ),
+                      ],
+
+                      Expanded(
+                        child: CustomButton(
+                          text: 'Edit Profile',
+                          onPressed: () {
+                            Get.toNamed(AppRoutes.editProfileScreen);
+                          },
+                          backgroundColor: AppColors.primary,
+                          borderRadius: BorderRadius.circular(Dimensions.radius10),
+                        ),
+                      ),
+                      SizedBox(width: Dimensions.width10,),
+                      CustomButton(
+                        onPressed: () {
+                          Get.toNamed(AppRoutes.uploadContent);
+                        },
+                        text: 'Add Post',
+                        borderRadius: BorderRadius.circular(Dimensions.radius10),
+                        backgroundColor: AppColors.white,
+                        borderColor: AppColors.primary,
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: Dimensions.height30),
+                  /*Padding(
+                    padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: Dimensions.width20,vertical: Dimensions.height10
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: AppColors.grey4
+                          )
+                        ),
+                        child: Text(
+                          "Posts",
+                          style: TextStyle(
+                            fontSize: Dimensions.font18,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),*/
+
+                  Builder(
+                    builder: (context) {
+                      // Check if EVERYTHING is loading (optional, depends on your loading logic)
+                      if (controller.isFirstLoad && controller.postCache.values.every((l) => l.isEmpty)) {
+                        return const PostGridShimmer();
+                      }
+
+                      return _buildContentGrid(controller);
+                    },
+                  ),
+
+
+                  SizedBox(height: Dimensions.height30),
                 ],
               ),
-
-              SizedBox(height: Dimensions.height30),
-              Divider(color: AppColors.grey4),
-              SizedBox(height: Dimensions.height20),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildTabItem(controller, 'video', 'Videos'),
-                  _buildTabItem(controller, 'image', 'Photos'),
-                  _buildTabItem(controller, 'text', 'Posts'),
-                ],
-              ),
-              SizedBox(height: Dimensions.height20),
-
-              /// 🖼️ Content Grid
-              Builder(
-                builder: (context) {
-                  if (controller.isFirstLoad && controller.postCache[controller.currentPostType]!.isEmpty) {
-                    return const PostGridShimmer();
-                  }
-
-                  if (controller.postCache[controller.currentPostType]!.isEmpty) {
-                    return Center(child: Text("No ${controller.currentPostType} posts yet."));
-                  }
-
-                  return _buildContentGrid(controller);
-                },
-              ),
-
-              SizedBox(height: Dimensions.height30),
-            ],
+            ),
           ),
         );
       },
@@ -289,45 +330,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// 📱 Helper: The Grid Logic
   Widget _buildContentGrid(UserController controller) {
+    // 1. Merge all cached lists into one
+    List<PersonalPostModel> allPosts = [
+      ...?controller.postCache['video'],
+      ...?controller.postCache['image'],
+      ...?controller.postCache['text'], // Assuming you cache text posts too
+    ];
 
-    List<PersonalPostModel> currentPosts = controller.postCache[controller.currentPostType] ?? [];
-    if (controller.postCache.isEmpty) {
+    // 2. Sort by Date (Newest first)
+    // Ensure your PersonalPostModel has a DateTime 'createdAt'
+    allPosts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    if (allPosts.isEmpty) {
       return Padding(
         padding: EdgeInsets.only(top: Dimensions.height30),
-        child: Text("No ${controller.currentPostType} found."),
+        child: const Text("No posts yet."),
       );
     }
 
     return GridView.builder(
       shrinkWrap: true,
-      // IMPORTANT: Allows grid inside SingleChildScrollView
       physics: const NeverScrollableScrollPhysics(),
-      // Disables internal scrolling
       padding: EdgeInsets.zero,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3, // 3 items per row like Instagram
+        crossAxisCount: 3,
         crossAxisSpacing: 5,
         mainAxisSpacing: 5,
-        childAspectRatio: 1, // Square tiles
+        childAspectRatio: 1,
       ),
-      itemCount: currentPosts.length,
+      itemCount: allPosts.length,
       itemBuilder: (context, index) {
-        var post = currentPosts[index];
+        final post = allPosts[index];
+
+        // We use the post's own type, not a controller state
+        final postType = post.type;
+
         return GestureDetector(
           onTap: () {
-            // 🔗 Navigate based on type
-            if (controller.currentPostType == 'video') {
-              Get.to(() => ProfileReelsPlayer(
-                videos: currentPosts,
-                initialIndex: index,
-              ));
+            if (postType == 'video') {
+              // ⚠️ Crucial: The video player usually needs a clean list of ONLY videos.
+              // We filter the list on the fly so the user can scroll up/down in the reels player.
+              final videoOnlyList = allPosts.where((p) => p.type == 'video').toList();
+              final videoIndex = videoOnlyList.indexOf(post);
+
+              if (videoIndex != -1) {
+                Get.to(
+                      () => ProfileReelsPlayer(
+                    videos: videoOnlyList,
+                    initialIndex: videoIndex,
+                  ),
+                );
+              }
             } else {
-              // Navigate to post detail
+              // Handle navigation for Images/Text if needed
+              // Get.to(() => PostDetailScreen(post: post));
             }
           },
-          child: _buildTileItem(post, controller.currentPostType),
+          // Pass the specific post's type to the tile builder
+          child: _buildTileItem(post, postType ?? 'image'),
         );
       },
     );
@@ -349,7 +410,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
     }
-
     // 2. IMAGE
     else if (type == 'image') {
       // 🛡️ Safety Check: If url is null or empty, show a placeholder instead of crashing
@@ -370,7 +430,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
     }
-
     // 3. VIDEO
     else {
       return Stack(

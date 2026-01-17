@@ -58,12 +58,13 @@ class _SplashState extends State<Splash> {
                 style: TextStyle(
                   fontSize: Dimensions.font22,
                   fontWeight: FontWeight.w700,
-                  foreground: Paint()
-                    ..shader = const LinearGradient(
-                      colors: [Color(0xFF0094FF), Color(0xFF003366)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ).createShader(Rect.fromLTWH(0.0, 0.0, 200.0, 70.0)),
+                  color: AppColors.primary
+                  // foreground: Paint()
+                  //   ..shader = const LinearGradient(
+                  //     colors: [Color(0xFF0094FF), Color(0xFF003366)],
+                  //     begin: Alignment.topCenter,
+                  //     end: Alignment.bottomCenter,
+                  //   ).createShader(Rect.fromLTWH(0.0, 0.0, 200.0, 70.0)),
                 ),
               ),
               Spacer(),

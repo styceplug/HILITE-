@@ -211,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     CustomButton(
                       text: 'SIGN UP',
                       onPressed: () {
-                        Get.toNamed(AppRoutes.createAccountScreen);
+                        Get.toNamed(AppRoutes.selectCategoryScreen);
                       },
                       backgroundColor: AppColors.bgColor,
                       borderColor: AppColors.primary,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/auth_controller.dart';
@@ -23,8 +25,15 @@ class _FootballerFormState extends State<FootballerForm> {
   String? selectedCountry;
   String? selectedState;
   AuthController authController = Get.find<AuthController>();
+  bool isPasswordVisible = false;
+  bool termsPolicy = false;
 
   // Controllers
+  TextEditingController nameController = TextEditingController();
+  TextEditingController usernameController = TextEditingController();
+  TextEditingController emailController = TextEditingController();
+  TextEditingController passwordController = TextEditingController();
+  Timer? debounceTimer;
   TextEditingController dobController = TextEditingController();
   TextEditingController contactController = TextEditingController();
   TextEditingController positionController = TextEditingController();
@@ -34,38 +43,48 @@ class _FootballerFormState extends State<FootballerForm> {
   TextEditingController weightController = TextEditingController();
   TextEditingController bioController = TextEditingController();
 
-  String savedName = '';
-  String savedUsername = '';
-  String savedEmail = '';
-  String savedPassword = '';
+  void togglePass() {
+    setState(() {
+      isPasswordVisible = !isPasswordVisible;
+    });
+  }
+
+  void toggleTerms() {
+    setState(() {
+      termsPolicy = !termsPolicy;
+    });
+  }
+
+  bool _validatePassword(String password) {
+    final hasMinLength = password.length >= 8;
+    final hasUpper = password.contains(RegExp(r'[A-Z]'));
+    final hasSymbol = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+    return hasMinLength && hasUpper && hasSymbol;
+  }
+
+  void checkUsername() {
+    final username = usernameController.text.trim();
+    authController.checkUsername(username);
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadSavedSignupData();
-  }
-
-  Future<void> _loadSavedSignupData() async {
-    final info = await StorageHelper.readBasicInfo();
-    final password = await StorageHelper.readPassword();
-
-    setState(() {
-      savedName = info['name'] ?? '';
-      savedUsername = info['username'] ?? '';
-      savedEmail = info['email'] ?? '';
-      savedPassword = password ?? '';
-    });
   }
 
   Map<String, dynamic> body() {
-    int? height = int.tryParse(heightController.text.replaceAll(RegExp(r'[^0-9]'), ''));
-    int? weight = int.tryParse(weightController.text.replaceAll(RegExp(r'[^0-9]'), ''));
+    int? height = int.tryParse(
+      heightController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+    );
+    int? weight = int.tryParse(
+      weightController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+    );
 
     return {
-      "name": savedName,
-      "username": savedUsername,
-      "email": savedEmail,
-      "password": savedPassword,
+      "name": nameController.text.trim(),
+      "username": usernameController.text.trim(),
+      "email": emailController.text.trim(),
+      "password": passwordController.text.trim(),
       "role": "player",
       "country": selectedCountry,
       "state": selectedState,
@@ -74,12 +93,11 @@ class _FootballerFormState extends State<FootballerForm> {
       "position": positionController.text,
       "preferredFoot": footController.text.toLowerCase(),
       "currentClub": clubController.text,
-      "height": height ?? 0,  // default to 0 if parsing fails
-      "weight": weight ?? 0,  // default to 0 if parsing fails
+      "height": height ?? 0, // default to 0 if parsing fails
+      "weight": weight ?? 0, // default to 0 if parsing fails
       "bio": bioController.text,
     };
   }
-
 
   /// Date Picker for DOB
   Future<void> _pickDate() async {
@@ -88,14 +106,14 @@ class _FootballerFormState extends State<FootballerForm> {
       initialDate: DateTime(2000),
       firstDate: DateTime(1950),
       lastDate: DateTime.now(),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: ColorScheme.light(
-            primary: AppColors.primary,
+      builder:
+          (context, child) =>
+          Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: ColorScheme.light(primary: AppColors.primary),
+            ),
+            child: child!,
           ),
-        ),
-        child: child!,
-      ),
     );
     if (pickedDate != null) {
       dobController.text = DateFormat('yyyy-MM-dd').format(pickedDate);
@@ -113,14 +131,16 @@ class _FootballerFormState extends State<FootballerForm> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => _buildBottomPicker(
-        title: title,
-        options: options,
-        onSelected: (value) {
-          onSelected(value);
-          Navigator.pop(context);
-        },
-      ),
+      builder:
+          (context) =>
+          _buildBottomPicker(
+            title: title,
+            options: options,
+            onSelected: (value) {
+              onSelected(value);
+              Navigator.pop(context);
+            },
+          ),
     );
   }
 
@@ -138,7 +158,8 @@ class _FootballerFormState extends State<FootballerForm> {
       child: Text(
         value.isEmpty ? title : value,
         style: TextStyle(
-          color: value.isEmpty
+          color:
+          value.isEmpty
               ? AppColors.black.withOpacity(0.5)
               : AppColors.black,
           fontSize: Dimensions.font15,
@@ -173,10 +194,11 @@ class _FootballerFormState extends State<FootballerForm> {
             ),
             SizedBox(height: Dimensions.height10),
             ...options.map(
-                  (option) => ListTile(
-                title: Text(option),
-                onTap: () => onSelected(option),
-              ),
+                  (option) =>
+                  ListTile(
+                    title: Text(option),
+                    onTap: () => onSelected(option),
+                  ),
             ),
           ],
         ),
@@ -220,12 +242,14 @@ class _FootballerFormState extends State<FootballerForm> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('HILITE',
-                              style: TextStyle(
-                                fontFamily: 'BebasNeue',
-                                fontSize: Dimensions.font30,
-                                color: AppColors.white,
-                              )),
+                          Text(
+                            'HILITE',
+                            style: TextStyle(
+                              fontFamily: 'BebasNeue',
+                              fontSize: Dimensions.font30,
+                              color: AppColors.white,
+                            ),
+                          ),
                           SizedBox(height: Dimensions.height10),
                           Text(
                             'PLAYER PROFILE SETUP',
@@ -251,11 +275,77 @@ class _FootballerFormState extends State<FootballerForm> {
                 ),
                 child: Column(
                   children: [
+                    CustomTextField(
+                      hintText: 'Full Name *',
+                      controller: nameController,
+                    ),
+                    SizedBox(height: Dimensions.height20),
+                    CustomTextField(
+                      hintText: 'Username *',
+                      controller: usernameController,
+                      onChanged: (value) {
+                        if (value
+                            .trim()
+                            .isNotEmpty) {
+                          debounceTimer?.cancel();
+                          debounceTimer = Timer(
+                            const Duration(milliseconds: 600),
+                                () {
+                              checkUsername();
+                            },
+                          );
+                        }
+                      },
+                      suffixIcon: Obx(() {
+                        if (authController.isCheckingUsername.value) {
+                          return Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: Dimensions.width10,
+                              vertical: Dimensions.height10,
+                            ),
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                              strokeWidth: 4,
+                            ),
+                          );
+                        } else if (authController.usernameMessage.isNotEmpty) {
+                          return Icon(
+                            authController.isUsernameAvailable.value
+                                ? Icons.check_circle
+                                : Icons.error,
+                            color:
+                            authController.isUsernameAvailable.value
+                                ? Colors.green
+                                : Colors.red,
+                            size: Dimensions.iconSize16,
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }),
+                    ),
+                    SizedBox(height: Dimensions.height5),
+                    Obx(
+                          () =>
+                      authController.usernameMessage.value.isNotEmpty
+                          ? Text(
+                        authController.usernameMessage.value,
+                        style: TextStyle(
+                          color:
+                          authController.isUsernameAvailable.value
+                              ? Colors.green
+                              : Colors.red,
+                          fontSize: Dimensions.font12,
+                        ),
+                      )
+                          : const SizedBox.shrink(),
+                    ),
+                    SizedBox(height: Dimensions.height20),
+
                     GestureDetector(
                       onTap: _pickDate,
                       child: AbsorbPointer(
                         child: CustomTextField(
-                          labelText: "Date of Birth (YYYY-MM-DD)",
+                          labelText: "Date of Birth (YYYY-MM-DD) *",
                           controller: dobController,
                         ),
                       ),
@@ -263,52 +353,56 @@ class _FootballerFormState extends State<FootballerForm> {
                     SizedBox(height: Dimensions.height20),
 
                     CustomTextField(
-                      labelText: "Contact Number",
+                      labelText: "Contact Number *",
                       controller: contactController,
                       keyboardType: TextInputType.phone,
                     ),
                     SizedBox(height: Dimensions.height20),
 
                     GestureDetector(
-                      onTap: () => _showBottomPicker(
-                        title: "Select Playing Position",
-                        options: [
-                          'GK', // Goalkeeper
-                          'RB', // Right Back
-                          'LB', // Left Back
-                          'CB', // Center Back
-                          'CDM', // Defensive Midfield
-                          'CM', // Central Midfield
-                          'CAM', // Attacking Midfield
-                          'RW', // Right Wing
-                          'LW', // Left Wing
-                          'ST', //
-                        ],
-                        onSelected: (val) {
-                          setState(() {
-                            positionController.text = val;
-                          });
-                        },
-                      ),
+                      onTap:
+                          () =>
+                          _showBottomPicker(
+                            title: "Select Playing Position ",
+                            options: [
+                              'GK', // Goalkeeper
+                              'RB', // Right Back
+                              'LB', // Left Back
+                              'CB', // Center Back
+                              'CDM', // Defensive Midfield
+                              'CM', // Central Midfield
+                              'CAM', // Attacking Midfield
+                              'RW', // Right Wing
+                              'LW', // Left Wing
+                              'ST', //
+                            ],
+                            onSelected: (val) {
+                              setState(() {
+                                positionController.text = val;
+                              });
+                            },
+                          ),
                       child: _buildPickerContainer(
-                        title: "Playing Position",
+                        title: "Playing Position *",
                         value: positionController.text,
                       ),
                     ),
                     SizedBox(height: Dimensions.height20),
 
                     GestureDetector(
-                      onTap: () => _showBottomPicker(
-                        title: "Preferred Foot",
-                        options: ['Left', 'Right', 'Both'],
-                        onSelected: (val) {
-                          setState(() {
-                            footController.text = val;
-                          });
-                        },
-                      ),
+                      onTap:
+                          () =>
+                          _showBottomPicker(
+                            title: "Preferred Foot",
+                            options: ['Left', 'Right', 'Both'],
+                            onSelected: (val) {
+                              setState(() {
+                                footController.text = val;
+                              });
+                            },
+                          ),
                       child: _buildPickerContainer(
-                        title: "Preferred Foot",
+                        title: "Preferred Foot *",
                         value: footController.text,
                       ),
                     ),
@@ -322,61 +416,19 @@ class _FootballerFormState extends State<FootballerForm> {
 
                     Row(
                       children: [
+
                         Expanded(
-                          child: GestureDetector(
-                            onTap: () => _showBottomPicker(
-                              title: "Select Height",
-                              options: [
-                                '160 cm',
-                                '165 cm',
-                                '170 cm',
-                                '175 cm',
-                                '180 cm',
-                                '185 cm',
-                                '190 cm',
-                                '200 cm',
-                                '210 cm',
-                                '< 220 cm',
-                              ],
-                              onSelected: (val) {
-                                setState(() {
-                                  heightController.text = val;
-                                });
-                              },
-                            ),
-                            child: _buildPickerContainer(
-                              title: "Height (cm / ft)",
-                              value: heightController.text,
-                            ),
+                          child: CustomTextField(
+                            hintText: 'Height in ft',
+                            controller: heightController,
+                            keyboardType: TextInputType.numberWithOptions(),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: GestureDetector(
-                            onTap: () => _showBottomPicker(
-                              title: "Select Weight",
-                              options: [
-                                '60 kg',
-                                '65 kg',
-                                '70 kg',
-                                '75 kg',
-                                '80 kg',
-                                '85 kg',
-                                '90 kg',
-                                '120 lbs',
-                                '150 lbs',
-                              ],
-                              onSelected: (val) {
-                                setState(() {
-                                  weightController.text = val;
-                                });
-                              },
-                            ),
-                            child: _buildPickerContainer(
-                              title: "Weight (kg / lbs)",
-                              value: weightController.text,
-                            ),
-                          ),
+                          child: CustomTextField(hintText: 'Weight in Kg',
+                            controller: weightController,
+                            keyboardType: TextInputType.numberWithOptions(),),
                         ),
                       ],
                     ),
@@ -403,6 +455,67 @@ class _FootballerFormState extends State<FootballerForm> {
                       labelText: "Player Bio / Description",
                       controller: bioController,
                       maxLines: 4,
+                    ),
+                    SizedBox(height: Dimensions.height20),
+
+                    CustomTextField(
+                      hintText: 'Email Address *',
+                      controller: emailController,
+                      autofillHints: [AutofillHints.email],
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+
+                    SizedBox(height: Dimensions.height20),
+                    CustomTextField(
+                      hintText: 'Password',
+                      maxLines: 1,
+                      controller: passwordController,
+                      obscureText: isPasswordVisible,
+                      suffixIcon: InkWell(
+                        onTap: () {
+                          togglePass();
+                          print(isPasswordVisible);
+                        },
+                        child: Icon(
+                          !isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: Dimensions.height20),
+                    Text(
+                      'Password must be at least 8 character long and include 1 capital letter and 1 symbol',
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
+                        color: AppColors.grey5,
+                        fontSize: Dimensions.font13,
+                      ),
+                    ),
+                    SizedBox(height: Dimensions.height20),
+                    InkWell(
+                      onTap: () {
+                        toggleTerms();
+                        print(termsPolicy);
+                      },
+                      child: Row(
+                        children: [
+                          Icon(
+                            termsPolicy
+                                ? Icons.check_box_outlined
+                                : Icons.check_box_outline_blank,
+                            color: AppColors.grey5,
+                          ),
+                          SizedBox(width: Dimensions.width5),
+                          Text(
+                            'I agree to  the Terms and Privacy Policy',
+                            style: TextStyle(
+                              color: AppColors.grey5,
+                              fontSize: Dimensions.font13,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     SizedBox(height: Dimensions.height20),
 

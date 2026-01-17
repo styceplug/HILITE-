@@ -34,6 +34,18 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: AppColors.primary,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+
+      systemNavigationBarColor: AppColors.primary,
+      systemNavigationBarIconBrightness: Brightness.light,
+      systemNavigationBarDividerColor: Colors.transparent,
+    ),
+  );
+
   await NotificationService().initialize();
   await dep.init();
   Get.put(GlobalLoaderController(), permanent: true);
@@ -56,7 +68,7 @@ class MyApp extends StatelessWidget {
             title: AppConstants.APP_NAME,
             theme: ThemeData(
                 fontFamily: 'Poppins',
-                scaffoldBackgroundColor: AppColors.bgColor
+                scaffoldBackgroundColor: AppColors.bgColor,
             ),
             getPages: AppRoutes.routes,
             initialRoute: AppRoutes.splash,

@@ -30,6 +30,7 @@ class NotificationController extends GetxController {
   Future<void> getNotifications() async {
     _isLoading = true;
     update();
+    print('starting...');
 
     Response response = await notificationRepo.getNotifications();
 
@@ -38,6 +39,7 @@ class NotificationController extends GetxController {
       var data = NotificationResponse.fromJson(response.body['data']);
       _notificationList = data.notifications ?? [];
       _unreadCount = data.unreadCount ?? 0;
+      print('Notification data : $data');
     } else {
       // Handle error
     }
@@ -51,10 +53,9 @@ class NotificationController extends GetxController {
     Response response = await notificationRepo.markAllAsRead();
     if (response.statusCode == 200) {
       _unreadCount = 0;
-      // Optimistically update local list to read
-      for (var item in _notificationList) {
-        item.isRead = true;
-      }
+      _notificationList = _notificationList.map((item) {
+        return item.copyWith(isRead: true);
+      }).toList();
       update();
       Get.snackbar("Success", "All notifications marked as read");
     }

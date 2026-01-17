@@ -86,7 +86,7 @@ class _SplashScreenState extends State<SplashScreen>
                         CustomButton(
                           text: 'CREATE ACCOUNT',
                           onPressed: () {
-                            Get.toNamed(AppRoutes.createAccountScreen);
+                            Get.toNamed(AppRoutes.selectCategoryScreen);
                           },
                           backgroundColor: AppColors.bgColor,
                           borderColor: AppColors.primary,

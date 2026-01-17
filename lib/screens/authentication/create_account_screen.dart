@@ -28,6 +28,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   TextEditingController usernameController = TextEditingController();
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
+  TextEditingController bioController = TextEditingController();
 
   void togglePass() {
     setState(() {
@@ -41,11 +42,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     });
   }
 
-  void storeBody() async {
+  void createAccount() async {
     final name = nameController.text.trim();
     final username = usernameController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text;
+    final bio = bioController.text.trim(); // Add bio
 
     FocusScope.of(context).unfocus();
 
@@ -62,8 +64,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     final passwordValid = _validatePassword(password);
     if (!passwordValid) {
       CustomSnackBar.failure(
-        message:
-            'Password must be at least 8 chars, include 1 uppercase and 1 symbol',
+        message: 'Password must be at least 8 chars, include 1 uppercase and 1 symbol',
       );
       return;
     }
@@ -72,23 +73,25 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
     if (!authController.isUsernameAvailable.value) {
       CustomSnackBar.failure(
-        message:
-            authController.usernameMessage.value ?? 'Username not available',
+        message: authController.usernameMessage.value ?? 'Username not available',
       );
       return;
     }
 
     try {
-      await StorageHelper.saveBasicInfo(
-        name: name,
-        username: username,
-        email: email,
-      );
-      await StorageHelper.savePassword(password);
+      // 1. Create the data map (body)
+      Map<String, dynamic> body = {
+        "name": name,
+        "username": username,
+        "email": email,
+        "password": password,
+        "bio": bio,
+        "role": "fan"
+      };
 
-      print('Account info saved locally');
+      // 2. Pass the 'body' to the function
+      authController.registerFan(body);
 
-      Get.toNamed(AppRoutes.selectCategoryScreen);
     } catch (e, s) {
       print(
         'Failed to save data locally. Try again. ${e.toString()}, ${s.toString()}',
@@ -204,10 +207,10 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  CustomTextField(hintText: 'Full Name',controller: nameController,),
+                  CustomTextField(hintText: 'Full Name *',controller: nameController,),
                   SizedBox(height: Dimensions.height20),
                   CustomTextField(
-                    hintText: 'Username',
+                    hintText: 'Username *',
                     controller: usernameController,
                     onChanged: (value) {
                       if (value.trim().isNotEmpty) {
@@ -265,10 +268,16 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                   ),
                   SizedBox(height: Dimensions.height20),
                   CustomTextField(
-                    hintText: 'Email Address',
+                    hintText: 'Email Address *',
                     controller: emailController,
                     autofillHints: [AutofillHints.email],
                     keyboardType: TextInputType.emailAddress,
+                  ),
+                  SizedBox(height: Dimensions.height20),
+                  CustomTextField(
+                    labelText: "Add Bio",
+                    maxLines: 3,
+                    controller: bioController,
                   ),
                   SizedBox(height: Dimensions.height20),
                   CustomTextField(
@@ -325,9 +334,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                   SizedBox(height: Dimensions.height20),
                   CustomButton(
                     text: 'CREATE ACCOUNT',
-                    onPressed: () {
-                      storeBody();
-                    },
+                    onPressed: createAccount,
                   ),
                   SizedBox(height: Dimensions.height20),
                   Text(

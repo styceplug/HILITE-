@@ -119,7 +119,9 @@ class PostModel {
   final String id;
   final String type;
   final String? text;
+  // Author can be null if it's just an ID string in the response
   final Author? author;
+  final String? authorId; // Store the ID separately if that's all we get
   final ContentDetails? video;
   final ContentDetails? image;
   final List<dynamic> likes;
@@ -131,6 +133,7 @@ class PostModel {
     required this.type,
     this.text,
     this.author,
+    this.authorId,
     this.video,
     this.image,
     this.likes = const [],
@@ -139,11 +142,23 @@ class PostModel {
   });
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
+    // 🛡️ Safe Author Parsing
+    Author? parsedAuthor;
+    String? parsedAuthorId;
+
+    if (json['author'] is Map<String, dynamic>) {
+      parsedAuthor = Author.fromJson(json['author']);
+      parsedAuthorId = parsedAuthor.id;
+    } else if (json['author'] is String) {
+      parsedAuthorId = json['author'];
+    }
+
     return PostModel(
-      id: json['_id'],
+      id: json['_id'] ?? '',
       type: json['type'] ?? 'text',
       text: json['text'],
-      author: json['author'] != null ? Author.fromJson(json['author']) : null,
+      author: parsedAuthor,
+      authorId: parsedAuthorId,
       video: json['video'] != null ? ContentDetails.fromJson(json['video']) : null,
       image: json['image'] != null ? ContentDetails.fromJson(json['image']) : null,
       likes: json['likes'] ?? [],
@@ -174,8 +189,15 @@ class ContentDetails {
   final String? title;
   final String? description;
   final String? thumbnailUrl;
+  final double? duration; // Added
 
-  ContentDetails({this.url, this.title, this.description, this.thumbnailUrl});
+  ContentDetails({
+    this.url,
+    this.title,
+    this.description,
+    this.thumbnailUrl,
+    this.duration,
+  });
 
   factory ContentDetails.fromJson(Map<String, dynamic> json) {
     return ContentDetails(
@@ -183,6 +205,9 @@ class ContentDetails {
       title: json['title'],
       description: json['description'],
       thumbnailUrl: json['thumbnailUrl'],
+      duration: (json['duration'] is int)
+          ? (json['duration'] as int).toDouble()
+          : json['duration'],
     );
   }
 }
@@ -193,26 +218,49 @@ class PersonalPostModel {
   String? text;
   String? mediaUrl;
   String? thumbnail;
+  double? duration; // Added from JSON
+  DateTime createdAt; // ⚠️ REQUIRED for the sorting logic
 
-  PersonalPostModel({this.id, this.type, this.text, this.mediaUrl, this.thumbnail});
+  PersonalPostModel({
+    this.id,
+    this.type,
+    this.text,
+    this.mediaUrl,
+    this.thumbnail,
+    this.duration,
+    required this.createdAt,
+  });
 
-  PersonalPostModel.fromJson(Map<String, dynamic> json) {
-    id = json['_id'];
-    type = json['type'];
-    text = json['text'];
+  factory PersonalPostModel.fromJson(Map<String, dynamic> json) {
+    String? extractedMediaUrl;
+    String? extractedThumbnail;
+    double? extractedDuration;
 
-    // 🔧 FIX: Handle the nested JSON structure correctly
-    if (type == 'image' && json['image'] != null) {
-      // The API returns "image": { "url": "..." }
-      mediaUrl = json['image']['url'];
+    // 🔧 Handle nested JSON structure
+    if (json['type'] == 'image' && json['image'] != null) {
+      extractedMediaUrl = json['image']['url'];
     }
-    else if (type == 'video' && json['video'] != null) {
-      // Assuming video follows the same pattern
-      mediaUrl = json['video']['url'];
-      thumbnail = json['video']['thumbnailUrl'] ?? json['video']['thumbnail'];    }
-    // Fallback if the API changes structure or sends 'file'
+    else if (json['type'] == 'video' && json['video'] != null) {
+      extractedMediaUrl = json['video']['url'];
+      extractedThumbnail = json['video']['thumbnailUrl'] ?? json['video']['thumbnail'];
+      // Parse duration safely
+      var dur = json['video']['duration'];
+      extractedDuration = (dur is int) ? dur.toDouble() : dur;
+    }
     else {
-      mediaUrl = json['mediaUrl'] ?? json['file'];
+      // Fallback
+      extractedMediaUrl = json['mediaUrl'] ?? json['file'];
     }
+
+    return PersonalPostModel(
+      id: json['_id'],
+      type: json['type'],
+      text: json['text'],
+      mediaUrl: extractedMediaUrl,
+      thumbnail: extractedThumbnail,
+      duration: extractedDuration,
+      // 🗓️ Parse Date (Default to now if missing to prevent sort crash)
+      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+    );
   }
 }

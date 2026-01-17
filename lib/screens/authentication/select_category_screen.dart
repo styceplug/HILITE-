@@ -21,48 +21,34 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
   String selectedRole = '';
 
   AuthController authController = Get.find<AuthController>();
-  String savedName = '';
-  String savedUsername = '';
-  String savedEmail = '';
-  String savedPassword = '';
+
 
 
   @override
   void initState() {
     super.initState();
-    _loadSavedSignupData();
   }
 
-  Future<void> _loadSavedSignupData() async {
-    final info = await StorageHelper.readBasicInfo();
-    final password = await StorageHelper.readPassword();
 
-    setState(() {
-      savedName = info['name'] ?? '';
-      savedUsername = info['username'] ?? '';
-      savedEmail = info['email'] ?? '';
-      savedPassword = password ?? '';
-    });
-  }
 
-  Map<String, dynamic> body(String username, String password, String email, String name) {
+  Map<String, dynamic> body(String username, String password, String email,
+      String name, String bio) {
     return {
       "name": name,
       "username": username,
       "email": email,
       "password": password,
+      "bio": bio
     };
   }
 
-  void registerFan(){
-    authController.registerFan(body(savedUsername, savedPassword, savedEmail, savedName)
-    );
-  }
+
 
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.primary,
       body: Container(
         child: Column(
           children: [
@@ -109,10 +95,10 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
                           horizontal: Dimensions.width20,
                         ),
                         child: Text(
-                          'CHOOSE ROLE TO PROCEED',
+                          'SELECT HOW YOU WANT TO USE HILITE',
                           style: TextStyle(
                             fontFamily: 'BebasNeue',
-                            fontSize: Dimensions.font30 * 1.2,
+                            fontSize: Dimensions.font30*1.1,
                             color: AppColors.white,
                             height: 1.1,
                           ),
@@ -123,9 +109,9 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
                           horizontal: Dimensions.width20,
                         ),
                         child: Text(
-                          'Choose your role as it applies to proceed, Welcome to HILITE - From Streets to Stadium',
+                          'Choose the option that best describes you and continue your journey,\n \nHILITE - From Streets to Stadium',
                           style: TextStyle(
-                            fontSize: Dimensions.font16,
+                            fontSize: Dimensions.font14,
                             color: AppColors.white,
                             height: 1.1,
                           ),
@@ -136,29 +122,29 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
                 ],
               ),
             ),
-            SizedBox(height: Dimensions.height20),
+            SizedBox(height: Dimensions.height10),
 
             RoleCard(
-              title: 'Football Players/Creators',
+              title: 'Players & Creators',
               description:
-                  'Showcase your talent, share highlights, and connect with agents, scouts, and clubs looking for the next big star.',
-              image: 'kick',
+              'Showcase your talent, share highlights, and connect with agents, scouts, and clubs looking for the next big star.',
+              image: 'footballer-img',
               isSelected: selectedRole == 'player',
               onTap: () => setState(() => selectedRole = 'player'),
             ),
             RoleCard(
-              title: 'Scout & Football Clubs',
+              title: 'Scout & Clubs',
               description:
-                  'Discover top football talents, analyze player stats, and build professional connections with clubs and creators.',
-              image: 'football',
+              'Discover top football talents, analyze player stats, and build professional connections with clubs and creators.',
+              image: 'scout-img',
               isSelected: selectedRole == 'scout-club',
               onTap: () => setState(() => selectedRole = 'scout-club'),
             ),
             RoleCard(
-              title: 'Fan',
+              title: 'Fans',
               description:
-                  'Stay close to the game — follow players, watch highlights, and join the football community that never sleeps.',
-              image: 'ice-skate',
+              'Stay close to the game — follow players, watch highlights, and join the football community that never sleeps.',
+              image: 'fans-img',
               isSelected: selectedRole == 'fan',
               onTap: () => setState(() => selectedRole = 'fan'),
             ),
@@ -170,13 +156,14 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
               ),
               child: CustomButton(
                 text: 'Continue',
+                backgroundColor: AppColors.white,
                 onPressed: () {
                   if (selectedRole == 'player') {
                     Get.toNamed(AppRoutes.footballerForm);
                   } else if (selectedRole == 'scout-club') {
                     Get.toNamed(AppRoutes.scoutClubForm);
                   } else if (selectedRole == 'fan') {
-                    registerFan();
+                    Get.toNamed(AppRoutes.createAccountScreen);
                   }
                 },
                 isDisabled: selectedRole.isEmpty,

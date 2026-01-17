@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/auth_controller.dart';
@@ -25,43 +27,58 @@ class _ScoutClubFormState extends State<ScoutClubForm> {
   String headCoachOrManager = '';
   int? selectedYear;
 
-  String savedName = '';
-  String savedUsername = '';
-  String savedEmail = '';
-  String savedPassword = '';
-
+  bool isPasswordVisible = false;
+  bool termsPolicy = false;
+  Timer? debounceTimer;
   AuthController authController = Get.find<AuthController>();
-
-  // Controllers
+  TextEditingController nameController = TextEditingController();
+  TextEditingController usernameController = TextEditingController();
+  TextEditingController emailController = TextEditingController();
+  TextEditingController passwordController = TextEditingController();
+  TextEditingController bioController = TextEditingController();
   TextEditingController contactNumberController = TextEditingController();
   TextEditingController agencyNameController = TextEditingController();
   TextEditingController licenseController = TextEditingController();
   TextEditingController experienceController = TextEditingController();
   TextEditingController clubNameController = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _loadSavedSignupData();
-  }
-
-  Future<void> _loadSavedSignupData() async {
-    final info = await StorageHelper.readBasicInfo();
-    final password = await StorageHelper.readPassword();
-
+  void togglePass() {
     setState(() {
-      savedName = info['name'] ?? '';
-      savedUsername = info['username'] ?? '';
-      savedEmail = info['email'] ?? '';
-      savedPassword = password ?? '';
+      isPasswordVisible = !isPasswordVisible;
     });
   }
 
+  void toggleTerms() {
+    setState(() {
+      termsPolicy = !termsPolicy;
+    });
+  }
+
+  bool _validatePassword(String password) {
+    final hasMinLength = password.length >= 8;
+    final hasUpper = password.contains(RegExp(r'[A-Z]'));
+    final hasSymbol = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+    return hasMinLength && hasUpper && hasSymbol;
+  }
+
+  void checkUsername() {
+    final username = usernameController.text.trim();
+    authController.checkUsername(username);
+  }
+
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+
+
   Map<String, dynamic> agentBody() => {
-    "name": savedName,
-    "username": savedUsername,
-    "email": savedEmail,
-    "password": savedPassword,
+    "name": nameController.text,
+    "username": usernameController.text,
+    "email": emailController.text,
+    "password": passwordController.text,
     "role": "agent",
     "country": selectedCountry,
     "state": selectedState,
@@ -69,13 +86,14 @@ class _ScoutClubFormState extends State<ScoutClubForm> {
     "agencyName": agencyNameController.text,
     "registrationId": licenseController.text,
     "experience": experienceController.text,
+    "bio": bioController.text,
   };
 
   Map<String, dynamic> clubBody() => {
-    "name": savedName,
-    "username": savedUsername,
-    "email": savedEmail,
-    "password": savedPassword,
+    "name": nameController.text,
+    "username": usernameController.text,
+    "email": emailController.text,
+    "password": passwordController.text,
     "role": "club",
     "country": selectedCountry,
     "state": selectedState,
@@ -84,6 +102,7 @@ class _ScoutClubFormState extends State<ScoutClubForm> {
     "yearFounded": selectedYear ?? 0,
     "clubType": selectedClubType.toLowerCase(),
     "manager": headCoachOrManager,
+    "bio": bioController.text
   };
 
   @override
@@ -96,16 +115,113 @@ class _ScoutClubFormState extends State<ScoutClubForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+
               _buildHeader(),
+
               Padding(
                 padding: EdgeInsets.all(Dimensions.width20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    CustomTextField(hintText: 'Full Name *',controller: nameController,),
+                    SizedBox(height: Dimensions.height20),
+                    CustomTextField(
+                      hintText: 'Username *',
+                      controller: usernameController,
+                      onChanged: (value) {
+                        if (value.trim().isNotEmpty) {
+                          debounceTimer?.cancel();
+                          debounceTimer = Timer(
+                            const Duration(milliseconds: 600),
+                                () {
+                              checkUsername();
+                            },
+                          );
+                        }
+                      },
+                      suffixIcon: Obx(() {
+                        if (authController.isCheckingUsername.value) {
+                          return Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: Dimensions.width10,
+                              vertical: Dimensions.height10,
+                            ),
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                              strokeWidth: 4,
+                            ),
+                          );
+                        } else if (authController.usernameMessage.isNotEmpty) {
+                          return Icon(
+                            authController.isUsernameAvailable.value
+                                ? Icons.check_circle
+                                : Icons.error,
+                            color:
+                            authController.isUsernameAvailable.value
+                                ? Colors.green
+                                : Colors.red,
+                            size: Dimensions.iconSize16,
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }),
+                    ),
+                    SizedBox(height: Dimensions.height5),
+                    Obx(
+                          () =>
+                      authController.usernameMessage.value.isNotEmpty
+                          ? Text(
+                        authController.usernameMessage.value,
+                        style: TextStyle(
+                          color:
+                          authController.isUsernameAvailable.value
+                              ? Colors.green
+                              : Colors.red,
+                          fontSize: Dimensions.font12,
+                        ),
+                      )
+                          : const SizedBox.shrink(),
+                    ),
+                    SizedBox(height: Dimensions.height20),
+                    CustomTextField(
+                      hintText: 'Email Address *',
+                      controller: emailController,
+                      autofillHints: [AutofillHints.email],
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    SizedBox(height: Dimensions.height20),
+                    CustomTextField(
+                      hintText: 'Password',
+                      maxLines: 1,
+                      controller: passwordController,
+                      obscureText: isPasswordVisible,
+                      suffixIcon: InkWell(
+                        onTap: () {
+                          togglePass();
+                          print(isPasswordVisible);
+                        },
+                        child: Icon(
+                          !isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: Dimensions.height20),
+                    Text(
+                      'Password must be at least 8 character long and include 1 capital letter and 1 symbol',
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
+                        color: AppColors.grey5,
+                        fontSize: Dimensions.font13,
+                      ),
+                    ),
+                    SizedBox(height: Dimensions.height20),
                     _buildProfileTypeSelector(),
                     SizedBox(height: Dimensions.height30),
                     if (selectedProfileType == 'agent') _buildAgentForm(),
                     if (selectedProfileType == 'club') _buildClubForm(),
+
                   ],
                 ),
               ),
@@ -240,13 +356,13 @@ class _ScoutClubFormState extends State<ScoutClubForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CustomTextField(
-          labelText: "Contact Number",
+          labelText: "Contact Number *",
           controller: contactNumberController,
           keyboardType: TextInputType.phone,
         ),
         SizedBox(height: Dimensions.height20),
         CustomTextField(
-          labelText: "Agency Name",
+          labelText: "Agency Name *",
           controller: agencyNameController,
         ),
         SizedBox(height: Dimensions.height20),
@@ -272,14 +388,44 @@ class _ScoutClubFormState extends State<ScoutClubForm> {
           labelText: "Experience / Players Represented",
           controller: experienceController,
         ),
+        SizedBox(height: Dimensions.height20),
+        CustomTextField(
+          labelText: "Add Bio",
+          maxLines: 3,
+          controller: bioController,
+        ),
+        SizedBox(height: Dimensions.height20),
+        InkWell(
+          onTap: () {
+            toggleTerms();
+            print(termsPolicy);
+          },
+          child: Row(
+            children: [
+              Icon(
+                termsPolicy
+                    ? Icons.check_box_outlined
+                    : Icons.check_box_outline_blank,
+                color: AppColors.grey5,
+              ),
+              SizedBox(width: Dimensions.width5),
+              Text(
+                'I agree to  the Terms and Privacy Policy',
+                style: TextStyle(
+                  color: AppColors.grey5,
+                  fontSize: Dimensions.font13,
+                ),
+              ),
+            ],
+          ),
+        ),
         SizedBox(height: Dimensions.height30),
         CustomButton(
           text: "Submit Agent Profile",
           onPressed: () {
-            if (formKey.currentState!.validate()) {
               authController.registerOthers(agentBody());
               print(agentBody());
-            }
+
           },
         ),
         SizedBox(height: Dimensions.height50),
@@ -291,10 +437,10 @@ class _ScoutClubFormState extends State<ScoutClubForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CustomTextField(labelText: "Club Name", controller: clubNameController),
+        CustomTextField(labelText: "Club Name *", controller: clubNameController),
         SizedBox(height: Dimensions.height20),
         CustomTextField(
-          labelText: "Contact Number",
+          labelText: "Contact Number *",
           controller: contactNumberController,
           keyboardType: TextInputType.phone,
         ),
@@ -312,28 +458,59 @@ class _ScoutClubFormState extends State<ScoutClubForm> {
         ),
         SizedBox(height: Dimensions.height20),
         _buildBottomPickerField(
-          title: "Head Coach / Manager",
+          title: "Head Coach or Manager *",
           value: headCoachOrManager,
           options: ["Head Coach", "Manager"],
           onSelected: (value) => setState(() => headCoachOrManager = value),
         ),
         SizedBox(height: Dimensions.height20),
         _buildBottomPickerField(
-          title: "Club Type (Academy / Amateur / Professional)",
+          title: "Club Type * (Academy or Amateur or Pro.)",
           value: selectedClubType,
           options: ["Academy", "Amateur", "Professional"],
           onSelected: (value) => setState(() => selectedClubType = value),
         ),
         SizedBox(height: Dimensions.height20),
         _buildYearPicker(),
+        SizedBox(height: Dimensions.height20),
+        CustomTextField(
+          labelText: "Add Bio",
+          maxLines: 3,
+          controller: bioController,
+        ),
+        SizedBox(height: Dimensions.height30),
+        InkWell(
+          onTap: () {
+            toggleTerms();
+            print(termsPolicy);
+          },
+          child: Row(
+            children: [
+              Icon(
+                termsPolicy
+                    ? Icons.check_box_outlined
+                    : Icons.check_box_outline_blank,
+                color: AppColors.grey5,
+              ),
+              SizedBox(width: Dimensions.width5),
+              Text(
+                'I agree to  the Terms and Privacy Policy',
+                style: TextStyle(
+                  color: AppColors.grey5,
+                  fontSize: Dimensions.font13,
+                ),
+              ),
+            ],
+          ),
+        ),
         SizedBox(height: Dimensions.height30),
         CustomButton(
           text: "Submit Club Profile",
           onPressed: () {
-            if (formKey.currentState!.validate()) {
+
               authController.registerOthers(clubBody());
               print(clubBody());
-            }
+
           },
         ),
         SizedBox(height: Dimensions.height50),

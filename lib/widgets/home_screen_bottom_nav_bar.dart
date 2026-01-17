@@ -22,7 +22,7 @@ class HomeScreenBottomNavBar extends StatelessWidget {
             // borderRadius: BorderRadius.circular(Dimensions.radius30),
           ),
           padding: EdgeInsets.only(
-            bottom: Dimensions.height10*7,
+            bottom: Dimensions.height10*3,
             left: Dimensions.width15,
             right: Dimensions.width15,
             top: Dimensions.height15,

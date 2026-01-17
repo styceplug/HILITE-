@@ -59,7 +59,6 @@ class PostController extends GetxController {
 
     // Simple validation (can be more complex)
     if (title.isEmpty || description.isEmpty) {
-      // CustomSnackBar.failure(message: 'Title and description are required.');
       return;
     }
 

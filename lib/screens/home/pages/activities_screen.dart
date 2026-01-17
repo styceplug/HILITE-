@@ -89,13 +89,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
                       ],
                     ),
                     SizedBox(height: Dimensions.height20),
-                    ItemCard(
-                      icon: Iconsax.finger_cricle,
-                      title: 'Notifications',
-                      subtitle: 'Check last notifications here',
-                      color: AppColors.error,
-                      onTap: (){Get.toNamed(AppRoutes.notificationsScreen);}
-                    ),
+
                     ItemCard(
                       icon: Icons.sports_soccer,
                       title: 'Trials',
@@ -115,7 +109,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
                   ],
                 ),
 
-                Positioned(
+              /*  Positioned(
                   right: 0,
                   bottom: Dimensions.bottomNavIconHeight + Dimensions.height150,
                   child: InkWell(
@@ -134,7 +128,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
                       child: Icon(CupertinoIcons.plus, color: AppColors.white),
                     ),
                   ),
-                ),
+                ),*/
               ],
             ),
           );

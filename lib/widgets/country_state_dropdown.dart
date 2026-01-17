@@ -163,7 +163,7 @@ class _CountryStateState extends State<CountryState> {
                 widget.onStateChanged(null);
               },
               hint: Text(
-                "Choose a country",
+                "Choose a country *",
                 style: TextStyle(
                   color: AppColors.black.withOpacity(0.5),
                   fontSize: Dimensions.font16
@@ -189,7 +189,7 @@ class _CountryStateState extends State<CountryState> {
               }).toList(),
               onChanged: widget.onStateChanged,
               hint: Text(
-                "Choose a state",
+                "Choose a state *",
                 style: TextStyle(
                     color: AppColors.black.withOpacity(0.5),
                     fontFamily: 'Poppins',

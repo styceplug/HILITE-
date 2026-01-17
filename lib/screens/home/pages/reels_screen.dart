@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:chewie/chewie.dart';
+import 'package:hilite/widgets/custom_button.dart';
+import 'package:hilite/widgets/custom_textfield.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../controllers/post_controller.dart';
 import '../../../models/post_model.dart';
+import '../../../routes/routes.dart';
 import '../../../utils/colors.dart';
 import '../../../utils/dimensions.dart';
 import '../../../widgets/reel_overlay.dart';
@@ -42,7 +45,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
-      onRefresh: (){
+      onRefresh: () {
         controller.loadRecommendedPosts(currentType);
         return Future.delayed(const Duration(seconds: 1));
       },
@@ -50,7 +53,8 @@ class _ReelsScreenState extends State<ReelsScreen> {
         backgroundColor: Colors.black,
         body: Obx(() {
           if (controller.posts.isEmpty) {
-            controller.loadRecommendedPosts(currentType);;
+            controller.loadRecommendedPosts(currentType);
+            ;
           }
 
           return Stack(
@@ -63,16 +67,12 @@ class _ReelsScreenState extends State<ReelsScreen> {
                 onPageChanged: (index) => controller.onPageChanged(index),
                 itemBuilder: (_, index) {
                   final post = controller.posts[index];
-                  if (post.type == 'video') {
+                  if (post.type == 'video' || post.type == 'image') {
                     return ReelsVideoItem(
-                        index: index,
-                        post: post,
-                        controller: controller
+                      index: index,
+                      post: post,
+                      controller: controller,
                     );
-                  } else if (post.type == 'image') {
-                    return _buildImageItem(post);
-                  } else {
-                    return _buildTextItem(post);
                   }
                 },
               ),
@@ -80,75 +80,55 @@ class _ReelsScreenState extends State<ReelsScreen> {
               // 2. Top Tabs (Trials / Images / Videos)
               Positioned(
                 top: MediaQuery.of(context).padding.top + 10,
-                left: 0,
-                right: 0,
+                left: Dimensions.width20,
+                right: Dimensions.width20,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // _tabBtn("Trials", "text"),
-                    _tabBtn("Images", "image"),
-                    _tabBtn("Videos", "video"),
+                    Expanded(
+                      child: InkWell(
+                        onTap: (){
+                          Get.toNamed(AppRoutes.recommendedAccountsScreen);
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: Dimensions.width20,
+                            vertical: Dimensions.height10,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(
+                              Dimensions.radius15,
+                            ),
+                            border: Border.all(color: AppColors.primary),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Icon(CupertinoIcons.search, color: AppColors.black),
+                              SizedBox(width: Dimensions.width15),
+                              Text(
+                                'Search...',
+                                style: TextStyle(
+                                  fontSize: Dimensions.font16,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.black,
+                                ),
+                              ),
+                              Spacer(),
+                              InkWell(
+                                onTap:(){},
+                                child: Icon(Iconsax.people, size: Dimensions.iconSize24),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
           );
         }),
-      ),
-    );
-  }
-
-  // Simple Tab Switcher
-  Widget _tabBtn(String label, String type) {
-    final isActive = currentType == type;
-    return GestureDetector(
-      onTap: () {
-        setState(() => currentType = type);
-        controller.pauseAll();
-        controller.loadRecommendedPosts(type);
-        if(pageController.hasClients) pageController.jumpToPage(0);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? Colors.white : Colors.white60,
-            fontSize: 16,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Fallback for non-video posts
-  Widget _buildImageItem(PostModel post) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.network(post.image?.url ?? "", fit: BoxFit.cover),
-        ReelsInteractionOverlay(post: post),
-      ],
-    );
-  }
-
-  Widget _buildTextItem(PostModel post) {
-    return Container(
-      color: Colors.black,
-      child: Stack(
-        children: [
-          Center(
-              child: Padding(
-                padding: const EdgeInsets.all(30),
-                child: Text(post.text ?? "",
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 24)
-                ),
-              )
-          ),
-          ReelsInteractionOverlay(post: post),
-        ],
       ),
     );
   }

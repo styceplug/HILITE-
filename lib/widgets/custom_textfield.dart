@@ -14,6 +14,7 @@ class CustomTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final TextInputType keyboardType;
   final Color? textColor;
+  final Color? fillColor;
   final int? maxLines;
   final void Function(String)? onChanged;
   final String? Function(String?)? validator;
@@ -29,6 +30,7 @@ class CustomTextField extends StatelessWidget {
     this.enabled = true,
     this.suffixIcon,
     this.textColor,
+    this.fillColor,
     this.keyboardType = TextInputType.text,
     this.maxLines,
     this.onChanged,

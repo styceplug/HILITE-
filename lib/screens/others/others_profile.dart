@@ -5,6 +5,7 @@ import 'package:hilite/widgets/snackbars.dart';
 import 'package:iconsax/iconsax.dart';
 
 import '../../models/post_model.dart';
+import '../../models/user_model.dart';
 import '../../routes/routes.dart';
 import '../../utils/colors.dart';
 import '../../utils/dimensions.dart';
@@ -50,53 +51,99 @@ class _OthersProfileState extends State<OthersProfileScreen> {
         builder: (controller) {
           var user = userController.othersProfile.value;
 
-
           if (user == null) {
             return const Center(child: CircularProgressIndicator());
           }
           final isFollowing = userController.othersProfile.value!.isFollowed;
-
 
           var player = user.playerDetails;
           var club = user.clubDetails;
           var agent = user.agentDetails;
 
           return SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              vertical: Dimensions.height10*5,
-            ),
+            padding: EdgeInsets.symmetric(vertical: Dimensions.height10 * 5),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                /// 👤 Profile Picture
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    BackButton(),
-                    ProfileAvatar(avatarUrl: user.profilePicture),
-                    InkWell(
-                      onTap: (){
-                        Get.bottomSheet(
-                          GiftSelectionBottomSheet(
-                            recipientId: user.id,
-                          ),
-                          isScrollControlled: true,
-                        );
-                      },
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: Dimensions.width10,vertical: Dimensions.height10),
-                        margin: EdgeInsets.only(right: Dimensions.width15,top: Dimensions.height10),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.success,
-                        ),
-                        child: Icon(Iconsax.gift,color: AppColors.white,size: Dimensions.iconSize16,),
-                      ),
-                    ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(Dimensions.width15, Dimensions.height30, Dimensions.width15, 0),
+                  child: SizedBox(
+                    // Ensure the Stack takes up the full width so centering is accurate
+                    width: double.infinity,
 
-                  ],
+                    // Set a height large enough to fit the Avatar/Buttons
+                    child: Stack(
+                      alignment: Alignment.topCenter,
+                      // This forces the Avatar to the exact center
+                      children: [
+                        // 1. Back Button (Pinned Left)
+                        Positioned(
+                          left: 0,
+                          // Remove default padding from BackButton to align perfectly with edge if needed
+                          child: const BackButton(color: Colors.black),
+                        ),
+
+                        // 2. Profile Avatar (Centered by Stack alignment)
+                        ProfileAvatar(avatarUrl: user.profilePicture),
+
+                        // 3. Action Buttons (Pinned Right)
+                        Positioned(
+                          right: 0,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // ℹ️ Info Button
+                              InkWell(
+                                onTap: () => _showProfileDetails(context, user),
+                                borderRadius: BorderRadius.circular(50),
+                                child: Container(
+                                  padding: EdgeInsets.all(Dimensions.width10),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: AppColors.grey2,
+                                  ),
+                                  child: Icon(
+                                    Icons.info_outline_rounded,
+                                    color: AppColors.black,
+                                    size:
+                                        Dimensions
+                                            .iconSize20, // Adjusted to your snippet
+                                  ),
+                                ),
+                              ),
+
+                              SizedBox(width: Dimensions.width10),
+
+                              // 🎁 Gift Button
+                              InkWell(
+                                onTap: () {
+                                  Get.bottomSheet(
+                                    GiftSelectionBottomSheet(
+                                      recipientId: user.id,
+                                    ),
+                                    isScrollControlled: true,
+                                  );
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.all(Dimensions.width10),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: AppColors.success,
+                                  ),
+                                  child: Icon(
+                                    Iconsax.gift,
+                                    color: AppColors.white,
+                                    size: Dimensions.iconSize16,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 SizedBox(height: Dimensions.height20),
 
@@ -123,12 +170,14 @@ class _OthersProfileState extends State<OthersProfileScreen> {
 
                 /// 📊 Stats Row
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: Dimensions.width100),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Dimensions.width100,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       // if (user.role != 'fan')
-                        _buildStat('Followers', '${user.followers}'),
+                      _buildStat('Followers', '${user.followers}'),
                       _buildStat('Following', '${user.following}'),
                     ],
                   ),
@@ -158,7 +207,11 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                 /// ⚽ Player Info
                 if (user.role == 'player') ...[
                   Padding(
-                    padding: EdgeInsets.only(bottom: Dimensions.height15,left: Dimensions.width30,right: Dimensions.width30),
+                    padding: EdgeInsets.only(
+                      bottom: Dimensions.height15,
+                      left: Dimensions.width30,
+                      right: Dimensions.width30,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -175,7 +228,11 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Padding(
-                      padding: EdgeInsets.only(bottom: Dimensions.height15,left: Dimensions.width30,right: Dimensions.width30),
+                      padding: EdgeInsets.only(
+                        bottom: Dimensions.height15,
+                        left: Dimensions.width30,
+                        right: Dimensions.width30,
+                      ),
                       child: Row(
                         children: [
                           _buildInfoTag('Account Name: ${user.name ?? '-'}'),
@@ -197,7 +254,11 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Padding(
-                      padding: EdgeInsets.only(bottom: Dimensions.height15,left: Dimensions.width30,right: Dimensions.width30),
+                      padding: EdgeInsets.only(
+                        bottom: Dimensions.height15,
+                        left: Dimensions.width30,
+                        right: Dimensions.width30,
+                      ),
                       child: Row(
                         children: [
                           _buildInfoTag('Agency: ${agent?.agencyName ?? '-'}'),
@@ -235,7 +296,10 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                           borderRadius: BorderRadius.circular(
                             Dimensions.radius10,
                           ),
-                          padding: EdgeInsets.symmetric(horizontal: Dimensions.width20,vertical: Dimensions.height10),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: Dimensions.width20,
+                            vertical: Dimensions.height10,
+                          ),
                         ),
                       ),
                       SizedBox(width: Dimensions.width20),
@@ -252,63 +316,60 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                               message: 'Direct messaging coming soon!',
                             );
                           },
-                          padding: EdgeInsets.symmetric(horizontal: Dimensions.width20,vertical: Dimensions.height10),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: Dimensions.width20,
+                            vertical: Dimensions.height10,
+                          ),
                           backgroundColor: AppColors.grey4,
                           borderRadius: BorderRadius.circular(
                             Dimensions.radius10,
                           ),
                         ),
                       ),
-                      
-
                     ],
                   ),
                 ),
 
                 SizedBox(height: Dimensions.height20),
 
-                /// 📑 TABS SECTION (Videos, Photos, Posts)
-                if (user.role != 'fan') ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildTabItem(controller, 'video', 'Videos'),
-                      _buildTabItem(controller, 'image', 'Photos'),
-                     if (user.role == 'club')
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildTabItem(controller, 'video', 'Videos'),
+                    _buildTabItem(controller, 'image', 'Photos'),
+                    if (user.role == 'club')
                       _buildTabItem(controller, 'fixtures', 'Fixtures'),
-                    ],
-                  ),
-                  SizedBox(height: Dimensions.height20),
+                  ],
+                ),
+                SizedBox(height: Dimensions.height20),
 
-                  /// 🖼️ CONTENT GRID
-                  Builder(
-                    builder: (context) {
-                      // 1. Loading + Empty = Shimmer
-                      if (controller.isExternalPostsLoading &&
-                          controller
-                              .externalPostCache[controller
-                                  .currentExternalPostType]!
-                              .isEmpty) {
-                        return const PostGridShimmer(); // Reuse your shimmer
-                      }
+                /// 🖼️ CONTENT GRID
+                Builder(
+                  builder: (context) {
+                    // 1. Loading + Empty = Shimmer
+                    if (controller.isExternalPostsLoading &&
+                        controller
+                            .externalPostCache[controller
+                                .currentExternalPostType]!
+                            .isEmpty) {
+                      return const PostGridShimmer(); // Reuse your shimmer
+                    }
 
-                      // 2. Not Loading + Empty = No Data Text
-                      if (controller
-                          .externalPostCache[controller
-                              .currentExternalPostType]!
-                          .isEmpty) {
-                        return Center(
-                          child: Text(
-                            "No ${controller.currentExternalPostType} found.",
-                          ),
-                        );
-                      }
+                    // 2. Not Loading + Empty = No Data Text
+                    if (controller
+                        .externalPostCache[controller.currentExternalPostType]!
+                        .isEmpty) {
+                      return Center(
+                        child: Text(
+                          "No ${controller.currentExternalPostType} found.",
+                        ),
+                      );
+                    }
 
-                      // 3. Data Exists = Grid
-                      return _buildContentGrid(controller);
-                    },
-                  ),
-                ],
+                    // 3. Data Exists = Grid
+                    return _buildContentGrid(controller);
+                  },
+                ),
 
                 SizedBox(height: Dimensions.height50),
               ],
@@ -317,6 +378,260 @@ class _OthersProfileState extends State<OthersProfileScreen> {
         },
       ),
     );
+  }
+
+  void _showProfileDetails(BuildContext context, UserModel user) {
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle Bar
+            Center(
+              child: Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Header
+            Row(
+              children: [
+                Icon(
+                  Icons.person_pin_circle_outlined,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'About this Account',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // --- 1. General Info ---
+                    _buildSectionTitle('General Information'),
+                    _buildDetailRow(
+                      Icons.person_outline,
+                      'Full Name',
+                      user.name,
+                    ),
+                    _buildDetailRow(
+                      Icons.alternate_email,
+                      'Username',
+                      '@${user.username}',
+                    ),
+                    if (user.country.isNotEmpty)
+                      _buildDetailRow(
+                        Icons.flag_outlined,
+                        'Country',
+                        user.country,
+                      ),
+                    if (user.state.isNotEmpty)
+                      _buildDetailRow(
+                        Icons.location_city,
+                        'State/Region',
+                        user.state,
+                      ),
+                    _buildDetailRow(
+                      Icons.calendar_today,
+                      'Joined',
+                      _formatDate(user.createdAt.toString()),
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    // --- 2. Role Specific Info ---
+
+                    // PLAYER
+                    if (user.role == 'player' &&
+                        user.playerDetails != null) ...[
+                      _buildSectionTitle('Player Details'),
+                      _buildDetailRow(
+                        Icons.sports_soccer,
+                        'Position',
+                        user.playerDetails?.position ?? '-',
+                      ),
+                      _buildDetailRow(
+                        Icons.shield_outlined,
+                        'Current Club',
+                        user.playerDetails?.currentClub ?? '-',
+                      ),
+                      _buildDetailRow(
+                        Icons.straighten,
+                        'Height',
+                        '${user.playerDetails?.height ?? '-'} cm',
+                      ),
+                      _buildDetailRow(
+                        Icons.fitness_center,
+                        'Weight',
+                        '${user.playerDetails?.weight ?? '-'} kg',
+                      ),
+                      _buildDetailRow(
+                        Icons.do_not_step,
+                        'Preferred Foot',
+                        user.playerDetails?.preferredFoot.capitalizeFirst ??
+                            '-',
+                      ),
+                      _buildDetailRow(
+                        Icons.cake,
+                        'Date of Birth',
+                        _formatDate(user.playerDetails?.dob.toString()),
+                      ),
+                    ],
+
+                    // CLUB
+                    if (user.role == 'club' && user.clubDetails != null) ...[
+                      _buildSectionTitle('Club Details'),
+                      _buildDetailRow(
+                        Icons.shield,
+                        'Club Name',
+                        user.clubDetails?.clubName ?? user.name,
+                      ),
+                      _buildDetailRow(
+                        Icons.category,
+                        'Type',
+                        user.clubDetails?.clubType.capitalizeFirst ?? '-',
+                      ),
+                      _buildDetailRow(
+                        Icons.person,
+                        'Manager',
+                        user.clubDetails?.manager ?? '-',
+                      ),
+                      _buildDetailRow(
+                        Icons.history,
+                        'Founded',
+                        user.clubDetails?.yearFounded ?? '-',
+                      ),
+                      // Removed 'League' since it is not in your ClubDetails model
+                    ],
+
+                    // AGENT
+                    if (user.role == 'agent' && user.agentDetails != null) ...[
+                      _buildSectionTitle('Agent Profile'),
+                      _buildDetailRow(
+                        Icons.business_center,
+                        'Agency',
+                        user.agentDetails?.agencyName ?? '-',
+                      ),
+                      // Fixed: Changed 'licenseId' to 'registrationId'
+                      _buildDetailRow(
+                        Icons.verified_user,
+                        'Registration ID',
+                        user.agentDetails?.registrationId ?? 'Not Listed',
+                      ),
+                      _buildDetailRow(
+                        Icons.work_history,
+                        'Experience',
+                        user.agentDetails?.experience ?? '-',
+                      ),
+                    ],
+
+                    const SizedBox(height: 15),
+                    // Contact
+                    _buildSectionTitle('Contact'),
+                    _buildDetailRow(Icons.email_outlined, 'Email', user.email),
+                    // if(user.number.isNotEmpty)
+                    //   _buildDetailRow(Icons.phone_android, 'Phone', user.number),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10, top: 5),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey[500],
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 18, color: AppColors.primary),
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value.isEmpty ? '-' : value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return '-';
+    try {
+      final date = DateTime.parse(dateStr);
+      return "${date.day}/${date.month}/${date.year}";
+    } catch (e) {
+      return dateStr;
+    }
   }
 
   /// 🔘 Tab Helper
