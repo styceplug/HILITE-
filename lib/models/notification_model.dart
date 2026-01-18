@@ -20,6 +20,7 @@ class NotificationResponse {
 class NotificationModel {
   final String id;
   final String userId;
+  final String url;
   final String title;
   final String message;
   final String type; // 'follow', 'like', 'comment', 'system'
@@ -30,6 +31,7 @@ class NotificationModel {
   NotificationModel({
     required this.id,
     required this.userId,
+    required this.url,
     required this.title,
     required this.message,
     required this.type,
@@ -42,6 +44,7 @@ class NotificationModel {
     return NotificationModel(
       id: json['_id'] ?? '',
       userId: json['user'] ?? '',
+      url: json['url'] ?? '',
       title: json['title'] ?? '',
       message: json['message'] ?? '',
       type: json['type'] ?? 'system', // Default to system if null
@@ -56,6 +59,7 @@ class NotificationModel {
     return {
       '_id': id,
       'user': userId,
+      'url': url,
       'title': title,
       'message': message,
       'type': type,
@@ -78,6 +82,7 @@ class NotificationModel {
     return NotificationModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
+      url: url ?? this.url,
       title: title ?? this.title,
       message: message ?? this.message,
       type: type ?? this.type,

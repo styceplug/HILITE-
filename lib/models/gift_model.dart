@@ -44,6 +44,3 @@ final List<GiftModel> giftList = [
   GiftModel(name: "Endorsement", coins: 1000000, icon: AppConstants.getPngAsset('endorsement')),
 ];
 
-
-
-

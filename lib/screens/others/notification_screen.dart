@@ -103,18 +103,26 @@ class _NotificationScreenState extends State<NotificationScreen> {
       onTap: () {
         Get.toNamed(
           AppRoutes.othersProfileScreen,
-          arguments: {'targetId': notification.userId}
+          arguments: {'targetId': notification.url},
         );
       },
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: Dimensions.height10),
-        color:
-            isUnread ? AppColors.primary.withOpacity(0.05) : Colors.transparent,
+        padding: EdgeInsets.symmetric(
+          vertical: Dimensions.height10,
+          horizontal: Dimensions.width10,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(Dimensions.radius10),
+          color:
+              isUnread
+                  ? AppColors.primary.withOpacity(0.01)
+                  : Colors.transparent,
+        ),
         child: Row(
           children: [
             Container(
-              height: Dimensions.height10 * 6,
-              width: Dimensions.width10 * 6,
+              height: Dimensions.height10 * 5,
+              width: Dimensions.width10 * 5,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: typeColor.withOpacity(0.8),
@@ -122,7 +130,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               child: Icon(
                 typeIcon,
                 color: AppColors.white,
-                size: Dimensions.iconSize30,
+                size: Dimensions.iconSize24,
               ),
             ),
             SizedBox(width: Dimensions.width10),
