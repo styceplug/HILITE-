@@ -17,6 +17,7 @@ import '../../../models/post_model.dart';
 import '../../../widgets/post_grid_shimmer.dart';
 import '../../../widgets/profile_avatar.dart';
 import '../../../widgets/reels_video_item.dart';
+import '../../others/relationship_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -56,7 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         return RefreshIndicator(
           color: AppColors.primary,
-          onRefresh: ()async{
+          onRefresh: () async {
             userController.getPersonalPosts('video');
             userController.getPersonalPosts('image');
           },
@@ -139,7 +140,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   /// 📖 Bio
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: Dimensions.width20,
+                    ),
                     child: Text(
                       user.bio ?? '',
                       textAlign: TextAlign.center,
@@ -158,10 +161,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      if (user.role != 'fan')
-                        _buildStat('Followers', '${user.followers}'),
+                      // if (user.role != 'fan')
+                      _buildStat('Followers', '${user.followers}', 'followers'),
                       _divider(),
-                      _buildStat('Following', '${user.following}'),
+                      _buildStat('Following', '${user.following}', 'following'),
                     ],
                   ),
 
@@ -188,13 +191,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           Row(
                             children: [
-                              _buildInfoTag('Handler\'s Name: ${user.name ?? '-'}'),
+                              _buildInfoTag(
+                                'Handler\'s Name: ${user.name ?? '-'}',
+                              ),
                               SizedBox(width: Dimensions.width20),
-                              _buildInfoTag('Club Type: ${club?.clubType ?? '-'}'),
+                              _buildInfoTag(
+                                'Club Type: ${club?.clubType ?? '-'}',
+                              ),
                               SizedBox(width: Dimensions.width20),
                               _buildInfoTag('Manager: ${club?.manager ?? '-'}'),
                               SizedBox(width: Dimensions.width20),
-                              _buildInfoTag('Founded: ${club?.yearFounded ?? '-'}'),
+                              _buildInfoTag(
+                                'Founded: ${club?.yearFounded ?? '-'}',
+                              ),
                               SizedBox(width: Dimensions.width20),
                             ],
                           ),
@@ -216,7 +225,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Row(
                     children: [
                       if (user.role == 'club' || user.role == 'agent') ...[
-
                         CustomButton(
                           text: 'Create Trial',
                           onPressed: () {
@@ -237,23 +245,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Get.toNamed(AppRoutes.editProfileScreen);
                           },
                           backgroundColor: AppColors.primary,
-                          borderRadius: BorderRadius.circular(Dimensions.radius10),
+                          borderRadius: BorderRadius.circular(
+                            Dimensions.radius10,
+                          ),
                         ),
                       ),
-                      SizedBox(width: Dimensions.width10,),
-                      CustomButton(
-                        onPressed: () {
-                          Get.toNamed(AppRoutes.uploadContent);
-                        },
-                        text: 'Add Post',
-                        borderRadius: BorderRadius.circular(Dimensions.radius10),
-                        backgroundColor: AppColors.white,
-                        borderColor: AppColors.primary,
-                      ),
+
+                      if(user.role != 'fan')...[
+                        SizedBox(width: Dimensions.width10),
+                        CustomButton(
+                          onPressed: () {
+                            Get.toNamed(AppRoutes.uploadContent);
+                          },
+                          text: 'Add Post',
+                          borderRadius: BorderRadius.circular(
+                            Dimensions.radius10,
+                          ),
+                          backgroundColor: AppColors.white,
+                          borderColor: AppColors.primary,
+                        ),
+                      ],
+
                     ],
                   ),
 
                   SizedBox(height: Dimensions.height30),
+
                   /*Padding(
                     padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
                     child: Align(
@@ -278,18 +295,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                   ),*/
-
                   Builder(
                     builder: (context) {
                       // Check if EVERYTHING is loading (optional, depends on your loading logic)
-                      if (controller.isFirstLoad && controller.postCache.values.every((l) => l.isEmpty)) {
+                      if (controller.isFirstLoad &&
+                          controller.postCache.values.every((l) => l.isEmpty)) {
                         return const PostGridShimmer();
                       }
 
                       return _buildContentGrid(controller);
                     },
                   ),
-
 
                   SizedBox(height: Dimensions.height30),
                 ],
@@ -371,12 +387,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (postType == 'video') {
               // ⚠️ Crucial: The video player usually needs a clean list of ONLY videos.
               // We filter the list on the fly so the user can scroll up/down in the reels player.
-              final videoOnlyList = allPosts.where((p) => p.type == 'video').toList();
+              final videoOnlyList =
+                  allPosts.where((p) => p.type == 'video').toList();
               final videoIndex = videoOnlyList.indexOf(post);
 
               if (videoIndex != -1) {
                 Get.to(
-                      () => ProfileReelsPlayer(
+                  () => ProfileReelsPlayer(
                     videos: videoOnlyList,
                     initialIndex: videoIndex,
                   ),
@@ -448,25 +465,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  /// 🧩 Stat Widget
-  Widget _buildStat(String label, String value) => Column(
-    children: [
-      Text(
-        value,
-        style: TextStyle(
-          fontSize: Dimensions.font22,
-          fontWeight: FontWeight.w600,
+  /// 🧩 Clickable Stat Widget
+  Widget _buildStat(String label, String value, String type) {
+    return InkWell(
+      onTap: () {
+        // Navigate to the new RelationshipScreen
+        Get.to(() => RelationshipScreen(
+          title: label, // "Followers" or "Following"
+          type: type,   // "followers" or "following"
+        ));
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: Column(
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: Dimensions.font22,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: Dimensions.font14,
+                fontWeight: FontWeight.w400,
+                color: Colors.grey[700], // Slight grey to indicate clickable
+              ),
+            ),
+          ],
         ),
       ),
-      Text(
-        label,
-        style: TextStyle(
-          fontSize: Dimensions.font14,
-          fontWeight: FontWeight.w400,
-        ),
-      ),
-    ],
-  );
+    );
+  }
 
   /// ┆ Divider
   Widget _divider() => Container(

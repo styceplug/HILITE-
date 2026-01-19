@@ -7,6 +7,7 @@ import 'package:hilite/helpers/global_loader_controller.dart';
 import 'package:hilite/widgets/snackbars.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../data/api/api_checker.dart';
 import '../data/repo/user_repo.dart';
 import '../models/post_model.dart';
 import '../models/user_model.dart';
@@ -25,6 +26,11 @@ class UserController extends GetxController {
 
   bool isPostsLoading = false;
   // List<PersonalPostModel> myPosts = [];
+
+
+
+
+
   String currentPostType = 'video';
   Map<String, List<PersonalPostModel>> postCache = {
     'text': [],
@@ -37,7 +43,10 @@ class UserController extends GetxController {
     'image': [],
     'video': [],
   };
-
+  List<UserModel> _relationshipList = [];
+  List<UserModel> get relationshipList => _relationshipList;
+  List<UserModel> _filteredRelationshipList = [];
+  List<UserModel> get filteredRelationshipList => _filteredRelationshipList;
   bool isExternalPostsLoading = false;
   String currentExternalPostType = 'text';
 
@@ -53,6 +62,49 @@ class UserController extends GetxController {
     loadCachedUser();
   }
 
+
+
+  Future<void> getRelationshipUsers(String type) async {
+    loader.showLoader();
+    _relationshipList = [];
+    _filteredRelationshipList = [];
+    update();
+
+    Response response;
+
+    if (type == 'followers') {
+      response = await userRepo.getRelationshipAccounts(followers: true);
+    } else if (type == 'following') {
+      response = await userRepo.getRelationshipAccounts(following: true);
+    } else {
+      // Default or blocked
+      response = await userRepo.getRelationshipAccounts(blocked: true);
+    }
+
+    if (response.statusCode == 200) {
+      List<dynamic> rawList = response.body['data'];
+      _relationshipList = rawList.map((e) => UserModel.fromJson(e)).toList();
+      _filteredRelationshipList = List.from(_relationshipList);
+
+    } else {
+      ApiChecker.checkApi(response);
+    }
+
+    loader.hideLoader();
+    update();
+  }
+
+  void searchRelationship(String query) {
+    if (query.isEmpty) {
+      _filteredRelationshipList = List.from(_relationshipList);
+    } else {
+      _filteredRelationshipList = _relationshipList.where((user) {
+        return user.name.toLowerCase().contains(query.toLowerCase()) ||
+            user.username.toLowerCase().contains(query.toLowerCase());
+      }).toList();
+    }
+    update(); // Update UI
+  }
 
   Future<void> saveDeviceToken() async {
     try {

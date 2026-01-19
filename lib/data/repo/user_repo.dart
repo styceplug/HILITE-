@@ -19,6 +19,20 @@ class UserRepo {
 
   static const String USER_KEY = "user_data";
 
+
+  Future<Response> getRelationshipAccounts({
+    bool followers = false,
+    bool following = false,
+    bool blocked = false
+  }) async {
+    String query = '';
+    if (followers) query = '?followers=true';
+    else if (following) query = '?following=true';
+    else if (blocked) query = '?blocked=true';
+
+    return await apiClient.getData(AppConstants.GET_PERSONAL_RELATIONSHIPS + query);
+  }
+
   Future<Response> updateDeviceToken(String token, String platform) async {
     return await apiClient.putData(AppConstants.POST_DEVICE_TOKEN, {
       "deviceToken": token,

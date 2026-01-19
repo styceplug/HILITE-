@@ -109,7 +109,9 @@ class GiftSelectionBottomSheet extends StatelessWidget {
               GestureDetector(
                 onTap: () {
                   Get.back(); // Close sheet
-                  Get.to(() => const WalletScreen()); // Navigate to wallet
+                  Get.to(() => const WalletScreen());
+                  //pause playing video
+                  Get.find<PostController>().pauseAll();
                 },
                 child: Container(
                   padding: EdgeInsets.all(4),
@@ -205,21 +207,20 @@ class _GiftGridItem extends StatelessWidget {
               // IMAGE HANDLING
               Image.asset(
                 gift.icon,
-                // Logic:
-                // 1. If NOT affordable -> Grey tint (Disabled look)
-                // 2. If Affordable AND model has color -> Tint with model color
-                // 3. If Affordable AND no model color -> Show ORIGINAL Image (null color)
+
                 color: !canAfford
                     ? Colors.grey[800]
-                    : gift.color, // Passing null here lets the original PNG colors show!
-                height: 40, // Hardcoded or Dimensions.height40
-                width: 40,
+                    : gift.color,
+                height: Dimensions.height10*6.1,
+                width: Dimensions.width10*6.1,
                 fit: BoxFit.contain,
               ),
               const SizedBox(height: 8),
               Text(
                 gift.name,
                 textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     color: canAfford ? Colors.white : Colors.grey[600],
                     fontSize: 12,

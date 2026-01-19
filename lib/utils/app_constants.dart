@@ -39,6 +39,7 @@ class AppConstants {
   static  String POST_NEW_COMMENTS(String postId) => '/v1/post/retrieve/$postId/comment';
   static const String UPLOAD_IMAGE_POST = '/v1/post/upload/image';
   static const String UPLOAD_VIDEO_POST = '/v1/post/upload/video';
+  static const String GET_PERSONAL_RELATIONSHIPS = '/v1/user/personal/accounts';
 
 
   //trials
