@@ -14,6 +14,8 @@ class HomeScreenBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     AppController appController = Get.find<AppController>();
 
+    final double bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Obx(
       () => ClipRect(
         child: Container(
@@ -22,7 +24,7 @@ class HomeScreenBottomNavBar extends StatelessWidget {
             // borderRadius: BorderRadius.circular(Dimensions.radius30),
           ),
           padding: EdgeInsets.only(
-            bottom: Dimensions.height10*3,
+            bottom: Dimensions.height10*3+bottomPadding,
             left: Dimensions.width15,
             right: Dimensions.width15,
             top: Dimensions.height15,
