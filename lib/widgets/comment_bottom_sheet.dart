@@ -86,7 +86,7 @@ class CommentsBottomSheet extends StatelessWidget {
                           radius: 18,
                           backgroundImage: NetworkImage(
                             comment.user.profilePicture ??
-                                'https://via.placeholder.com/150',
+                                'https://placehold.net/avatar-2.png',
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -157,7 +157,7 @@ class _CommentInputField extends StatelessWidget {
             backgroundColor: Colors.white,
             backgroundImage: NetworkImage(
               Get.find<UserController>().user.value?.profilePicture ??
-                  'https://via.placeholder.com/150',
+                  'https://placehold.net/avatar-2.png',
             ),
           ),
           const SizedBox(width: 10),

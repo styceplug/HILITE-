@@ -5,7 +5,8 @@ class AppConstants {
 
 
   // static const String BASE_URL = 'https://hilite-oq2v.onrender.com/api';
-  static const String BASE_URL = 'http://72.62.60.218:5000/api';
+  // static const String BASE_URL = 'http://72.62.60.218:5000/api';
+  static const String BASE_URL = 'https://api.hiliteapp.net/api';
 
   //TOKEN
   static const authToken = 'authToken';

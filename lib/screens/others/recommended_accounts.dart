@@ -382,7 +382,7 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(50),
                       child: Image.network(
-                        user.profilePicture ?? 'https://via.placeholder.com/150',
+                        user.profilePicture ?? 'https://placehold.net/avatar-2.png',
                         height: 65,
                         width: 65,
                         fit: BoxFit.cover,
