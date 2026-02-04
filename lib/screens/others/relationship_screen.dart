@@ -12,11 +12,13 @@ import '../../widgets/profile_avatar.dart';
 class RelationshipScreen extends StatefulWidget {
   final String title;
   final String type;
+  final String? targetId;
 
   const RelationshipScreen({
     super.key,
     required this.title,
-    required this.type
+    required this.type,
+    this.targetId
   });
 
   @override
@@ -31,10 +33,9 @@ class _RelationshipScreenState extends State<RelationshipScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      userController.getRelationshipUsers(widget.type);
+      userController.getRelationshipUsers(widget.type, targetId: widget.targetId);
       _searchController.clear();
-    });
-  }
+    });}
 
   @override
   void dispose() {

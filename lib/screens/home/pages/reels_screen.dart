@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
@@ -22,7 +24,7 @@ class ReelsScreen extends StatefulWidget {
 
 class _ReelsScreenState extends State<ReelsScreen> {
   final PostController controller = Get.find<PostController>();
-  final PageController pageController = PageController();
+  // final PageController pageController = PageController();
 
   String currentType = "video";
 
@@ -38,7 +40,6 @@ class _ReelsScreenState extends State<ReelsScreen> {
 
   @override
   void dispose() {
-    pageController.dispose();
     super.dispose();
   }
 
@@ -52,16 +53,13 @@ class _ReelsScreenState extends State<ReelsScreen> {
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Obx(() {
-          if (controller.posts.isEmpty) {
-            controller.loadRecommendedPosts(currentType);
-            ;
-          }
+
 
           return Stack(
             children: [
               // 1. The Vertical Feed
               PageView.builder(
-                controller: pageController,
+                controller: controller.reelsPageController,
                 scrollDirection: Axis.vertical,
                 itemCount: controller.posts.length,
                 onPageChanged: (index) => controller.onPageChanged(index),
@@ -77,53 +75,78 @@ class _ReelsScreenState extends State<ReelsScreen> {
                 },
               ),
 
-              // 2. Top Tabs (Trials / Images / Videos)
+              // 2. Top Tabs (Search Bar)
               Positioned(
                 top: MediaQuery.of(context).padding.top + 10,
                 left: Dimensions.width20,
                 right: Dimensions.width20,
-                child: Row(
-                  children: [
-                    Expanded(
+                child: ClipRRect(
+                  // 1. Clip the blur effect to the rounded corners
+                  borderRadius: BorderRadius.circular(Dimensions.radius15),
+                  child: BackdropFilter(
+                    // 2. The Blur Effect (Frosted Glass)
+                    // This blurs the video behind the search bar, ensuring text readability
+                    filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: Dimensions.width20,
+                        vertical: Dimensions.height10,
+                      ),
+                      decoration: BoxDecoration(
+                        // 3. Semi-transparent dark background
+                        // This ensures white text pops even on bright white videos
+                        color: Colors.black.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(Dimensions.radius15),
+                        border: Border.all(
+                          // 4. Subtle white border for contrast
+                          color: Colors.white.withOpacity(0.2),
+                          width: 1.5,
+                        ),
+                      ),
                       child: InkWell(
-                        onTap: (){
+                        onTap: () {
                           Get.toNamed(AppRoutes.recommendedAccountsScreen);
                         },
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: Dimensions.width20,
-                            vertical: Dimensions.height10,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(
-                              Dimensions.radius15,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            // 5. Icons and Text are always WHITE to contrast with the dark tint
+                            Icon(
+                                CupertinoIcons.search,
+                                color: Colors.white,
+                                size: Dimensions.iconSize24
                             ),
-                            border: Border.all(color: AppColors.primary),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Icon(CupertinoIcons.search, color: AppColors.black),
-                              SizedBox(width: Dimensions.width15),
-                              Text(
-                                'Search...',
-                                style: TextStyle(
-                                  fontSize: Dimensions.font16,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.black,
-                                ),
+                            SizedBox(width: Dimensions.width15),
+                            Text(
+                              'Search...',
+                              style: TextStyle(
+                                fontSize: Dimensions.font16,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white.withOpacity(0.9), // Slightly softer white
+                                shadows: [
+                                  // 6. Tiny drop shadow for extra legibility on chaotic backgrounds
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.5),
+                                    offset: const Offset(0, 1),
+                                    blurRadius: 2,
+                                  ),
+                                ],
                               ),
-                              Spacer(),
-                              InkWell(
-                                onTap:(){},
-                                child: Icon(Iconsax.people, size: Dimensions.iconSize24),
+                            ),
+                            const Spacer(),
+                            InkWell(
+                              onTap: () {},
+                              child: Icon(
+                                  Iconsax.people,
+                                  size: Dimensions.iconSize24,
+                                  color: Colors.white
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ],

@@ -210,7 +210,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                   CustomTextField(hintText: 'Full Name *',controller: nameController,),
                   SizedBox(height: Dimensions.height20),
                   CustomTextField(
-                    hintText: 'Username *',
+                    hintText: 'Pick Username *',
                     controller: usernameController,
                     onChanged: (value) {
                       if (value.trim().isNotEmpty) {

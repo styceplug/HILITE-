@@ -281,7 +281,7 @@ class _FootballerFormState extends State<FootballerForm> {
                     ),
                     SizedBox(height: Dimensions.height20),
                     CustomTextField(
-                      hintText: 'Username *',
+                      hintText: 'Pick Username *',
                       controller: usernameController,
                       onChanged: (value) {
                         if (value

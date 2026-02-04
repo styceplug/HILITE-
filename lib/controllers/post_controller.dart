@@ -9,6 +9,7 @@ import 'package:hilite/widgets/snackbars.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:camera/camera.dart';
+import '../data/api/api_checker.dart';
 import '../data/repo/post_repo.dart';
 import 'dart:io';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -28,23 +29,214 @@ class PostController extends GetxController {
   RxList<CommentModel> comments = <CommentModel>[].obs;
   RxBool isLoading = false.obs;
   UserController userController = Get.find<UserController>();
-
+  List<PostModel> _bookmarkList = [];
+  List<PostModel> get bookmarkList => _bookmarkList;
   // Map Index -> VideoController
   final Map<int, VideoPlayerController> videoControllers = {};
 
   // Set of indexes that are initialized and ready to play
   var initializedIndexes = <int>{}.obs;
-
+  bool isHandlingDeepLink = false;
   int _currentIndex = 0;
+
+  final PageController reelsPageController = PageController();
 
   @override
   void onClose() {
+    reelsPageController.dispose();
     _disposeAll();
     super.onClose();
   }
 
 
 
+
+
+  Future<void> handleDeepLink(String videoId) async {
+    print("🔗 Deep Link Detected for Video ID: $videoId");
+
+    // 1. Lock feed & Pause
+    isHandlingDeepLink = true;
+    pauseAll();
+    loader.showLoader();
+
+    try {
+      final response = await postRepo.getPostById(videoId);
+
+      if (response.statusCode == 200) {
+        // Parse Deep Link Post
+        final dynamic responseData = response.body['data'];
+        PostModel? deepLinkPost;
+
+        if (responseData is List && responseData.isNotEmpty) {
+          deepLinkPost = PostModel.fromJson(responseData[0]);
+        } else if (responseData is Map<String, dynamic>) {
+          deepLinkPost = PostModel.fromJson(responseData);
+        }
+
+        if (deepLinkPost != null && deepLinkPost.type == 'video') {
+
+          // 2. Prepare the Feed
+          // If we already have posts loaded, we can reuse them to save time
+          List<PostModel> currentFeed = [];
+          if (posts.isNotEmpty) {
+            currentFeed = List.from(posts);
+          } else {
+            // Fetch background feed if empty
+            try {
+              final recResponse = await postRepo.getRecommendedPosts(contentType: "video");
+              if (recResponse.statusCode == 200) {
+                final List data = recResponse.body['data'];
+                currentFeed = data.map((e) => PostModel.fromJson(e)).toList();
+              }
+            } catch (e) {
+              print("Background feed fetch failed: $e");
+            }
+          }
+
+          // 3. Merge: [DeepLink, ...Rest]
+          // Remove deep link post from existing feed to avoid duplicates
+          currentFeed.removeWhere((p) => p.id == deepLinkPost!.id);
+
+          // Assign merged list
+          posts.assignAll([deepLinkPost, ...currentFeed]);
+
+          // 4. Reset Navigation
+          AppController appController = Get.find<AppController>();
+          if (Get.currentRoute != AppRoutes.homeScreen) {
+            Get.offAllNamed(AppRoutes.homeScreen);
+          }
+          if (appController.currentAppPage.value != 0) {
+            appController.changeCurrentAppPage(0);
+          }
+
+          // 5. Force UI Rebuild
+          update();
+
+          // 6. HARD RESET PLAYERS (Fixes Lag/Stuck Frame)
+          // We dispose everything completely to ensure a clean slate
+          await _disposeAllControllersSafe();
+
+          // 7. Wait for PageView to mount
+          await Future.delayed(const Duration(milliseconds: 500));
+
+          if (reelsPageController.hasClients) {
+            reelsPageController.jumpToPage(0);
+          }
+
+          // 8. Initialize & Play Index 0
+          // Use caching logic specifically for the first video
+          await _initController(0);
+          videoControllers[0]?.play();
+
+          // 9. Preload next
+          if (posts.length > 1) _preloadNext(1);
+
+        } else {
+          CustomSnackBar.failure(message: "Link content is not a video.");
+          Get.offAllNamed(AppRoutes.homeScreen);
+        }
+      } else {
+        CustomSnackBar.failure(message: "Content not found");
+        Get.offAllNamed(AppRoutes.homeScreen);
+      }
+    } catch (e) {
+      print("Deep link error: $e");
+      Get.offAllNamed(AppRoutes.homeScreen);
+    } finally {
+      loader.hideLoader();
+      // Unlock almost immediately so pagination works
+      isHandlingDeepLink = false;
+    }
+  }
+
+  // Helper for safe disposal
+  Future<void> _disposeAllControllersSafe() async {
+    for (var controller in videoControllers.values) {
+      await controller.pause();
+      await controller.dispose();
+    }
+    videoControllers.clear();
+    initializedIndexes.clear();
+  }
+
+  Future<void> getBookmarks() async {
+    loader.showLoader();
+    update();
+
+    Response response = await postRepo.getBookmarkedPosts();
+
+    if (response.statusCode == 200) {
+      List<dynamic> rawList = response.body['data'];
+      // Parse using PostModel since the structure matches a post
+      _bookmarkList = rawList.map((e) => PostModel.fromJson(e)).toList();
+    } else {
+      ApiChecker.checkApi(response);
+    }
+
+    loader.hideLoader();
+    update();
+  }
+
+  bool isPostBookmarked(String postId) {
+    final post = posts.firstWhereOrNull((p) => p.id == postId);
+    return post?.isBookmarked ?? false;
+  }
+
+  void _updatePostBookmarks(String postId, bool isBookmarking) {
+    final postIndex = posts.indexWhere((p) => p.id == postId);
+
+    if (postIndex != -1) {
+      final post = posts[postIndex];
+
+      // We create a new copy of the post with the updated bookmark status
+      posts[postIndex] = PostModel(
+        id: post.id,
+        type: post.type,
+        text: post.text,
+        author: post.author,
+        video: post.video,
+        image: post.image,
+        likes: post.likes,
+        comments: post.comments,
+        isLiked: post.isLiked,
+        isBookmarked: isBookmarking, // <--- Update the flag
+      );
+    }
+  }
+
+  Future<void> toggleBookmark(String postId) async {
+    // 1. Get current state
+    final post = posts.firstWhereOrNull((p) => p.id == postId);
+    if (post == null) return;
+
+    final currentlyBookmarked = post.isBookmarked;
+    final shouldBeBookmarked = !currentlyBookmarked;
+
+    // 2. OPTIMISTIC UI UPDATE (Instant feedback)
+    _updatePostBookmarks(postId, shouldBeBookmarked);
+
+    // 3. Call API
+    final apiCall = currentlyBookmarked
+        ? postRepo.unBookmarkPost(postId)
+        : postRepo.bookmarkPost(postId);
+
+    try {
+      final response = await apiCall;
+
+      if (response.statusCode != 200) {
+        // 4. Revert on failure
+        print("Bookmark op failed. Status: ${response.statusCode}");
+        _updatePostBookmarks(postId, currentlyBookmarked);
+        CustomSnackBar.failure(message: "Failed to update bookmark");
+      }
+    } catch (e) {
+      // 5. Revert on network error
+      print("Network error during bookmark: $e");
+      _updatePostBookmarks(postId, currentlyBookmarked);
+      CustomSnackBar.failure(message: "Connection error");
+    }
+  }
 
 
   Future<void> uploadMediaPost({
@@ -345,6 +537,13 @@ class PostController extends GetxController {
   }
 
   Future<void> loadRecommendedPosts(String type) async {
+
+    if (isHandlingDeepLink) {
+      print("🚫 Skipping loadRecommendedPosts (Deep Link in progress)");
+      return;
+    }
+
+
     loader.showLoader();
     _disposeAll();
     posts.clear();
@@ -371,8 +570,6 @@ class PostController extends GetxController {
       _preloadNext(1);
     }
   }
-
-  // --- Caching Logic ---
 
   Future<File?> _cacheVideoFile(int index) async {
     if (index >= posts.length || posts[index].type != 'video') return null;

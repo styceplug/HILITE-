@@ -1,3 +1,4 @@
+import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +11,7 @@ import 'package:hilite/utils/dimensions.dart';
 import 'package:hilite/widgets/app_loading_overlay.dart';
 
 import 'controllers/app_controller.dart';
+import 'controllers/post_controller.dart';
 import 'firebase_options.dart';
 import 'helpers/dependencies.dart' as VersionService;
 import 'helpers/dependencies.dart' as dep;
@@ -45,6 +47,24 @@ Future<void> main() async {
       systemNavigationBarDividerColor: Colors.transparent,
     ),
   );
+  final appLinks = AppLinks();
+  final uri = await appLinks.getInitialLink();
+  try {
+    final Uri? initialUri = await appLinks.getInitialLink();
+    if (initialUri != null) {
+      _handleDeepLink(initialUri);
+    }
+  } catch (e) {
+    print("Initial link error: $e");
+  }
+
+  appLinks.uriLinkStream.listen((Uri? uri) {
+    if (uri != null) {
+      _handleDeepLink(uri);
+    }
+  }, onError: (err) {
+    print("Link stream error: $err");
+  });
 
   await NotificationService().initialize();
   await dep.init();
@@ -89,6 +109,21 @@ class MyApp extends StatelessWidget {
           );
         });
       });
+    });
+  }
+}
+
+void _handleDeepLink(Uri uri) {
+  // Check if link is https://hiliteapp.net/post/6926...
+  if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'post') {
+
+    String videoId = uri.pathSegments[1];
+    print("🔗 Deep Link to Post ID: $videoId");
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (Get.isRegistered<PostController>()) {
+        Get.find<PostController>().handleDeepLink(videoId);
+      }
     });
   }
 }

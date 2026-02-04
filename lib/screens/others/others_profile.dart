@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/user_controller.dart';
+import 'package:hilite/screens/others/relationship_screen.dart';
 import 'package:hilite/widgets/snackbars.dart';
 import 'package:iconsax/iconsax.dart';
 
@@ -177,8 +178,8 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       // if (user.role != 'fan')
-                      _buildStat('Followers', '${user.followers}'),
-                      _buildStat('Following', '${user.following}'),
+                      _buildStat('Followers', '${user.followers}','followers'),
+                      _buildStat('Following', '${user.following}', 'following'),
                     ],
                   ),
                 ),
@@ -580,7 +581,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildDetailRow(IconData icon, String label, String value,) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -748,24 +749,34 @@ class _OthersProfileState extends State<OthersProfileScreen> {
   }
 
   /// 🧩 Stats Box
-  Widget _buildStat(String label, String value) => Column(
-    children: [
-      Text(
-        value,
-        style: TextStyle(
-          fontSize: Dimensions.font22,
-          fontWeight: FontWeight.w600,
+  Widget _buildStat(String label, String value, String type) => InkWell(
+    onTap: () {
+      // Navigate to the new RelationshipScreen
+      Get.to(() => RelationshipScreen(
+        title: label,
+        type: type,
+        targetId: targetId,
+      ));
+    },
+    child: Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: Dimensions.font22,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-      ),
-      Text(
-        label,
-        style: TextStyle(
-          fontSize: Dimensions.font14,
-          fontWeight: FontWeight.w400,
-          color: AppColors.black.withOpacity(0.7),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: Dimensions.font14,
+            fontWeight: FontWeight.w400,
+            color: AppColors.black.withOpacity(0.7),
+          ),
         ),
-      ),
-    ],
+      ],
+    ),
   );
 
   /// ┆ Divider

@@ -471,8 +471,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onTap: () {
         // Navigate to the new RelationshipScreen
         Get.to(() => RelationshipScreen(
-          title: label, // "Followers" or "Following"
-          type: type,   // "followers" or "following"
+          title: label,
+          type: type,
+          targetId: null,
         ));
       },
       borderRadius: BorderRadius.circular(8),

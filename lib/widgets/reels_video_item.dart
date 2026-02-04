@@ -9,69 +9,236 @@ import '../controllers/user_controller.dart';
 import '../models/post_model.dart';
 import '../utils/colors.dart';
 
-class ReelsVideoItem extends StatelessWidget {
+import 'dart:ui'; // For blur effect if needed
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:video_player/video_player.dart';
+
+
+class ReelsVideoItem extends StatefulWidget {
   final int index;
   final PostModel post;
   final PostController controller;
-  final String? tag; // <--- 1. ADD THIS
+  final String? tag;
 
   const ReelsVideoItem({
     Key? key,
     required this.index,
     required this.post,
     required this.controller,
-    this.tag, // <--- 2. ADD THIS
+    this.tag,
   }) : super(key: key);
 
   @override
+  State<ReelsVideoItem> createState() => _ReelsVideoItemState();
+}
+
+class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProviderStateMixin {
+  bool _isSpeedingUp = false;
+  bool _isDragging = false;
+
+  late AnimationController _speedAnimController;
+  late Animation<double> _speedOpacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _speedAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _speedOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(_speedAnimController);
+  }
+
+  @override
+  void dispose() {
+    _speedAnimController.dispose();
+    super.dispose();
+  }
+
+  void _startSpeedUp(TapDownDetails details, VideoPlayerController videoCtrl) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Right side of screen triggers speed up
+    if (details.globalPosition.dx > screenWidth * 0.6) {
+      videoCtrl.setPlaybackSpeed(2.0);
+      setState(() => _isSpeedingUp = true);
+      _speedAnimController.forward();
+    }
+  }
+
+  void _endSpeedUp(VideoPlayerController videoCtrl) {
+    if (_isSpeedingUp) {
+      videoCtrl.setPlaybackSpeed(1.0);
+      setState(() => _isSpeedingUp = false);
+      _speedAnimController.reverse();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => controller.togglePlayPause(index),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // LAYER 1: Thumbnail
-          if (post.video?.thumbnailUrl != null)
-            Image.network(post.video!.thumbnailUrl!, fit: BoxFit.cover)
-          else
-            Container(color: Colors.black),
+    return GetBuilder<PostController>(
+      id: 'video_item_${widget.index}',
+      tag: widget.tag,
+      builder: (controller) {
+        final videoCtrl = widget.controller.videoControllers[widget.index];
+        final isReady = widget.controller.initializedIndexes.contains(widget.index);
 
-          // LAYER 2: Video Player
-          Obx(() {
-            final isReady = controller.initializedIndexes.contains(index);
-            final videoCtrl = controller.videoControllers[index];
+        // ✅ FIX: GestureDetector is now the ROOT widget
+        // This ensures it catches taps even if the video is visually behind other things.
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque, // Ensures taps are caught
+          onTap: () => widget.controller.togglePlayPause(widget.index),
+          onTapDown: (details) {
+            if (isReady && videoCtrl != null) _startSpeedUp(details, videoCtrl);
+          },
+          onTapUp: (_) {
+            if (isReady && videoCtrl != null) _endSpeedUp(videoCtrl);
+          },
+          onTapCancel: () {
+            if (isReady && videoCtrl != null) _endSpeedUp(videoCtrl);
+          },
+          onLongPressEnd: (_) {
+            if (isReady && videoCtrl != null) _endSpeedUp(videoCtrl);
+          },
 
-            if (!isReady || videoCtrl == null) return const SizedBox.shrink();
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // 1. THUMBNAIL
+              if (widget.post.video?.thumbnailUrl != null)
+                Image.network(widget.post.video!.thumbnailUrl!, fit: BoxFit.cover)
+              else
+                Container(color: Colors.black),
 
-            return FittedBox(
-              fit: BoxFit.cover,
-              child: SizedBox(
-                width: videoCtrl.value.size.width,
-                height: videoCtrl.value.size.height,
-                child: VideoPlayer(videoCtrl),
-              ),
-            );
-          }),
+              // 2. VIDEO PLAYER
+                if (isReady && videoCtrl != null && videoCtrl.value.isInitialized)
+                  FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: videoCtrl.value.size.width,
+                    height: videoCtrl.value.size.height,
+                    child: VideoPlayer(videoCtrl),
+                  ),
+                ),
 
-          // LAYER 3: Play/Pause Icon
-          GetBuilder<PostController>(
-            id: 'overlay_$index',
-            tag: tag, // <--- 3. PASS THE TAG HERE
-            builder: (_) {
-              final videoCtrl = controller.videoControllers[index];
-              if (videoCtrl == null || !videoCtrl.value.isInitialized) {
-                return const Center(child: CircularProgressIndicator(color: Colors.white));
-              }
-              return videoCtrl.value.isPlaying
-                  ? const SizedBox.shrink()
-                  : const Center(child: Icon(Icons.play_arrow, size: 60, color: Colors.white54));
+              // 3. "2X SPEED" OVERLAY
+              if (isReady)
+                Positioned(
+                  top: 50,
+                  right: 0,
+                  left: 0,
+                  child: FadeTransition(
+                    opacity: _speedOpacity,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.fast_forward_rounded, color: Colors.white, size: 16),
+                              SizedBox(width: 8),
+                              Text("2x Speed", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // 4. PLAY/PAUSE ICON (Animated)
+              if (isReady && videoCtrl != null)
+                Center(
+                  child: ValueListenableBuilder(
+                    valueListenable: videoCtrl,
+                    builder: (context, VideoPlayerValue value, child) {
+                      if (_isSpeedingUp || _isDragging) return const SizedBox.shrink();
+
+                      if (!value.isPlaying && !value.isBuffering) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.3),
+                            shape: BoxShape.circle,
+                          ),
+                          padding: const EdgeInsets.all(15),
+                          child: const Icon(Icons.play_arrow_rounded, size: 50, color: Colors.white),
+                        );
+                      }
+                      if (value.isBuffering) {
+                        return const CircularProgressIndicator(color: Colors.white);
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ),
+
+              // 5. INTERACTION OVERLAY
+              // (Buttons like "Like", "Comment" inside this widget will still work
+              // because they sit on top and consume their own touch events)
+              if (!_isDragging)
+                ReelsInteractionOverlay(post: widget.post),
+
+              // 6. PROGRESS BAR
+              if (isReady && videoCtrl != null)
+                Positioned(
+                  bottom: Dimensions.bottomNavIconHeight+Dimensions.height10*9,
+                  left: 0,
+                  right: 0,
+                  child: _buildProgressBar(videoCtrl),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProgressBar(VideoPlayerController controller) {
+    return ValueListenableBuilder(
+      valueListenable: controller,
+      builder: (context, VideoPlayerValue value, child) {
+        final duration = value.duration.inMilliseconds;
+        final position = value.position.inMilliseconds;
+        double max = duration.toDouble();
+        double current = position.toDouble();
+
+        if (current > max) current = max;
+        if (max <= 0) max = 1.0;
+
+        // ✅ FIX: Corrected SliderThemeData error
+        return SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 2.0,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 10.0),
+            activeTrackColor: Colors.white,
+            inactiveTrackColor: Colors.white.withOpacity(0.2),
+            thumbColor: Colors.white,
+            overlayColor: Colors.white.withOpacity(0.4),
+          ),
+          child: Slider(
+            value: current,
+            min: 0.0,
+            max: max,
+            onChangeStart: (_) {
+              setState(() => _isDragging = true);
+              controller.pause();
+            },
+            onChangeEnd: (_) {
+              setState(() => _isDragging = false);
+              controller.play();
+            },
+            onChanged: (val) {
+              controller.seekTo(Duration(milliseconds: val.toInt()));
             },
           ),
-
-          // LAYER 4: UI Overlay
-          ReelsInteractionOverlay(post: post),
-        ],
-      ),
+        );
+      },
     );
   }
 }

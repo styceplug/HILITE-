@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/post_controller.dart';
 import 'package:hilite/routes/routes.dart';
+import 'package:hilite/utils/app_constants.dart';
 import 'package:hilite/utils/dimensions.dart';
+import 'package:hilite/widgets/snackbars.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/post_model.dart';
 import '../utils/colors.dart';
@@ -153,6 +157,36 @@ class ReelsInteractionOverlay extends StatelessWidget {
                     );
                   }),
                   const SizedBox(height: 20),
+                  Obx(() {
+
+                    final isBookmarked = postController.isPostBookmarked(post.id);
+                    return InkWell(
+                      onTap: ()=> postController.toggleBookmark(post.id),
+                      child: _InteractionIcon(
+                        icon: isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                        color: isBookmarked ? AppColors.white : Colors.white,
+                        label: 'Save',
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 20),
+                  GestureDetector(
+                    onTap: () {
+                      String link = "https://api.hiliteapp.net/post/${post.id}";
+
+                      Share.share(
+                        'Check out this video on Hilite! $link',
+                        subject: 'Watch this reel on Hilite',
+                      );
+                    },
+                    child: _InteractionIcon(
+                      icon: Iconsax.send_1, // Or Iconsax.share
+                      label: "Share",
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
 
                   GestureDetector(
                     onTap: () {

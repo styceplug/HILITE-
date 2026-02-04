@@ -14,6 +14,17 @@ class PostRepo {
   PostRepo({required this.apiClient});
 
 
+
+  Future<Response> getPostById(String id) async {
+
+    return await apiClient.getData(AppConstants.GET_SINGLE_POST(id));
+  }
+
+  Future<Response> getBookmarkedPosts() async {
+    return await apiClient.getData(AppConstants.GET_BOOKMARKED_POST);
+  }
+
+
   Future<Response> postNewComment({
     required String postId,
     required String content,
@@ -150,6 +161,20 @@ class PostRepo {
   Future<Response> unlikePost(String postId) async {
     return await apiClient.putData(
       AppConstants.UNLIKE_POST(postId),
+      {},
+    );
+  }
+
+  Future<Response> bookmarkPost(String postId) async {
+    return await apiClient.putData(
+      AppConstants.BOOKMARK_POST(postId),
+      {},
+    );
+  }
+
+  Future<Response> unBookmarkPost(String postId) async {
+    return await apiClient.putData(
+      AppConstants.UNBOOKMARK_POST(postId),
       {},
     );
   }

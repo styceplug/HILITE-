@@ -156,14 +156,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            InkWell(
-                              onTap: () {
-                                toggleRememberMe();
-                                print(isRememberMe);
-                              },
-                              child: !isRememberMe
+                        InkWell(
+                          onTap: () {
+                            toggleRememberMe();
+                            print(isRememberMe);
+                          },
+                          child: Row(
+                            children: [
+                              !isRememberMe
                                   ? Icon(
                                       Icons.check_box_outline_blank,
                                       size: Dimensions.iconSize16,
@@ -172,14 +172,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                       Icons.check_box,
                                       size: Dimensions.iconSize16,
                                     ),
-                            ),
-                            SizedBox(width: Dimensions.width5),
-                            Text(
-                              'Stay Signed in?',
-                              textAlign: TextAlign.right,
-                              style: TextStyle(color: AppColors.grey5),
-                            ),
-                          ],
+                              SizedBox(width: Dimensions.width5),
+                              Text(
+                                'Stay Signed in?',
+                                textAlign: TextAlign.right,
+                                style: TextStyle(color: AppColors.grey5),
+                              ),
+                            ],
+                          ),
                         ),
                         InkWell(
                           onTap: () {

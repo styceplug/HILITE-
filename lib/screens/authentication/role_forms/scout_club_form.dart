@@ -123,100 +123,6 @@ class _ScoutClubFormState extends State<ScoutClubForm> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CustomTextField(hintText: 'Full Name *',controller: nameController,),
-                    SizedBox(height: Dimensions.height20),
-                    CustomTextField(
-                      hintText: 'Username *',
-                      controller: usernameController,
-                      onChanged: (value) {
-                        if (value.trim().isNotEmpty) {
-                          debounceTimer?.cancel();
-                          debounceTimer = Timer(
-                            const Duration(milliseconds: 600),
-                                () {
-                              checkUsername();
-                            },
-                          );
-                        }
-                      },
-                      suffixIcon: Obx(() {
-                        if (authController.isCheckingUsername.value) {
-                          return Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: Dimensions.width10,
-                              vertical: Dimensions.height10,
-                            ),
-                            child: CircularProgressIndicator(
-                              color: AppColors.primary,
-                              strokeWidth: 4,
-                            ),
-                          );
-                        } else if (authController.usernameMessage.isNotEmpty) {
-                          return Icon(
-                            authController.isUsernameAvailable.value
-                                ? Icons.check_circle
-                                : Icons.error,
-                            color:
-                            authController.isUsernameAvailable.value
-                                ? Colors.green
-                                : Colors.red,
-                            size: Dimensions.iconSize16,
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      }),
-                    ),
-                    SizedBox(height: Dimensions.height5),
-                    Obx(
-                          () =>
-                      authController.usernameMessage.value.isNotEmpty
-                          ? Text(
-                        authController.usernameMessage.value,
-                        style: TextStyle(
-                          color:
-                          authController.isUsernameAvailable.value
-                              ? Colors.green
-                              : Colors.red,
-                          fontSize: Dimensions.font12,
-                        ),
-                      )
-                          : const SizedBox.shrink(),
-                    ),
-                    SizedBox(height: Dimensions.height20),
-                    CustomTextField(
-                      hintText: 'Email Address *',
-                      controller: emailController,
-                      autofillHints: [AutofillHints.email],
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    SizedBox(height: Dimensions.height20),
-                    CustomTextField(
-                      hintText: 'Password',
-                      maxLines: 1,
-                      controller: passwordController,
-                      obscureText: isPasswordVisible,
-                      suffixIcon: InkWell(
-                        onTap: () {
-                          togglePass();
-                          print(isPasswordVisible);
-                        },
-                        child: Icon(
-                          !isPasswordVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: Dimensions.height20),
-                    Text(
-                      'Password must be at least 8 character long and include 1 capital letter and 1 symbol',
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                        color: AppColors.grey5,
-                        fontSize: Dimensions.font13,
-                      ),
-                    ),
-                    SizedBox(height: Dimensions.height20),
                     _buildProfileTypeSelector(),
                     SizedBox(height: Dimensions.height30),
                     if (selectedProfileType == 'agent') _buildAgentForm(),
@@ -356,6 +262,98 @@ class _ScoutClubFormState extends State<ScoutClubForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CustomTextField(
+          hintText: 'Pick Username *',
+          controller: usernameController,
+          onChanged: (value) {
+            if (value.trim().isNotEmpty) {
+              debounceTimer?.cancel();
+              debounceTimer = Timer(
+                const Duration(milliseconds: 600),
+                    () {
+                  checkUsername();
+                },
+              );
+            }
+          },
+          suffixIcon: Obx(() {
+            if (authController.isCheckingUsername.value) {
+              return Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: Dimensions.width10,
+                  vertical: Dimensions.height10,
+                ),
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 4,
+                ),
+              );
+            } else if (authController.usernameMessage.isNotEmpty) {
+              return Icon(
+                authController.isUsernameAvailable.value
+                    ? Icons.check_circle
+                    : Icons.error,
+                color:
+                authController.isUsernameAvailable.value
+                    ? Colors.green
+                    : Colors.red,
+                size: Dimensions.iconSize16,
+              );
+            }
+            return const SizedBox.shrink();
+          }),
+        ),
+        SizedBox(height: Dimensions.height5),
+        Obx(
+              () =>
+          authController.usernameMessage.value.isNotEmpty
+              ? Text(
+            authController.usernameMessage.value,
+            style: TextStyle(
+              color:
+              authController.isUsernameAvailable.value
+                  ? Colors.green
+                  : Colors.red,
+              fontSize: Dimensions.font12,
+            ),
+          )
+              : const SizedBox.shrink(),
+        ),
+        SizedBox(height: Dimensions.height20),
+        CustomTextField(
+          hintText: 'Email Address *',
+          controller: emailController,
+          autofillHints: [AutofillHints.email],
+          keyboardType: TextInputType.emailAddress,
+        ),
+        SizedBox(height: Dimensions.height20),
+        CustomTextField(
+          hintText: 'Password',
+          maxLines: 1,
+          controller: passwordController,
+          obscureText: isPasswordVisible,
+          suffixIcon: InkWell(
+            onTap: () {
+              togglePass();
+              print(isPasswordVisible);
+            },
+            child: Icon(
+              !isPasswordVisible
+                  ? Icons.visibility
+                  : Icons.visibility_off,
+            ),
+          ),
+        ),
+        SizedBox(height: Dimensions.height20),
+        Text(
+          'Password must be at least 8 character long and include 1 capital letter and 1 symbol',
+          textAlign: TextAlign.left,
+          style: TextStyle(
+            color: AppColors.grey5,
+            fontSize: Dimensions.font13,
+          ),
+        ),
+        SizedBox(height: Dimensions.height20),
+        CustomTextField(
           labelText: "Contact Number *",
           controller: contactNumberController,
           keyboardType: TextInputType.phone,
@@ -437,6 +435,98 @@ class _ScoutClubFormState extends State<ScoutClubForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        CustomTextField(
+          hintText: 'Pick Username *',
+          controller: usernameController,
+          onChanged: (value) {
+            if (value.trim().isNotEmpty) {
+              debounceTimer?.cancel();
+              debounceTimer = Timer(
+                const Duration(milliseconds: 600),
+                    () {
+                  checkUsername();
+                },
+              );
+            }
+          },
+          suffixIcon: Obx(() {
+            if (authController.isCheckingUsername.value) {
+              return Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: Dimensions.width10,
+                  vertical: Dimensions.height10,
+                ),
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 4,
+                ),
+              );
+            } else if (authController.usernameMessage.isNotEmpty) {
+              return Icon(
+                authController.isUsernameAvailable.value
+                    ? Icons.check_circle
+                    : Icons.error,
+                color:
+                authController.isUsernameAvailable.value
+                    ? Colors.green
+                    : Colors.red,
+                size: Dimensions.iconSize16,
+              );
+            }
+            return const SizedBox.shrink();
+          }),
+        ),
+        SizedBox(height: Dimensions.height5),
+        Obx(
+              () =>
+          authController.usernameMessage.value.isNotEmpty
+              ? Text(
+            authController.usernameMessage.value,
+            style: TextStyle(
+              color:
+              authController.isUsernameAvailable.value
+                  ? Colors.green
+                  : Colors.red,
+              fontSize: Dimensions.font12,
+            ),
+          )
+              : const SizedBox.shrink(),
+        ),
+        SizedBox(height: Dimensions.height20),
+        CustomTextField(
+          hintText: 'Email Address *',
+          controller: emailController,
+          autofillHints: [AutofillHints.email],
+          keyboardType: TextInputType.emailAddress,
+        ),
+        SizedBox(height: Dimensions.height20),
+        CustomTextField(
+          hintText: 'Password',
+          maxLines: 1,
+          controller: passwordController,
+          obscureText: isPasswordVisible,
+          suffixIcon: InkWell(
+            onTap: () {
+              togglePass();
+              print(isPasswordVisible);
+            },
+            child: Icon(
+              !isPasswordVisible
+                  ? Icons.visibility
+                  : Icons.visibility_off,
+            ),
+          ),
+        ),
+        SizedBox(height: Dimensions.height20),
+        Text(
+          'Password must be at least 8 character long and include 1 capital letter and 1 symbol',
+          textAlign: TextAlign.left,
+          style: TextStyle(
+            color: AppColors.grey5,
+            fontSize: Dimensions.font13,
+          ),
+        ),
+        SizedBox(height: Dimensions.height20),
         CustomTextField(labelText: "Club Name *", controller: clubNameController),
         SizedBox(height: Dimensions.height20),
         CustomTextField(

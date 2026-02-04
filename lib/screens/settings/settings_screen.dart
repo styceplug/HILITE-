@@ -81,6 +81,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               settingTile(icon: Iconsax.wallet, title: 'Wallet', onTap: () {
                 Get.toNamed(AppRoutes.walletScreen);
               }),
+              settingTile(
+                icon: Iconsax.bookmark,
+                title: "Bookmarked Posts",
+                onTap: () {
+                  Get.toNamed(AppRoutes.bookmarksScreen);
+                },
+              ),
 
               SizedBox(height: Dimensions.height30),
 

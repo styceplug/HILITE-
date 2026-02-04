@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/screens/authentication/create_account_screen.dart';
 import 'package:hilite/screens/authentication/forgot_password.dart';
@@ -7,6 +8,7 @@ import 'package:hilite/screens/authentication/role_forms/scout_club_form.dart';
 import 'package:hilite/screens/authentication/select_category_screen.dart';
 import 'package:hilite/screens/authentication/verify_profile.dart';
 import 'package:hilite/screens/home/home_screen.dart';
+import 'package:hilite/screens/others/bookmarks_screen.dart';
 import 'package:hilite/screens/others/competition_details_screen.dart';
 import 'package:hilite/screens/others/competitions_screen.dart';
 import 'package:hilite/screens/others/notification_screen.dart';
@@ -23,7 +25,11 @@ import 'package:hilite/screens/splash/no_internet_screen.dart';
 import 'package:hilite/screens/splash/onboarding_screen.dart';
 import 'package:hilite/screens/splash/update_app_screen.dart';
 import 'package:hilite/screens/trials/trials_screen_list.dart';
+import 'package:hilite/widgets/custom_appbar.dart';
+import 'package:hilite/widgets/reels_video_item.dart';
 
+import '../controllers/post_controller.dart';
+import '../models/post_model.dart';
 import '../screens/splash/splash.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/trials/create_trails_screen.dart';
@@ -45,6 +51,11 @@ class AppRoutes {
   static const String verifyProfileScreen = '/verify-profile-screen';
   static const String editProfileScreen = '/edit-profile-screen';
 
+
+  static const String videoReelScreen = '/video-reel-screen';
+
+
+
   //forms
   static const String footballerForm = '/footballer-form';
   static const String scoutClubForm = '/scout-club-form';
@@ -57,6 +68,7 @@ class AppRoutes {
   static const String uploadContent = '/upload-content';
   static const String referralScreen = '/referral-screen';
   static const String postDetailScreen = '/post-detail-screen';
+  static const String bookmarksScreen = '/bookmarks-screen';
   static const String recommendedAccountsScreen =
       '/recommended-accounts-screen';
 
@@ -72,11 +84,47 @@ class AppRoutes {
   static const String trialListScreen = '/trial-list-screen';
 
   static final routes = [
+    GetPage(
+      name: videoReelScreen,
+      page: () {
+        // Get the post from arguments
+        final PostModel post = Get.arguments as PostModel;
+
+        // Get or create the controller
+        final PostController controller = Get.find<PostController>();
+
+        return Scaffold(
+          backgroundColor: Colors.black,
+          appBar: CustomAppbar(
+            backgroundColor: Colors.transparent,
+            leadingIcon: BackButton(
+              onPressed: (){
+                Get.offAllNamed(AppRoutes.homeScreen);
+              },
+            ),
+          ),
+          body: ReelsVideoItem(
+            index: 0, // Single video, so index is always 0
+            post: post,
+            controller: controller,
+          ),
+        );
+      },
+      transition: Transition.fadeIn,
+    ),
 
     GetPage(
       name: walletScreen,
       page: () {
         return const WalletScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+
+    GetPage(
+      name: bookmarksScreen,
+      page: () {
+        return const BookmarksScreen();
       },
       transition: Transition.fadeIn,
     ),

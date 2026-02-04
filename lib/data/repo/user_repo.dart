@@ -19,6 +19,20 @@ class UserRepo {
 
   static const String USER_KEY = "user_data";
 
+  Future<Response> getExternalRelationshipAccounts(String targetId, {
+    bool followers = false,
+    bool following = false,
+  }) async {
+    String query = '';
+    if (followers) query = '?followers=true'; //
+    else if (following) query = '?following=true'; //
+
+
+    String url = '/v1/user/external/$targetId/accounts$query';
+
+    return await apiClient.getData(url);
+  }
+
 
   Future<Response> getRelationshipAccounts({
     bool followers = false,

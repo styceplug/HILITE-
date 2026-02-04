@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/utils/dimensions.dart';
+import 'package:hilite/widgets/snackbars.dart';
 import 'package:intl/intl.dart';
 import '../controllers/post_controller.dart';
 import '../controllers/user_controller.dart';
@@ -137,7 +138,7 @@ class _GiftGridItem extends StatelessWidget {
   final UserController userController;
 
   const _GiftGridItem({
-    super.key, // Added super.key best practice
+    super.key,
     required this.gift,
     required this.recipientId,
     required this.walletController,
@@ -160,7 +161,7 @@ class _GiftGridItem extends StatelessWidget {
       double currentBalance = double.tryParse(balanceStr) ?? 0;
       bool canAfford = currentBalance >= gift.coins;
 
-      // 2. Determine Display Color (Use model color OR fallback to Tier Color)
+      // 2. Determine Display Color
       Color displayColor = gift.color ?? _getTierColor(gift.coins);
 
       return GestureDetector(
@@ -169,37 +170,30 @@ class _GiftGridItem extends StatelessWidget {
             Get.back(); // Close modal
             walletController.giftTokens(recipientId, gift.coins.toDouble());
           } else {
-            Get.snackbar(
-                "Low Balance",
-                "You need ${gift.coins - currentBalance} more tokens.",
-                backgroundColor: Colors.redAccent,
-                colorText: Colors.white,
-                snackPosition: SnackPosition.BOTTOM,
-                margin: const EdgeInsets.all(20)
-            );
+            CustomSnackBar.failure(message: 'Insufficient Funds: Fund your wallet to gift');
+
           }
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: canAfford
-                ? const Color(0xFF2C2C2C)
-                : Colors.white.withOpacity(0.02),
+            // Always show the active background color
+            color: const Color(0xFF2C2C2C),
             borderRadius: BorderRadius.circular(15),
+            // Always show the border
             border: Border.all(
-              // FIX: Use displayColor which is guaranteed not null
-              color: canAfford ? displayColor.withOpacity(0.5) : Colors.transparent,
+              color: displayColor.withOpacity(0.5),
               width: 1.5,
             ),
-            boxShadow: canAfford ? [
+            // Always show the glow/shadow
+            boxShadow: [
               BoxShadow(
-                // FIX: Use displayColor here too
                   color: displayColor.withOpacity(0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4)
               )
-            ] : [],
+            ],
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -207,12 +201,10 @@ class _GiftGridItem extends StatelessWidget {
               // IMAGE HANDLING
               Image.asset(
                 gift.icon,
-
-                color: !canAfford
-                    ? Colors.grey[800]
-                    : gift.color,
-                height: Dimensions.height10*6.1,
-                width: Dimensions.width10*6.1,
+                // Always use the gift's actual color (or null if it's a full-color image)
+                color: gift.color,
+                height: Dimensions.height10 * 6.1,
+                width: Dimensions.width10 * 6.1,
                 fit: BoxFit.contain,
               ),
               const SizedBox(height: 8),
@@ -221,8 +213,9 @@ class _GiftGridItem extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    color: canAfford ? Colors.white : Colors.grey[600],
+                // Always use White text
+                style: const TextStyle(
+                    color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.w500
                 ),
@@ -231,12 +224,13 @@ class _GiftGridItem extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.token, color: canAfford ? Colors.amber : Colors.grey[700], size: 12),
+                  // Always use Amber for the coin icon and text
+                  const Icon(Icons.token, color: Colors.amber, size: 12),
                   const SizedBox(width: 4),
                   Text(
                     gift.coins.toString(),
-                    style: TextStyle(
-                        color: canAfford ? Colors.amber : Colors.grey[700],
+                    style: const TextStyle(
+                        color: Colors.amber,
                         fontWeight: FontWeight.bold,
                         fontSize: 13
                     ),

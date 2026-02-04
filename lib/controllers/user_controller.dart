@@ -64,7 +64,7 @@ class UserController extends GetxController {
 
 
 
-  Future<void> getRelationshipUsers(String type) async {
+  Future<void> getRelationshipUsers(String type, {String? targetId}) async {
     loader.showLoader();
     _relationshipList = [];
     _filteredRelationshipList = [];
@@ -72,24 +72,35 @@ class UserController extends GetxController {
 
     Response response;
 
-    if (type == 'followers') {
-      response = await userRepo.getRelationshipAccounts(followers: true);
-    } else if (type == 'following') {
-      response = await userRepo.getRelationshipAccounts(following: true);
+    // 2. Determine which API call to make
+    if (targetId != null && targetId.isNotEmpty) {
+      // 🅰️ External Profile (Viewing someone else's followers)
+      if (type == 'followers') {
+        response = await userRepo.getExternalRelationshipAccounts(targetId, followers: true);
+      } else {
+        response = await userRepo.getExternalRelationshipAccounts(targetId, following: true);
+      }
     } else {
-      // Default or blocked
-      response = await userRepo.getRelationshipAccounts(blocked: true);
+      // 🅱️ Personal Profile (Viewing my own followers)
+      if (type == 'followers') {
+        response = await userRepo.getRelationshipAccounts(followers: true);
+      } else if (type == 'following') {
+        response = await userRepo.getRelationshipAccounts(following: true);
+      } else {
+        response = await userRepo.getRelationshipAccounts(blocked: true);
+      }
     }
 
+    // 3. Process Response
     if (response.statusCode == 200) {
       List<dynamic> rawList = response.body['data'];
       _relationshipList = rawList.map((e) => UserModel.fromJson(e)).toList();
-      _filteredRelationshipList = List.from(_relationshipList);
-
+      _filteredRelationshipList = List.from(_relationshipList); // Init search list
     } else {
       ApiChecker.checkApi(response);
     }
 
+    // 4. Finish
     loader.hideLoader();
     update();
   }
