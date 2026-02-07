@@ -17,6 +17,7 @@ import '../../../models/post_model.dart';
 import '../../../widgets/post_grid_shimmer.dart';
 import '../../../widgets/profile_avatar.dart';
 import '../../../widgets/reels_video_item.dart';
+import '../../others/others_profile.dart';
 import '../../others/relationship_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -271,30 +272,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   SizedBox(height: Dimensions.height30),
 
-                  /*Padding(
-                    padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: Dimensions.width20,vertical: Dimensions.height10
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: AppColors.grey4
-                          )
-                        ),
-                        child: Text(
-                          "Posts",
-                          style: TextStyle(
-                            fontSize: Dimensions.font18,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.black,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),*/
                   Builder(
                     builder: (context) {
                       // Check if EVERYTHING is loading (optional, depends on your loading logic)
@@ -385,8 +362,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return GestureDetector(
           onTap: () {
             if (postType == 'video') {
-              // ⚠️ Crucial: The video player usually needs a clean list of ONLY videos.
-              // We filter the list on the fly so the user can scroll up/down in the reels player.
+
               final videoOnlyList =
                   allPosts.where((p) => p.type == 'video').toList();
               final videoIndex = videoOnlyList.indexOf(post);
@@ -400,9 +376,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               }
             } else {
-              // Handle navigation for Images/Text if needed
-              // Get.to(() => PostDetailScreen(post: post));
-            }
+
+              Get.to(() => ProfileImageViewer(imageUrl: post.mediaUrl!));            }
           },
           // Pass the specific post's type to the tile builder
           child: _buildTileItem(post, postType ?? 'image'),
@@ -539,4 +514,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
       borderRadius: BorderRadius.circular(Dimensions.radius10),
     ),
   );
+}
+
+
+class ProfileImageViewer extends StatelessWidget {
+  final String imageUrl;
+
+  const ProfileImageViewer({super.key, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true, // 1. Allows image to extend behind the AppBar
+      appBar: AppBar(
+        backgroundColor: Colors.transparent, // 2. Make AppBar transparent
+        elevation: 0,
+        leading: Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.5), // Optional: Backdrop for back button visibility
+            shape: BoxShape.circle,
+          ),
+          child: const BackButton(color: Colors.white),
+        ),
+      ),
+      body: GestureDetector(
+        onTap: () => Get.back(),
+        child: InteractiveViewer(
+          panEnabled: true,
+          minScale: 0.5,
+          maxScale: 4,
+          child: Center(
+            child: Hero(
+              tag: imageUrl,
+              child: Image.network(
+                imageUrl,
+                // 3. Force image to take full screen dimensions
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+
+                // 4. Choose your fit:
+                // BoxFit.contain = Shows FULL image (may have black bars)
+                // BoxFit.cover   = Fills screen (WILL CROP edges)
+                fit: BoxFit.contain,
+
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) =>
+                const Icon(Icons.error, color: Colors.white, size: 50),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

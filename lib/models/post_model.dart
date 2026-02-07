@@ -65,6 +65,7 @@ class PostModel {
       isBookmarked: data['isBookmarked'] ?? false,
     );
   }
+
 }
 
 class Author {

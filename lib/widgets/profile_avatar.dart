@@ -14,14 +14,16 @@ import '../utils/dimensions.dart';
 class ProfileAvatar extends StatefulWidget {
   final XFile? avatarFile;
   final String? avatarUrl;
+  VoidCallback? onTap;
 
   final Function(XFile)? onImageSelected;
 
-  const ProfileAvatar({
+   ProfileAvatar({
     super.key,
     this.onImageSelected,
     this.avatarFile,
     this.avatarUrl,
+    this.onTap
   });
 
   @override
@@ -73,18 +75,6 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
     }
   }
 
-  ImageProvider? _getImageProvider() {
-    if (selectedImage != null) {
-      return FileImage(File(selectedImage!.path));
-    } else if (avatarUrl != null && avatarUrl!.isNotEmpty) {
-      return NetworkImage(
-        "$avatarUrl?v=${DateTime.now().millisecondsSinceEpoch}",
-      );
-    } else {
-      return null;
-    }
-  }
-
   Widget? _getImageWidget() {
     if (selectedImage != null) {
       return Container(
@@ -129,20 +119,10 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
     return Stack(
       children: [
         GestureDetector(
-          onTap: isMyProfile ? pickImage : null,
+          onTap: isMyProfile ? pickImage : widget.onTap,
           child:
               image != null
                   ? image
-                  // ? Container(
-                  //   height: Dimensions.height100 * 1.5,
-                  //   width: Dimensions.width100 * 1.5,
-                  //   decoration: BoxDecoration(
-                  //     color: AppColors.error,
-                  //     shape: BoxShape.circle,
-                  //     border: Border.all(color: AppColors.primary),
-                  //     image: DecorationImage(fit: BoxFit.cover, image: image),
-                  //   ),
-                  // )
                   : Container(
                     height: Dimensions.height100 * 1.5,
                     width: Dimensions.width100 * 1.5,

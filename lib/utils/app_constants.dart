@@ -54,7 +54,7 @@ class AppConstants {
       '/v1/post/retrieve/$postId/bookmark';
 
   static String UNBOOKMARK_POST(String postId) =>
-      '/v1/post/retrieve/$postId/bookmark';
+      '/v1/post/retrieve/$postId/unbookmark';
 
   static String GET_POST_COMMENTS(String postId) =>
       '/v1/post/retrieve/$postId/comment';

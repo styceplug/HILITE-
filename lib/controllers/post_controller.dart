@@ -250,9 +250,6 @@ class PostController extends GetxController {
     if (isLoading.value) return; // Prevent double-tap upload
 
     // Simple validation (can be more complex)
-    if (title.isEmpty || description.isEmpty) {
-      return;
-    }
 
     isLoading.value = true;
 
@@ -609,14 +606,29 @@ class PostController extends GetxController {
     try {
       await controller.initialize();
       controller.setLooping(true);
+
+      // 1. Add to set
       initializedIndexes.add(index);
+
+      // 2. Add Listener (Optional: for other updates)
       controller.addListener(() {
-        update(['overlay_$index']);
+        // You generally don't need to update the whole item on every frame
+        // unless you are tracking position in the GetBuilder.
+        // Keeping this is fine, but usually overlay updates are handled by ValueListenableBuilder.
+        // update(['overlay_$index']);
       });
-      controller.setLooping(true);
-      initializedIndexes.add(index); // Update UI
+
+      // -----------------------------------------------------
+      // 🚀 CRITICAL FIX: TELL THE UI WE ARE READY!
+      // -----------------------------------------------------
+      update(['video_item_$index']);
+
     } catch (e) {
+      print("Error initializing video $index: $e");
       videoControllers.remove(index);
+      initializedIndexes.remove(index);
+      // Update UI to show error state if needed
+      update(['video_item_$index']);
     }
   }
 

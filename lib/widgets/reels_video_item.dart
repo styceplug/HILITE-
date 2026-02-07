@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 import '../controllers/post_controller.dart';
 import '../controllers/user_controller.dart';
 import '../models/post_model.dart';
+import '../models/user_model.dart';
 import '../utils/colors.dart';
 
 import 'dart:ui'; // For blur effect if needed
@@ -83,8 +84,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
         final videoCtrl = widget.controller.videoControllers[widget.index];
         final isReady = widget.controller.initializedIndexes.contains(widget.index);
 
-        // ✅ FIX: GestureDetector is now the ROOT widget
-        // This ensures it catches taps even if the video is visually behind other things.
+
         return GestureDetector(
           behavior: HitTestBehavior.opaque, // Ensures taps are caught
           onTap: () => widget.controller.togglePlayPause(widget.index),
@@ -247,11 +247,13 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
 class ProfileReelsPlayer extends StatefulWidget {
   final List<PersonalPostModel> videos;
   final int initialIndex;
+  final UserModel? authorProfile;
 
   const ProfileReelsPlayer({
     Key? key,
     required this.videos,
     required this.initialIndex,
+    this.authorProfile, // 2. Add to constructor
   }) : super(key: key);
 
   @override
@@ -260,36 +262,32 @@ class ProfileReelsPlayer extends StatefulWidget {
 
 class _ProfileReelsPlayerState extends State<ProfileReelsPlayer> {
   late PostController _profileController;
-  final String _controllerTag = 'profile_reels'; // Unique ID for this screen
-  late PageController _pageController;
+  final String _controllerTag = 'profile_reels';
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: widget.initialIndex);
 
-    // 1. Create a NEW, TAGGED instance of PostController just for this screen
-    // This ensures we don't mess up the Home Screen feed.
     _profileController = Get.put(
         PostController(postRepo: Get.find()),
         tag: _controllerTag
     );
 
-    // 2. Convert PersonalPostModel -> PostModel and load into controller
+    // 3. Convert using the logic that checks for authorProfile
     final convertedPosts = widget.videos.map((p) => _convertToPostModel(p)).toList();
     _profileController.posts.assignAll(convertedPosts);
 
-    // 3. Start playing the initial video
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_profileController.reelsPageController.hasClients) {
+        _profileController.reelsPageController.jumpToPage(widget.initialIndex);
+      }
       _profileController.onPageChanged(widget.initialIndex);
     });
   }
 
   @override
   void dispose() {
-    // 4. Clean up this specific controller to free memory
     Get.delete<PostController>(tag: _controllerTag);
-    _pageController.dispose();
     super.dispose();
   }
 
@@ -300,7 +298,7 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer> {
       body: Stack(
         children: [
           PageView.builder(
-            controller: _pageController,
+            controller: _profileController.reelsPageController,
             scrollDirection: Axis.vertical,
             itemCount: _profileController.posts.length,
             onPageChanged: (index) => _profileController.onPageChanged(index),
@@ -309,18 +307,22 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer> {
                 index: index,
                 post: _profileController.posts[index],
                 controller: _profileController,
-                tag: _controllerTag, // Important: Pass the tag!
+                tag: _controllerTag,
               );
             },
           ),
-
-          // Back Button
           Positioned(
             top: 40,
             left: 20,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Get.back(),
+            child: Container(
+              decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  shape: BoxShape.circle
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Get.back(),
+              ),
             ),
           ),
         ],
@@ -328,45 +330,49 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer> {
     );
   }
 
-// ✅ FIXED: Accurately maps PersonalPostModel -> PostModel
+  // ✅ LOGIC FIX: Determine Author dynamically
   PostModel _convertToPostModel(PersonalPostModel personal) {
-    // 1. Get Current User (Me)
-    final me = Get.find<UserController>().user.value;
+    String authorId = '';
+    String authorName = 'Unknown';
+    String authorPic = '';
 
-    // 2. Create Author object from UserModel
-    // Note: If 'me' is null, we provide safe defaults
+    // A. If we passed a specific author (Others Profile), use that
+    if (widget.authorProfile != null) {
+      authorId = widget.authorProfile!.id;
+      authorName = widget.authorProfile!.username;
+      authorPic = widget.authorProfile!.profilePicture ?? '';
+    }
+    // B. Otherwise, fallback to Current User (My Profile)
+    else {
+      final me = Get.find<UserController>().user.value;
+      authorId = me?.id ?? '';
+      authorName = me?.username ?? 'Unknown';
+      authorPic = me?.profilePicture ?? '';
+    }
+
     final author = Author(
-      id: me?.id ?? '',
-      username: me?.username ?? 'Unknown',
-      profilePicture: me?.profilePicture ?? '',
+      id: authorId,
+      username: authorName,
+      profilePicture: authorPic,
     );
 
-    // 3. Create ContentDetails (Video) object
-    // Note: PersonalPostModel stores thumbnail in 'thumbnail' but ContentDetails expects 'thumbnailUrl'
     final videoContent = ContentDetails(
       url: personal.mediaUrl,
-      title: personal.text, // Use text as title fallback
+      title: personal.text,
       description: personal.text,
       thumbnailUrl: personal.thumbnail,
+      duration: personal.duration,
     );
 
-    // 4. Return the full PostModel
     return PostModel(
       id: personal.id ?? '',
       type: personal.type ?? 'video',
       text: personal.text,
       author: author,
-
-      // Map the video content
       video: videoContent,
-
-      // PersonalPostModel doesn't have these, so we use empty defaults
-      // This fixes the "getter not defined" errors
       likes: [],
       comments: [],
       isLiked: false,
-
-      // If your PostModel has an 'image' field, we can leave it null for video posts
       image: null,
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/user_controller.dart';
+import 'package:hilite/screens/home/pages/profile_screen.dart';
 import 'package:hilite/screens/others/relationship_screen.dart';
 import 'package:hilite/widgets/snackbars.dart';
 import 'package:iconsax/iconsax.dart';
@@ -68,7 +69,12 @@ class _OthersProfileState extends State<OthersProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Padding(
-                  padding: EdgeInsets.fromLTRB(Dimensions.width15, Dimensions.height30, Dimensions.width15, 0),
+                  padding: EdgeInsets.fromLTRB(
+                    Dimensions.width15,
+                    Dimensions.height30,
+                    Dimensions.width15,
+                    0,
+                  ),
                   child: SizedBox(
                     // Ensure the Stack takes up the full width so centering is accurate
                     width: double.infinity,
@@ -81,12 +87,30 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                         // 1. Back Button (Pinned Left)
                         Positioned(
                           left: 0,
-                          // Remove default padding from BackButton to align perfectly with edge if needed
                           child: const BackButton(color: Colors.black),
                         ),
 
-                        // 2. Profile Avatar (Centered by Stack alignment)
-                        ProfileAvatar(avatarUrl: user.profilePicture),
+                        ProfileAvatar(
+                          avatarUrl: user.profilePicture,
+                          onTap: () {
+                            if (user.profilePicture != null &&
+                                user.profilePicture!.isNotEmpty) {
+                              // 2. Navigate to the preview
+                              Get.to(
+                                () => FullScreenImageViewer(
+                                  imageUrl: user.profilePicture!,
+                                ),
+                                transition: Transition.fadeIn,
+                                // Smooth fade transition
+                                duration: const Duration(milliseconds: 300),
+                              );
+                            } else {
+                              CustomSnackBar.showToast(
+                                message: 'User has no Profile Image',
+                              );
+                            }
+                          },
+                        ),
 
                         // 3. Action Buttons (Pinned Right)
                         Positioned(
@@ -178,7 +202,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       // if (user.role != 'fan')
-                      _buildStat('Followers', '${user.followers}','followers'),
+                      _buildStat('Followers', '${user.followers}', 'followers'),
                       _buildStat('Following', '${user.following}', 'following'),
                     ],
                   ),
@@ -581,7 +605,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value,) {
+  Widget _buildDetailRow(IconData icon, String label, String value) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -691,7 +715,11 @@ class _OthersProfileState extends State<OthersProfileScreen> {
           onTap: () {
             if (controller.currentExternalPostType == 'video') {
               Get.to(
-                () => ProfileReelsPlayer(videos: posts, initialIndex: index),
+                () => ProfileReelsPlayer(videos: posts, initialIndex: index,authorProfile: controller.othersProfile.value,),
+              );
+            } else {
+              Get.to(
+                  ()=> ProfileImageViewer(imageUrl: post.mediaUrl!)
               );
             }
           },
@@ -752,11 +780,9 @@ class _OthersProfileState extends State<OthersProfileScreen> {
   Widget _buildStat(String label, String value, String type) => InkWell(
     onTap: () {
       // Navigate to the new RelationshipScreen
-      Get.to(() => RelationshipScreen(
-        title: label,
-        type: type,
-        targetId: targetId,
-      ));
+      Get.to(
+        () => RelationshipScreen(title: label, type: type, targetId: targetId),
+      );
     },
     child: Column(
       children: [
@@ -806,4 +832,67 @@ class _OthersProfileState extends State<OthersProfileScreen> {
       ),
     ),
   );
+}
+
+class FullScreenImageViewer extends StatelessWidget {
+  final String imageUrl;
+
+  const FullScreenImageViewer({super.key, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    // Get screen size to make the circle responsive
+    final double size = MediaQuery.of(context).size.width;
+
+    return Scaffold(
+      backgroundColor: Colors.black, // TikTok uses a solid black/dark background
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: const BackButton(color: Colors.white),
+      ),
+      // Extend body behind app bar for full immersion
+      extendBodyBehindAppBar: true,
+      body: Center(
+        child: GestureDetector(
+          onTap: () => Get.back(), // Tap anywhere to close
+          child: InteractiveViewer(
+            panEnabled: true,
+            boundaryMargin: const EdgeInsets.all(20),
+            minScale: 0.5,
+            maxScale: 4,
+            child: Hero(
+              tag: imageUrl,
+              // ClipOval forces the image into a circle
+              child: ClipOval(
+                child: Image.network(
+                  imageUrl,
+                  // Use width & height to force a square, which ClipOval turns into a circle
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover, // Ensures the image fills the circle
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return SizedBox(
+                      width: size,
+                      height: size,
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: size,
+                    height: size,
+                    color: Colors.grey[900],
+                    child: const Icon(Icons.error, color: Colors.white, size: 50),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

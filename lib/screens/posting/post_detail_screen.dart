@@ -176,7 +176,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
         text:
           'Share',
         backgroundColor: AppColors.white,
-        isDisabled: _descController.text.isEmpty,
+        // isDisabled: _descController.text.isEmpty,
       );
     });
   }
@@ -191,9 +191,9 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     postController.uploadMediaPost(
       file: file,
       isVideo: isVideo,
-      title: caption,
-      description: caption,
-      text: caption,
+      title: caption ?? '',
+      description: caption ?? '',
+      text: caption ?? '',
       isPublic: true,
     );
   }
