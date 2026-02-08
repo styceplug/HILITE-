@@ -109,9 +109,25 @@ class ApiClient extends GetConnect implements GetxService {
   // 📨 POST
   Future<Response> postData(String uri, dynamic body, {Map<String, String>? headers}) async {
     print('➡️ POST: $baseUrl$uri');
-    print('🧾 Body: $body');
+    // print('🧾 Body: $body'); // Optional: Comment out for large files
+
+    // 1. Prepare mutable headers starting with defaults
+    Map<String, String> requestHeaders = Map.from(_mainHeaders ?? {});
+
+    // 2. Merge custom headers if provided
+    if (headers != null) {
+      requestHeaders.addAll(headers);
+    }
+
+    // 3. 🚨 CRITICAL FIX: If sending a file (FormData), remove Content-Type.
+    // This forces GetConnect to generate the correct 'multipart/form-data; boundary=...' header.
+    if (body is FormData) {
+      requestHeaders.remove('Content-Type');
+    }
+
+    // 4. Execute request with modified headers
     return _handleRequest(
-          () => post(uri, body, headers: headers ?? _mainHeaders),
+          () => post(uri, body, headers: requestHeaders),
       uri,
     );
   }

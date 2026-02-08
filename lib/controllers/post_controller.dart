@@ -51,6 +51,31 @@ class PostController extends GetxController {
 
 
 
+  Future<void> deleteUserPost(String postId, String type) async {
+    loader.showLoader();
+
+    final PostRepo postRepo = Get.find<PostRepo>();
+
+    try {
+      // 2. Call API
+      final response = await postRepo.deletePost(postId);
+      Get.back(); // Close loading dialog
+
+      if (response.statusCode == 200) {
+          update(); // Rebuild the grid
+          CustomSnackBar.success(message: "Post deleted successfully");
+          loader.hideLoader();
+
+        }
+       else {
+        ApiChecker.checkApi(response);
+      }
+    } catch (e) {
+      loader.hideLoader();
+      print("Delete error: $e");
+      CustomSnackBar.failure(message: "Failed to delete post");
+    }
+  }
 
   Future<void> handleDeepLink(String videoId) async {
     print("🔗 Deep Link Detected for Video ID: $videoId");

@@ -11,6 +11,7 @@ import 'package:hilite/screens/home/home_screen.dart';
 import 'package:hilite/screens/others/bookmarks_screen.dart';
 import 'package:hilite/screens/others/competition_details_screen.dart';
 import 'package:hilite/screens/others/competitions_screen.dart';
+import 'package:hilite/screens/others/create_competition_screen.dart';
 import 'package:hilite/screens/others/notification_screen.dart';
 import 'package:hilite/screens/others/others_profile.dart';
 import 'package:hilite/screens/others/recommended_accounts.dart';
@@ -77,6 +78,7 @@ class AppRoutes {
   static const String notificationsScreen = '/notifications-screen';
   static const String trialsScreen = '/trials-screen';
   static const String competitionDetailsScreen = '/competition-details-screen';
+  static const String createCompetitionScreen = '/create-competition-screen';
 
   //trials
   static const String createTrialScreen = '/create-trial-screen';
@@ -125,6 +127,15 @@ class AppRoutes {
       name: bookmarksScreen,
       page: () {
         return const BookmarksScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+
+
+    GetPage(
+      name: createCompetitionScreen,
+      page: () {
+        return const CreateCompetitionScreen();
       },
       transition: Transition.fadeIn,
     ),

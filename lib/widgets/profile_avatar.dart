@@ -7,6 +7,7 @@ import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/widgets/snackbars.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../screens/home/pages/profile_screen.dart';
 import '../utils/app_constants.dart';
 import '../utils/colors.dart';
 import '../utils/dimensions.dart';
@@ -18,12 +19,12 @@ class ProfileAvatar extends StatefulWidget {
 
   final Function(XFile)? onImageSelected;
 
-   ProfileAvatar({
+  ProfileAvatar({
     super.key,
     this.onImageSelected,
     this.avatarFile,
     this.avatarUrl,
-    this.onTap
+    this.onTap,
   });
 
   @override
@@ -79,7 +80,7 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
     if (selectedImage != null) {
       return Container(
         height: Dimensions.height150,
-        width: Dimensions.width10*15,
+        width: Dimensions.width10 * 15,
         decoration: BoxDecoration(
           color: AppColors.primary,
           shape: BoxShape.circle,
@@ -92,18 +93,14 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
       );
     } else if (avatarUrl != null && avatarUrl!.isNotEmpty) {
       return Container(
-        height: Dimensions.height150 ,
-        width: Dimensions.width10*15,
+        height: Dimensions.height150,
+        width: Dimensions.width10 * 15,
         decoration: BoxDecoration(
           // color: AppColors.error,
           shape: BoxShape.circle,
           border: Border.all(color: AppColors.primary),
         ),
-        child: ClipOval(
-          child: CachedNetworkImage(
-            imageUrl: "$avatarUrl",
-          ),
-        ),
+        child: ClipOval(child: CachedNetworkImage(imageUrl: "$avatarUrl")),
       );
     }
   }
@@ -119,7 +116,9 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
     return Stack(
       children: [
         GestureDetector(
-          onTap: isMyProfile ? pickImage : widget.onTap,
+          onTap: () {
+            Get.to(() => ProfileImageViewer(imageUrl: avatarUrl ?? ''));
+          },
           child:
               image != null
                   ? image
@@ -141,13 +140,20 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
           Positioned(
             bottom: 0,
             right: 0,
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.error,
-              child: Icon(
-                Icons.edit,
-                size: Dimensions.iconSize20,
-                color: Colors.white,
+            child: InkWell(
+              onTap: isMyProfile ? pickImage : widget.onTap,
+              child: Positioned(
+                bottom: 0,
+                right: 0,
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AppColors.error,
+                  child: Icon(
+                    Icons.edit,
+                    size: Dimensions.iconSize20,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ),

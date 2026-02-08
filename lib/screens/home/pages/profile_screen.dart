@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/post_controller.dart';
 import 'package:hilite/models/user_model.dart';
 import 'package:hilite/routes/routes.dart';
 import 'package:hilite/utils/app_constants.dart';
@@ -106,13 +107,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ],
                   ),
-                  SizedBox(height: Dimensions.height30),
-
-                  /// 🧑‍💼 Profile Avatar
                   SizedBox(height: Dimensions.height20),
 
-                  /// 🧾 Name & Role
-                  if (user.role == 'club')
+                  if (user.role == 'club') ...[
                     Text(
                       club?.clubName ?? '',
                       style: TextStyle(
@@ -120,7 +117,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                  if (user.role != 'club')
+                  ],
+
+                  if (user.role == 'agent') ...[
+                    Text(
+                      user.agentDetails!.agencyName,
+                      style: TextStyle(
+                        fontSize: Dimensions.font18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+
+                  if (user.role == 'fan' || user.role == 'player') ...[
                     Text(
                       user.name,
                       style: TextStyle(
@@ -128,6 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                  ],
 
                   Text(
                     '@${user.username}'.toLowerCase(),
@@ -145,7 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       horizontal: Dimensions.width20,
                     ),
                     child: Text(
-                      user.bio ?? '',
+                      user.bio ?? 'No Bio Yet',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: Dimensions.font13,
@@ -156,13 +166,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
 
-                  SizedBox(height: Dimensions.height20),
+                  SizedBox(height: Dimensions.height10),
 
                   /// 📊 Stats
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      // if (user.role != 'fan')
+                      _buildStat('Posts', '${user.posts}', 'posts'),
+                      _divider(),
                       _buildStat('Followers', '${user.followers}', 'followers'),
                       _divider(),
                       _buildStat('Following', '${user.following}', 'following'),
@@ -193,18 +204,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Row(
                             children: [
                               _buildInfoTag(
-                                'Handler\'s Name: ${user.name ?? '-'}',
+                                'Year Founded: ${user.clubDetails?.yearFounded}',
                               ),
                               SizedBox(width: Dimensions.width20),
                               _buildInfoTag(
-                                'Club Type: ${club?.clubType ?? '-'}',
+                                'Club Type: ${club?.clubType.capitalizeFirst ?? '-'}',
                               ),
                               SizedBox(width: Dimensions.width20),
                               _buildInfoTag('Manager: ${club?.manager ?? '-'}'),
                               SizedBox(width: Dimensions.width20),
-                              _buildInfoTag(
-                                'Founded: ${club?.yearFounded ?? '-'}',
-                              ),
+
+                              _buildInfoTag('Country: ${user.country ?? '-'}'),
+                              SizedBox(width: Dimensions.width20),
+
+                              _buildInfoTag('State: ${user.state ?? '-'}'),
                               SizedBox(width: Dimensions.width20),
                             ],
                           ),
@@ -216,57 +229,97 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   /// 🤝 Agent Info
                   if (user.role == 'agent') ...[
-                    _buildInfoTag('Agency: ${agent?.agencyName ?? '-'}'),
-                    SizedBox(height: Dimensions.height5),
-                    _buildInfoTag('Experience: ${agent?.experience ?? '-'}'),
-                    SizedBox(height: Dimensions.height20),
+                    Padding(
+                      padding: EdgeInsets.only(bottom: Dimensions.height15),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildInfoTag(
+                              'Agency: ${agent?.agencyName ?? '-'}',
+                            ),
+                            SizedBox(width: Dimensions.width10),
+                            _buildInfoTag(
+                              'Experience: ${agent?.experience ?? '-'}',
+                            ),
+                            SizedBox(width: Dimensions.width10),
+                            _buildInfoTag(
+                              'Licence Number: ${agent?.registrationId}',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
 
                   /// ✏️ Edit Profile Button
-                  Row(
+                  Column(
                     children: [
-                      if (user.role == 'club' || user.role == 'agent') ...[
-                        CustomButton(
-                          text: 'Create Trial',
-                          onPressed: () {
-                            Get.toNamed(AppRoutes.createTrialScreen);
-                          },
-                          backgroundColor: AppColors.secondary,
-                          borderColor: AppColors.primary,
-                          borderRadius: BorderRadius.circular(
-                            Dimensions.radius10,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CustomButton(
+                              text: 'Edit Profile',
+                              onPressed: () {
+                                Get.toNamed(AppRoutes.editProfileScreen);
+                              },
+                              backgroundColor: AppColors.primary,
+                              borderRadius: BorderRadius.circular(
+                                Dimensions.radius10,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
 
-                      Expanded(
-                        child: CustomButton(
-                          text: 'Edit Profile',
-                          onPressed: () {
-                            Get.toNamed(AppRoutes.editProfileScreen);
-                          },
-                          backgroundColor: AppColors.primary,
-                          borderRadius: BorderRadius.circular(
-                            Dimensions.radius10,
-                          ),
-                        ),
+                          if (user.role != 'fan') ...[
+                            SizedBox(width: Dimensions.width10),
+                            CustomButton(
+                              onPressed: () {
+                                Get.toNamed(AppRoutes.uploadContent);
+                              },
+                              text: 'Add Post',
+                              borderRadius: BorderRadius.circular(
+                                Dimensions.radius10,
+                              ),
+                              backgroundColor: AppColors.white,
+                              borderColor: AppColors.primary,
+                            ),
+                          ],
+                        ],
                       ),
+                      SizedBox(height: Dimensions.height10),
+                      if (user.role == 'club' || user.role == 'agent') ...[
+                        Row(
+                          children: [
+                            CustomButton(
+                              text: 'Create Trial',
+                              onPressed: () {
+                                Get.toNamed(AppRoutes.createTrialScreen);
+                              },
+                              backgroundColor: AppColors.secondary,
+                              borderColor: AppColors.primary,
+                              borderRadius: BorderRadius.circular(
+                                Dimensions.radius10,
+                              ),
+                            ),
+                            if (user.role == 'club') ...[
+                              SizedBox(width: Dimensions.width20),
+                              Expanded(
+                                child: CustomButton(
+                                  onPressed: () {
+                                    Get.toNamed(AppRoutes.createCompetitionScreen);
+                                  },
+                                  text: 'Create Competition',
+                                  borderRadius: BorderRadius.circular(
+                                    Dimensions.radius10,
+                                  ),
 
-                      if(user.role != 'fan')...[
-                        SizedBox(width: Dimensions.width10),
-                        CustomButton(
-                          onPressed: () {
-                            Get.toNamed(AppRoutes.uploadContent);
-                          },
-                          text: 'Add Post',
-                          borderRadius: BorderRadius.circular(
-                            Dimensions.radius10,
-                          ),
-                          backgroundColor: AppColors.white,
-                          borderColor: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
+                        SizedBox(width: Dimensions.width10),
                       ],
-
                     ],
                   ),
 
@@ -274,7 +327,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   Builder(
                     builder: (context) {
-                      // Check if EVERYTHING is loading (optional, depends on your loading logic)
                       if (controller.isFirstLoad &&
                           controller.postCache.values.every((l) => l.isEmpty)) {
                         return const PostGridShimmer();
@@ -328,11 +380,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     List<PersonalPostModel> allPosts = [
       ...?controller.postCache['video'],
       ...?controller.postCache['image'],
-      ...?controller.postCache['text'], // Assuming you cache text posts too
     ];
 
-    // 2. Sort by Date (Newest first)
-    // Ensure your PersonalPostModel has a DateTime 'createdAt'
+    PostController postController = Get.find<PostController>();
+
     allPosts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     if (allPosts.isEmpty) {
@@ -362,7 +413,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return GestureDetector(
           onTap: () {
             if (postType == 'video') {
-
               final videoOnlyList =
                   allPosts.where((p) => p.type == 'video').toList();
               final videoIndex = videoOnlyList.indexOf(post);
@@ -376,10 +426,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               }
             } else {
-
-              Get.to(() => ProfileImageViewer(imageUrl: post.mediaUrl!));            }
+              Get.to(() => ProfileImageViewer(imageUrl: post.mediaUrl!));
+            }
           },
-          // Pass the specific post's type to the tile builder
+          onLongPress: () {
+            if (post.id == null) return;
+
+            Get.dialog(
+              AlertDialog(
+                title: Text('Delete Post'),
+                content: Text(
+                  'Are you sure you want to delete this post? This action cannot be undone',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Get.back();
+                      postController.deleteUserPost(post.id!, post.type!);
+                    },
+                    child: Text('Delete'),
+                  ),
+                ],
+              ),
+            );
+          },
           child: _buildTileItem(post, postType ?? 'image'),
         );
       },
@@ -445,11 +519,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return InkWell(
       onTap: () {
         // Navigate to the new RelationshipScreen
-        Get.to(() => RelationshipScreen(
-          title: label,
-          type: type,
-          targetId: null,
-        ));
+        Get.to(
+          () => RelationshipScreen(title: label, type: type, targetId: null),
+        );
       },
       borderRadius: BorderRadius.circular(8),
       child: Padding(
@@ -516,7 +588,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   );
 }
 
-
 class ProfileImageViewer extends StatelessWidget {
   final String imageUrl;
 
@@ -526,14 +597,16 @@ class ProfileImageViewer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      extendBodyBehindAppBar: true, // 1. Allows image to extend behind the AppBar
+      extendBodyBehindAppBar: true,
+      // 1. Allows image to extend behind the AppBar
       appBar: AppBar(
         backgroundColor: Colors.transparent, // 2. Make AppBar transparent
         elevation: 0,
         leading: Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.5), // Optional: Backdrop for back button visibility
+            color: Colors.black.withOpacity(0.5),
+            // Optional: Backdrop for back button visibility
             shape: BoxShape.circle,
           ),
           child: const BackButton(color: Colors.white),
@@ -565,8 +638,9 @@ class ProfileImageViewer extends StatelessWidget {
                     child: CircularProgressIndicator(color: Colors.white),
                   );
                 },
-                errorBuilder: (context, error, stackTrace) =>
-                const Icon(Icons.error, color: Colors.white, size: 50),
+                errorBuilder:
+                    (context, error, stackTrace) =>
+                        const Icon(Icons.error, color: Colors.white, size: 50),
               ),
             ),
           ),

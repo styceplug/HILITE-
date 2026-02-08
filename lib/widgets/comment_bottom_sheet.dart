@@ -34,7 +34,7 @@ class CommentsBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85, // 85% screen height
+      height: MediaQuery.of(context).size.height * 0.5, // 85% screen height
       decoration: const BoxDecoration(
         color: Colors.black,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

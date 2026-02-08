@@ -48,6 +48,10 @@ class AppConstants {
   static String UNLIKE_POST(String postId) =>
       '/v1/post/retrieve/$postId/unlike';
 
+
+  static String DELETE_POST(String postId) =>
+      '/v1/post/retrieve/$postId';
+
   static String LIKE_POST(String postId) => '/v1/post/retrieve/$postId/like';
 
   static String BOOKMARK_POST(String postId) =>
@@ -81,6 +85,9 @@ class AppConstants {
 
   //competition
   static const String GET_COMPETITION = '/v1/competition';
+  static const String CREATE_COMPETITION = '/v1/competition';
+
+
 
   static String GET_COMPETITION_DETAILS(String competitionId) =>
       '/v1/competition/$competitionId';

@@ -15,6 +15,10 @@ class PostRepo {
 
 
 
+  Future<Response> deletePost(String postId) async {
+    return await apiClient.deleteData(AppConstants.DELETE_POST(postId));
+  }
+
   Future<Response> getPostById(String id) async {
 
     return await apiClient.getData(AppConstants.GET_SINGLE_POST(id));
