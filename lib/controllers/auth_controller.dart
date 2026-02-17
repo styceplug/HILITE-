@@ -8,6 +8,7 @@ import 'package:hilite/routes/routes.dart';
 import 'package:hilite/widgets/snackbars.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/api/api_checker.dart';
 import '../models/user_model.dart';
 import '../utils/app_constants.dart';
 
@@ -28,6 +29,39 @@ class AuthController extends GetxController implements GetxService {
   late AppController appController = Get.find<AppController>();
   Rx<UserModel?> user = Rx<UserModel?>(null);
   UserRepo? userRepo;
+
+
+
+
+
+
+
+  Future<void> deleteAvatar() async {
+    loader.showLoader();
+    update();
+
+    Response response = await authRepo.deleteAvatar();
+
+    if (response.statusCode == 200) {
+      // 1. Check if user data exists
+      if (user.value != null) {
+
+        user.value = user.value!.copyWith(profilePicture: null);
+
+        user.refresh();
+      }
+
+      await userController.getUserProfile();
+
+      CustomSnackBar.success(message: "Avatar removed successfully");
+    } else {
+      ApiChecker.checkApi(response);
+    }
+
+    loader.hideLoader();
+    update();
+  }
+
 
   Future<void> login(
     String input,
@@ -61,6 +95,8 @@ class AuthController extends GetxController implements GetxService {
           if (staySignedIn) {
             await saveUserToken(token);
           }
+          authRepo.apiClient.token = token;
+          authRepo.apiClient.updateHeader(token);
           await userController.getUserProfile();
           CustomSnackBar.success(
             message:

@@ -24,8 +24,10 @@ class AppConstants {
   //user
   static const String GET_PROFILE = '/v1/auth/profile';
   static const String UPDATE_PROFILE_IMAGE = '/v1/user/personal/profile/avatar';
+  static const String DELETE_AVATAR = '/v1/user/personal/profile/avatar';
   static const String UPDATE_PROFILE_DETAILS = '/v1/user/personal/profile';
   static const String GET_RECOMMENDED_ACCOUNTS = '/v1/recommendation/users';
+  static const String SEARCH_ACCOUNTS = '/v1/search/global';
   static const String GET_RECOMMENDED_POSTS = '/v1/recommendation/posts';
 
 

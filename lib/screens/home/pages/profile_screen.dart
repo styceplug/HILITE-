@@ -15,6 +15,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../controllers/user_controller.dart';
 import '../../../models/post_model.dart';
+import '../../../utils/others.dart';
 import '../../../widgets/post_grid_shimmer.dart';
 import '../../../widgets/profile_avatar.dart';
 import '../../../widgets/reels_video_item.dart';
@@ -91,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
 
-                      ProfileAvatar(
+                      MyProfileAvatar(
                         avatarUrl: user.profilePicture,
                         onImageSelected: (XFile file) {
                           userController.uploadProfilePicture(file);
@@ -413,17 +414,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return GestureDetector(
           onTap: () {
             if (postType == 'video') {
-              final videoOnlyList =
-                  allPosts.where((p) => p.type == 'video').toList();
+              final videoOnlyList = allPosts.where((p) => p.type == 'video').toList();
+              final converted = videoOnlyList.map((p) => personalToPostModel(p)).toList();
               final videoIndex = videoOnlyList.indexOf(post);
 
               if (videoIndex != -1) {
-                Get.to(
-                  () => ProfileReelsPlayer(
-                    videos: videoOnlyList,
-                    initialIndex: videoIndex,
-                  ),
-                );
+                Get.to(() => ProfileReelsPlayer(
+                  videos: converted,
+                  initialIndex: videoIndex,
+                ));
               }
             } else {
               Get.to(() => ProfileImageViewer(imageUrl: post.mediaUrl!));

@@ -136,10 +136,17 @@ class UserRepo {
   }
 
   Future<Response> getRecommendedUsers({int limit = 20}) async {
+    return await apiClient.getData('${AppConstants.GET_RECOMMENDED_ACCOUNTS}?limit=$limit');
+  }
+
+  Future<Response> searchUsers({required String query, int limit = 10}) async {
     return await apiClient.getData(
-      '${AppConstants.GET_RECOMMENDED_ACCOUNTS}?limit=$limit',
+      '${AppConstants.SEARCH_ACCOUNTS}?searchTerm=$query&limit=$limit',
     );
   }
+
+
+
 
   Future<Response> followUser(String targetId) async {
     return await apiClient.putData(AppConstants.FOLLOW_ACCOUNT(targetId),{});

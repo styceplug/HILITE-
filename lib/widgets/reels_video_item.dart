@@ -245,7 +245,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
 
 
 class ProfileReelsPlayer extends StatefulWidget {
-  final List<PersonalPostModel> videos;
+  final List<PostModel> videos;
   final int initialIndex;
   final UserModel? authorProfile;
 
@@ -269,13 +269,11 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer> {
     super.initState();
 
     _profileController = Get.put(
-        PostController(postRepo: Get.find()),
-        tag: _controllerTag
+      PostController(postRepo: Get.find()),
+      tag: _controllerTag,
     );
 
-    // 3. Convert using the logic that checks for authorProfile
-    final convertedPosts = widget.videos.map((p) => _convertToPostModel(p)).toList();
-    _profileController.posts.assignAll(convertedPosts);
+    _profileController.posts.assignAll(widget.videos);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_profileController.reelsPageController.hasClients) {
@@ -320,8 +318,11 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer> {
                   shape: BoxShape.circle
               ),
               child: IconButton(
+
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Get.back(),
+                onPressed: () {
+                      Get.back();
+                },
               ),
             ),
           ),

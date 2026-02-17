@@ -7,10 +7,12 @@ import 'package:hilite/widgets/custom_appbar.dart';
 import 'package:hilite/widgets/custom_textfield.dart';
 import 'package:iconsax/iconsax.dart';
 
-
+import '../../models/post_model.dart';
 import '../../models/user_model.dart';
 import '../../utils/colors.dart';
 import '../../utils/dimensions.dart';
+import '../../widgets/reels_video_item.dart';
+import '../home/pages/profile_screen.dart';
 
 class RecommendedAccountsScreen extends StatefulWidget {
   const RecommendedAccountsScreen({super.key});
@@ -28,11 +30,13 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if(userController.recommendedUsers.isEmpty){
+      if (userController.recommendedUsers.isEmpty) {
         userController.getRecommendedUsers();
       } else {
-        if(userController.filteredUsers.isEmpty){
-          userController.filteredUsers.assignAll(userController.recommendedUsers);
+        if (userController.filteredUsers.isEmpty) {
+          userController.filteredUsers.assignAll(
+            userController.recommendedUsers,
+          );
         }
       }
     });
@@ -44,158 +48,314 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
     super.dispose();
   }
 
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgColor,
-      appBar: CustomAppbar(
-        title: 'Discover Accounts',
-        leadingIcon: const BackButton(),
-        actionIcon: IconButton(
-          icon: Icon(Icons.info_outline, size: Dimensions.iconSize24),
-          onPressed: () {
-            _showInfoDialog(context);
-          },
+    var posts =
+        userController.externalPostCache[userController
+            .currentExternalPostType] ??
+        [];
+
+    return DefaultTabController(
+      length: 3, // Accounts, Images, Videos
+      child: Scaffold(
+        backgroundColor: AppColors.bgColor,
+        appBar: CustomAppbar(
+          title: 'Search Hilite',
+          leadingIcon: const BackButton(),
         ),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => userController.getRecommendedUsers(),
-        color: AppColors.primary,
-        child: Container(
-          height: Dimensions.screenHeight,
-          width: Dimensions.screenWidth,
-          child: Column(
-            children: [
-              // Search & Filters Section
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: Dimensions.width20,
-                  vertical: Dimensions.height15,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Search Bar
-                    CustomTextField(
-                      controller: searchController,
-                      hintText: 'Search by name, club, username...',
-                      prefixIcon: Icons.search,
-                      suffixIcon: Obx(() {
-                        return userController.searchQuery.value.isNotEmpty
-                            ? IconButton(
-                          icon: const Icon(Icons.clear, size: 20),
-                          onPressed: () {
-                            searchController.clear();
-                            userController.searchQuery.value = '';
-                            userController.applyFilters();
-                          },
-                        )
-                            : const SizedBox.shrink();
-                      }),
-                      onChanged: (value) {
-                        userController.onSearchChanged(value);
-                      },
-                    ),
+        body: Column(
+          children: [
+            // --- Search & Filters ---
+            _buildSearchHeader(),
 
-                    SizedBox(height: Dimensions.height15),
-
-                    // Filter Chips
-                    _buildFilterChips(),
-                  ],
-                ),
-              ),
-
-              // Results Section
-              Obx(() {
-                final hasFilters = userController.searchQuery.value.isNotEmpty ||
-                    userController.selectedRole.value.isNotEmpty ||
-                    userController.selectedPosition.value.isNotEmpty;
-
-                return hasFilters
-                    ? Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: Dimensions.width20,
-                    vertical: Dimensions.height10,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${userController.filteredUsers.length} results found',
-                        style: TextStyle(
-                          fontSize: Dimensions.font14,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
+            // --- Tab Bar (Only visible when searching) ---
+            Obx(
+              () =>
+                  userController.searchQuery.value.isNotEmpty
+                      ? Container(
+                        color: Colors.white,
+                        child: TabBar(
+                          labelColor: AppColors.primary,
+                          unselectedLabelColor: Colors.grey,
+                          indicatorColor: AppColors.primary,
+                          tabs: const [
+                            Tab(text: 'Accounts'),
+                            Tab(text: 'Images'),
+                            Tab(text: 'Videos'),
+                          ],
                         ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () {
-                          searchController.clear();
-                          userController.clearAllFilters();
-                        },
-                        icon: const Icon(Icons.refresh, size: 18),
-                        label: const Text('Clear All'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: Dimensions.width10,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-                    : const SizedBox.shrink();
-              }),
+                      )
+                      : const SizedBox.shrink(),
+            ),
 
-              // User List
-              Expanded(
-                child: Obx(() {
-                  if (userController.recommendedUsers.isEmpty) {
-                    return _buildEmptyState(
-                      icon: Icons.people_outline,
-                      title: 'No Recommendations Yet',
-                      message: 'Check back later for account suggestions',
-                    );
-                  }
-
-                  if (userController.filteredUsers.isEmpty) {
-                    return _buildEmptyState(
-                      icon: Icons.search_off,
-                      title: 'No Results Found',
-                      message: 'Try adjusting your filters',
-                    );
-                  }
-
-                  return ListView.builder(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: Dimensions.width20,
-                      vertical: Dimensions.height15,
-                    ),
-                    itemCount: userController.filteredUsers.length,
-                    itemBuilder: (context, index) {
-                      final user = userController.filteredUsers[index];
-                      return _buildAccountCard(user);
-                    },
+            // --- Results ---
+            Expanded(
+              child: Obx(() {
+                // Show Loading State
+                if (userController.isSearching.value) {
+                  return Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
                   );
-                }),
-              ),
-            ],
-          ),
+                }
+
+                // Discovery Mode (No search term)
+                if (userController.searchQuery.value.isEmpty) {
+                  return RefreshIndicator(
+                    onRefresh: () => userController.getRecommendedUsers(),
+                    child: _buildUserList(userController.filteredUsers),
+                  );
+                }
+
+                // Global Search Mode
+                return TabBarView(
+                  children: [
+                    _buildUserList(userController.searchUsers),
+                    _buildImageGrid(userController.searchImages),
+                    _buildVideoGrid(userController.searchVideos),
+                  ],
+                );
+              }),
+            ),
+          ],
         ),
       ),
     );
   }
 
+  Widget _buildUserList(List<UserModel> users) {
+    if (users.isEmpty)
+      return _buildEmptyState(
+        icon: Icons.person,
+        title: "No users found",
+        message: "",
+      );
+    return ListView.builder(
+      padding: EdgeInsets.all(Dimensions.width20),
+      itemCount: users.length,
+      itemBuilder: (context, index) => _buildAccountCard(users[index]),
+    );
+  }
+
+  Widget _buildImageGrid(List<dynamic> images) {
+    if (images.isEmpty)
+      return _buildEmptyState(
+        icon: Icons.image_search,
+        title: 'Not Found',
+        message: 'Search Query did not return any image',
+      );
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(2),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 2,
+        mainAxisSpacing: 2,
+      ),
+      itemCount: images.length,
+      itemBuilder: (context, index) {
+        final PostModel post =
+            images[index] as PostModel; // ✅ Cast to PostModel
+        final img = post.image?.url ?? ''; // ✅ Access property directly
+
+        return InkWell(
+          onTap: () {
+            Get.to(() => ProfileImageViewer(imageUrl: img));
+          },
+          child: Image.network(
+            img,
+            fit: BoxFit.cover,
+            errorBuilder:
+                (_, __, ___) => Container(
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.image, color: Colors.grey),
+                ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildVideoGrid(List<dynamic> videos) {
+    if (videos.isEmpty)
+      return _buildEmptyState(
+        icon: Icons.videocam_outlined,
+        title: "No videos",
+        message: "Try searching for highlights",
+      );
+
+    var posts =
+        userController.externalPostCache[userController
+            .currentExternalPostType] ??
+        [];
+
+    return GridView.builder(
+      padding: EdgeInsets.all(Dimensions.width10),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 0.75,
+      ),
+      itemCount: videos.length,
+      itemBuilder:
+          (context, index) => InkWell(
+            onTap: () {
+              List<PostModel> searchPosts = videos.map((e) => e as PostModel).toList();
+              print('tapped');
+              Get.to(
+                () => ProfileReelsPlayer(
+                  videos: searchPosts,
+                  initialIndex: index,
+                  authorProfile: userController.othersProfile.value,
+                ),
+              );
+            },
+            child: _buildVideoCard(videos[index]),
+          ),
+    );
+  }
+
+  Widget _buildVideoCard(dynamic videoData) {
+    // Cast videoData to PostModel (since that's what it actually is)
+    final PostModel post = videoData as PostModel;
+
+    // Access the video property directly from the PostModel object
+    final video = post.video;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.black12,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Thumbnail with error handling
+          Image.network(
+            video?.thumbnailUrl ?? '',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: Colors.grey[300],
+                child: const Icon(
+                  Icons.video_library,
+                  size: 40,
+                  color: Colors.grey,
+                ),
+              );
+            },
+          ),
+
+          // Gradient Overlay
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+              ),
+            ),
+          ),
+
+          // Play Icon
+          Center(
+            child: Icon(
+              Icons.play_circle_fill,
+              color: Colors.white.withOpacity(0.8),
+              size: 40,
+            ),
+          ),
+
+          // Title and Duration
+          Positioned(
+            bottom: 8,
+            left: 8,
+            right: 8,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  video?.title ?? post.text ?? 'Highlight',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+                if (video?.duration != null)
+                  Text(
+                    "${video!.duration?.toStringAsFixed(0)}s",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 10,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchHeader() {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: Dimensions.width20,
+        vertical: Dimensions.height15,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          CustomTextField(
+            controller: searchController,
+            maxLines: 1,
+            hintText: 'Search people, highlights, or clubs...',
+            prefixIcon: Icons.search,
+            suffixIcon: Obx(
+              () =>
+                  userController.searchQuery.value.isNotEmpty
+                      ? IconButton(
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () {
+                          searchController.clear();
+                          userController.onSearchChanged('');
+                        },
+                      )
+                      : const SizedBox.shrink(),
+            ),
+            onChanged: (value) => userController.onSearchChanged(value),
+          ),
+
+          // Only show role filters for Accounts
+          Obx(
+            () =>
+                userController.searchQuery.value.isEmpty
+                    ? Column(
+                      children: [
+                        SizedBox(height: Dimensions.height15),
+                        _buildFilterChips(),
+                      ],
+                    )
+                    : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildFilterChips() {
     return Obx(() {
@@ -247,15 +407,13 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOutBack,
                 builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: value,
-                    child: child,
-                  );
+                  return Transform.scale(scale: value, child: child);
                 },
                 child: _buildFilterChip(
-                  label: userController.selectedPosition.value.isEmpty
-                      ? 'Position'
-                      : userController.selectedPosition.value,
+                  label:
+                      userController.selectedPosition.value.isEmpty
+                          ? 'Position'
+                          : userController.selectedPosition.value,
                   icon: Icons.location_on,
                   isSelected: userController.selectedPosition.value.isNotEmpty,
                   onTap: () {
@@ -263,6 +421,25 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                   },
                 ),
               ),
+
+              SizedBox(width: Dimensions.width10),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeOutBack,
+                builder: (context, value, child) {
+                  return Transform.scale(scale: value, child: child);
+                },
+                child: _buildFilterChip(
+                  label: userController.selectedAgeRange.value.isEmpty
+                      ? 'Age'
+                      : userController.selectedAgeRange.value,
+                  icon: Icons.cake_outlined,
+                  isSelected: userController.selectedAgeRange.value.isNotEmpty,
+                  onTap: () => _showAgeBottomSheet(context),
+                ),
+              ),
+
             ],
 
             SizedBox(width: Dimensions.width10),
@@ -305,6 +482,94 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
       );
     });
   }
+  void _showAgeBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        final ranges = const ['U18', '18-20', '21-29', '30-34', '35+'];
+
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Age Range',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                  Obx(() {
+                    final has = userController.selectedAgeRange.value.isNotEmpty;
+                    return has
+                        ? TextButton.icon(
+                      onPressed: () {
+                        userController.selectedAgeRange.value = '';
+                        userController.applyFilters();
+                        Navigator.pop(context);
+                      },
+                      icon: const Icon(Icons.clear, size: 18),
+                      label: const Text('Clear'),
+                    )
+                        : const SizedBox.shrink();
+                  }),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              ...ranges.map((r) {
+                return Obx(() {
+                  final selected = userController.selectedAgeRange.value == r;
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      backgroundColor: selected
+                          ? AppColors.primary.withOpacity(.15)
+                          : Colors.grey[100],
+                      child: Icon(
+                        Icons.cake_outlined,
+                        color: selected ? AppColors.primary : Colors.grey[700],
+                      ),
+                    ),
+                    title: Text(
+                      r,
+                      style: TextStyle(
+                        fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                      ),
+                    ),
+                    trailing: selected
+                        ? Icon(Icons.check_circle, color: AppColors.primary)
+                        : const Icon(Icons.chevron_right),
+                    onTap: () {
+                      userController.selectedAgeRange.value = r;
+                      userController.applyFilters();
+                      Navigator.pop(context);
+                    },
+                  );
+                });
+              }).toList(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
 
 
   Widget _buildFilterChip({
@@ -366,10 +631,11 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
         elevation: 2,
         shadowColor: Colors.black.withOpacity(0.08),
         child: InkWell(
-          onTap: () => Get.toNamed(
-            AppRoutes.othersProfileScreen,
-            arguments: {'targetId': user.id},
-          ),
+          onTap:
+              () => Get.toNamed(
+                AppRoutes.othersProfileScreen,
+                arguments: {'targetId': user.id},
+              ),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: EdgeInsets.all(Dimensions.width15),
@@ -382,7 +648,8 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(50),
                       child: Image.network(
-                        user.profilePicture ?? 'https://placehold.net/avatar-2.png',
+                        user.profilePicture ??
+                            'https://placehold.net/avatar-2.png',
                         height: 65,
                         width: 65,
                         fit: BoxFit.cover,
@@ -482,8 +749,7 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                             onTap: () => _showOptionsBottomSheet(context, user),
                           ),
                         ],
-                      )
-
+                      ),
                     ],
                   ),
                 ),
@@ -506,11 +772,7 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.verified,
-            size: 14,
-            color: AppColors.primary,
-          ),
+          Icon(Icons.verified, size: 14, color: AppColors.primary),
           const SizedBox(width: 4),
           Text(
             role.capitalizeFirst ?? '',
@@ -620,28 +882,32 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
   void _showInfoDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.info_outline, color: AppColors.primary),
-            const SizedBox(width: 10),
-             Text('About Recommendations',style: TextStyle(fontSize: Dimensions.font20),),
-          ],
-        ),
-        content: const Text(
-          'Accounts are suggested based on your interests and connections. Your account may also be suggested to people you may know.',
-          style: TextStyle(height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Got it'),
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                Icon(Icons.info_outline, color: AppColors.primary),
+                const SizedBox(width: 10),
+                Text(
+                  'About Recommendations',
+                  style: TextStyle(fontSize: Dimensions.font20),
+                ),
+              ],
+            ),
+            content: const Text(
+              'Accounts are suggested based on your interests and connections. Your account may also be suggested to people you may know.',
+              style: TextStyle(height: 1.5),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Got it'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -651,13 +917,14 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => PositionsBottomSheet(
-        onSelect: (position) {
-          userController.selectedPosition.value = position;
-          userController.applyFilters();
-        },
-        currentPosition: userController.selectedPosition.value,
-      ),
+      builder:
+          (context) => PositionsBottomSheet(
+            onSelect: (position) {
+              userController.selectedPosition.value = position;
+              userController.applyFilters();
+            },
+            currentPosition: userController.selectedPosition.value,
+          ),
     );
   }
 
@@ -666,43 +933,44 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading:  Icon(Iconsax.gift),
-              title: const Text('Gift User'),
-              onTap: () {
-                Navigator.pop(context);
-                // Add report functionality
-              },
+      builder:
+          (context) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            ListTile(
-              leading: const Icon(Icons.block_outlined, color: Colors.red),
-              title: const Text('Block User'),
-              onTap: () {
-                Navigator.pop(context);
-                userController.blockUser(user.id);
-              },
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: Icon(Iconsax.gift),
+                  title: const Text('Gift User'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // Add report functionality
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.block_outlined, color: Colors.red),
+                  title: const Text('Block User'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    userController.blockUser(user.id);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.report_outlined),
+                  title: const Text('Report User'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // Add report functionality
+                  },
+                ),
+                const SizedBox(height: 10),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.report_outlined),
-              title: const Text('Report User'),
-              onTap: () {
-                Navigator.pop(context);
-                // Add report functionality
-              },
-            ),
-            const SizedBox(height: 10),
-          ],
-        ),
-      ),
+          ),
     );
   }
 }
@@ -720,7 +988,8 @@ class PositionsBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85, // Takes up 85% of screen
+      height:
+          MediaQuery.of(context).size.height * 0.85, // Takes up 85% of screen
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -746,10 +1015,7 @@ class PositionsBottomSheet extends StatelessWidget {
               children: [
                 const Text(
                   'Select Position',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                 ),
                 if (currentPosition.isNotEmpty)
                   TextButton.icon(
@@ -777,7 +1043,7 @@ class PositionsBottomSheet extends StatelessWidget {
                     color: Colors.black.withOpacity(0.1),
                     blurRadius: 10,
                     spreadRadius: 2,
-                  )
+                  ),
                 ],
               ),
               child: ClipRRect(
@@ -796,7 +1062,14 @@ class PositionsBottomSheet extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
                               _PositionNode('LW', currentPosition, onSelect),
-                              Container(margin: const EdgeInsets.only(bottom: 20), child: _PositionNode('ST', currentPosition, onSelect)),
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 20),
+                                child: _PositionNode(
+                                  'ST',
+                                  currentPosition,
+                                  onSelect,
+                                ),
+                              ),
                               _PositionNode('RW', currentPosition, onSelect),
                             ],
                           ),
@@ -847,7 +1120,10 @@ class PositionsBottomSheet extends StatelessWidget {
             width: 100,
             height: 100,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 2,
+              ),
               shape: BoxShape.circle,
             ),
           ),
@@ -867,7 +1143,10 @@ class PositionsBottomSheet extends StatelessWidget {
             width: 120,
             height: 60,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 2,
+              ),
             ),
           ),
         ),
@@ -878,7 +1157,10 @@ class PositionsBottomSheet extends StatelessWidget {
             width: 120,
             height: 60,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 2,
+              ),
             ),
           ),
         ),
@@ -922,7 +1204,7 @@ class _PositionNode extends StatelessWidget {
                   color: Colors.black.withOpacity(0.2),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
-                )
+                ),
               ],
             ),
             child: Center(

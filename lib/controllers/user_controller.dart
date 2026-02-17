@@ -20,16 +20,20 @@ class UserController extends GetxController {
 
   GlobalLoaderController loader = Get.find<GlobalLoaderController>();
   Rx<UserModel?> user = Rx<UserModel?>(null);
-  var recommendedUsers = <UserModel>[].obs;
+  RxList<UserModel> recommendedUsers = <UserModel>[].obs;
+  RxList<UserModel> searchResults = <UserModel>[].obs;
+  RxBool isSearching = false.obs;
+  RxString searchQuery = ''.obs;
   Rxn<UserModel> othersProfile = Rxn<UserModel>();
   RxList<UserModel> filteredUsers = <UserModel>[].obs;
+  final RxString selectedAgeRange = ''.obs;
+  RxList<UserModel> searchUsers = <UserModel>[].obs;
+  RxList<PostModel> searchImages = <PostModel>[].obs;
+  RxList<PostModel> searchVideos = <PostModel>[].obs;
 
   bool isPostsLoading = false;
+
   // List<PersonalPostModel> myPosts = [];
-
-
-
-
 
   String currentPostType = 'video';
   Map<String, List<PersonalPostModel>> postCache = {
@@ -44,14 +48,15 @@ class UserController extends GetxController {
     'video': [],
   };
   List<UserModel> _relationshipList = [];
+
   List<UserModel> get relationshipList => _relationshipList;
   List<UserModel> _filteredRelationshipList = [];
+
   List<UserModel> get filteredRelationshipList => _filteredRelationshipList;
   bool isExternalPostsLoading = false;
   String currentExternalPostType = 'text';
+  Timer? _debounce;
 
-
-  RxString searchQuery = ''.obs;
   RxString selectedRole = ''.obs;
   RxString selectedPosition = ''.obs;
   RxString selectedClub = ''.obs;
@@ -62,7 +67,69 @@ class UserController extends GetxController {
     loadCachedUser();
   }
 
+  void onSearchChanged(String query) {
+    searchQuery.value = query;
 
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+    if (query.isEmpty) {
+      isSearching.value = false;
+      searchResults.clear();
+      applyFilters(); // Show recommended list
+      return;
+    }
+
+    // If the query is short, just do local filtering on the recommendations
+    if (query.length < 2) {
+      isSearching.value = false;
+      applyFilters();
+    } else {
+      // If it's 3+ chars, wait and then hit the API
+      _debounce = Timer(const Duration(milliseconds: 500), () {
+        performApiSearch(query);
+      });
+    }
+  }
+
+  Future<void> performApiSearch(String query) async {
+    if (query.trim().isEmpty) return;
+
+    isSearching.value = true;
+    update();
+
+    try {
+      Response response = await userRepo.searchUsers(query: query);
+
+      if (response.statusCode == 200 && response.body['code'] == '00') {
+        var data = response.body['data'];
+
+        // 1. Parse Users (You already did this correctly)
+        searchUsers.assignAll(
+          (data['users'] as List).map((e) => UserModel.fromJson(e)).toList(),
+        );
+
+        // 2. Parse Images (FIXED: Added mapping)
+        final List imageList = data['images'] ?? [];
+        searchImages.assignAll(
+          imageList.map((e) => PostModel.fromJson(e)).toList(),
+        );
+
+        // 3. Parse Videos (FIXED: Added mapping)
+        final List videoList = data['videos'] ?? [];
+        searchVideos.assignAll(
+          videoList.map((e) => PostModel.fromJson(e)).toList(),
+        );
+
+        // Update the main filtered list for the "Accounts" tab
+        filteredUsers.assignAll(searchUsers);
+      }
+    } catch (e) {
+      print("Search Error: $e");
+    } finally {
+      isSearching.value = false;
+      update();
+    }
+  }
 
   Future<void> getRelationshipUsers(String type, {String? targetId}) async {
     loader.showLoader();
@@ -76,9 +143,15 @@ class UserController extends GetxController {
     if (targetId != null && targetId.isNotEmpty) {
       // 🅰️ External Profile (Viewing someone else's followers)
       if (type == 'followers') {
-        response = await userRepo.getExternalRelationshipAccounts(targetId, followers: true);
+        response = await userRepo.getExternalRelationshipAccounts(
+          targetId,
+          followers: true,
+        );
       } else {
-        response = await userRepo.getExternalRelationshipAccounts(targetId, following: true);
+        response = await userRepo.getExternalRelationshipAccounts(
+          targetId,
+          following: true,
+        );
       }
     } else {
       // 🅱️ Personal Profile (Viewing my own followers)
@@ -95,7 +168,9 @@ class UserController extends GetxController {
     if (response.statusCode == 200) {
       List<dynamic> rawList = response.body['data'];
       _relationshipList = rawList.map((e) => UserModel.fromJson(e)).toList();
-      _filteredRelationshipList = List.from(_relationshipList); // Init search list
+      _filteredRelationshipList = List.from(
+        _relationshipList,
+      ); // Init search list
     } else {
       ApiChecker.checkApi(response);
     }
@@ -109,10 +184,11 @@ class UserController extends GetxController {
     if (query.isEmpty) {
       _filteredRelationshipList = List.from(_relationshipList);
     } else {
-      _filteredRelationshipList = _relationshipList.where((user) {
-        return user.name.toLowerCase().contains(query.toLowerCase()) ||
-            user.username.toLowerCase().contains(query.toLowerCase());
-      }).toList();
+      _filteredRelationshipList =
+          _relationshipList.where((user) {
+            return user.name.toLowerCase().contains(query.toLowerCase()) ||
+                user.username.toLowerCase().contains(query.toLowerCase());
+          }).toList();
     }
     update(); // Update UI
   }
@@ -123,11 +199,12 @@ class UserController extends GetxController {
 
       // 1. Request Permission
       NotificationSettings settings = await messaging.requestPermission(
-        alert: true, badge: true, sound: true,
+        alert: true,
+        badge: true,
+        sound: true,
       );
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-
         // 🍎 iOS SPECIFIC FIX: Wait for APNs Token
         if (Platform.isIOS) {
           String? apnsToken = await messaging.getAPNSToken();
@@ -140,7 +217,9 @@ class UserController extends GetxController {
 
           // If still null, we are likely on a Simulator or config is wrong
           if (apnsToken == null) {
-            print("❌ APNs Token is null. Are you on a Simulator? Push won't work.");
+            print(
+              "❌ APNs Token is null. Are you on a Simulator? Push won't work.",
+            );
             return; // Stop here to prevent the crash
           }
         }
@@ -168,11 +247,7 @@ class UserController extends GetxController {
   }
 
   void clearExternalCache() {
-    externalPostCache = {
-      'text': [],
-      'image': [],
-      'video': [],
-    };
+    externalPostCache = {'text': [], 'image': [], 'video': []};
     currentExternalPostType = 'text';
     update();
   }
@@ -194,7 +269,8 @@ class UserController extends GetxController {
     if (response.statusCode == 200) {
       List<dynamic> data = response.body['data'];
       // Parse using the same model (since structure is identical)
-      externalPostCache[type] = data.map((e) => PersonalPostModel.fromJson(e)).toList();
+      externalPostCache[type] =
+          data.map((e) => PersonalPostModel.fromJson(e)).toList();
     } else {
       print("Error fetching external posts: ${response.statusText}");
     }
@@ -259,7 +335,7 @@ class UserController extends GetxController {
         if (user != null) {
           user.value = user.value!.copyWith(profilePicture: newImageUrl);
 
-          await userRepo.cacheUserData(user!.toJson());
+          await userRepo.cacheUserData(user.toJson());
           update();
         }
 
@@ -282,7 +358,9 @@ class UserController extends GetxController {
     try {
       loader.showLoader();
 
-      final Response response = await userRepo.getRecommendedUsers(limit: limit);
+      final Response response = await userRepo.getRecommendedUsers(
+        limit: limit,
+      );
 
       final code = response.body['code']?.toString();
       final message = response.body['message'];
@@ -292,9 +370,8 @@ class UserController extends GetxController {
         final data = response.body['data'];
 
         if (data is List) {
-          recommendedUsers.value = data
-              .map((e) => UserModel.fromJson(e))
-              .toList();
+          recommendedUsers.value =
+              data.map((e) => UserModel.fromJson(e)).toList();
 
           // Since API returns only unfollowed users, initialize followedUserIds as empty
           // followedUserIds.clear();
@@ -309,7 +386,9 @@ class UserController extends GetxController {
           final roleCount = <String, int>{};
           for (var user in recommendedUsers) {
             roleCount[user.role] = (roleCount[user.role] ?? 0) + 1;
-            print("   - ${user.name} (${user.role}) ${user.role == 'player' ? '- ${user.playerDetails?.position}' : ''}");
+            print(
+              "   - ${user.name} (${user.role}) ${user.role == 'player' ? '- ${user.playerDetails?.position}' : ''}",
+            );
           }
           roleCount.forEach((role, count) {
             print("   $role: $count");
@@ -318,9 +397,7 @@ class UserController extends GetxController {
           // Apply filters after loading new data (if any filters are active)
           applyFilters();
         } else {
-          CustomSnackBar.failure(
-            message: 'Invalid data format received',
-          );
+          CustomSnackBar.failure(message: 'Invalid data format received');
         }
       } else {
         CustomSnackBar.failure(
@@ -328,19 +405,13 @@ class UserController extends GetxController {
         );
       }
     } on TimeoutException catch (_) {
-      CustomSnackBar.failure(
-        message: 'Request timed out. Please try again.',
-      );
+      CustomSnackBar.failure(message: 'Request timed out. Please try again.');
     } on SocketException catch (_) {
-      CustomSnackBar.failure(
-        message: 'No internet connection',
-      );
+      CustomSnackBar.failure(message: 'No internet connection');
     } catch (e, stackTrace) {
       print("❌ Error fetching recommended users: $e");
       print("Stack trace: $stackTrace");
-      CustomSnackBar.failure(
-        message: 'An unexpected error occurred',
-      );
+      CustomSnackBar.failure(message: 'An unexpected error occurred');
     } finally {
       loader.hideLoader();
     }
@@ -353,6 +424,7 @@ class UserController extends GetxController {
     print("   - Selected role: '${selectedRole.value}'");
     print("   - Selected position: '${selectedPosition.value}'");
     print("   - Selected club: '${selectedClub.value}'");
+    print("   - Selected age range: '${selectedAgeRange.value}'");
 
     List<UserModel> list = List.from(recommendedUsers);
 
@@ -361,17 +433,19 @@ class UserController extends GetxController {
       final query = searchQuery.value.toLowerCase().trim();
       final beforeCount = list.length;
 
-      list = list.where((user) {
-        final nameLower = user.name.toLowerCase();
-        final usernameLower = user.username.toLowerCase();
-        final bioLower = user.bio?.toLowerCase() ?? '';
-        final clubNameLower = user.clubDetails?.clubName.toLowerCase() ?? '';
+      list =
+          list.where((user) {
+            final nameLower = user.name.toLowerCase();
+            final usernameLower = user.username.toLowerCase();
+            final bioLower = user.bio?.toLowerCase() ?? '';
+            final clubNameLower =
+                user.clubDetails?.clubName.toLowerCase() ?? '';
 
-        return nameLower.contains(query) ||
-            usernameLower.contains(query) ||
-            bioLower.contains(query) ||
-            clubNameLower.contains(query);
-      }).toList();
+            return nameLower.contains(query) ||
+                usernameLower.contains(query) ||
+                bioLower.contains(query) ||
+                clubNameLower.contains(query);
+          }).toList();
 
       print("   - After search filter: $beforeCount → ${list.length}");
     }
@@ -386,9 +460,10 @@ class UserController extends GetxController {
     // ⚽ Filter by position (only for players)
     if (selectedPosition.value.isNotEmpty) {
       final beforeCount = list.length;
-      list = list.where((user) {
-        return user.playerDetails?.position == selectedPosition.value;
-      }).toList();
+      list =
+          list.where((user) {
+            return user.playerDetails?.position == selectedPosition.value;
+          }).toList();
       print("   - After position filter: $beforeCount → ${list.length}");
     }
 
@@ -397,12 +472,30 @@ class UserController extends GetxController {
       final clubQuery = selectedClub.value.toLowerCase().trim();
       final beforeCount = list.length;
 
-      list = list.where((user) {
-        final clubName = user.clubDetails?.clubName.toLowerCase() ?? '';
-        return clubName.contains(clubQuery);
-      }).toList();
+      list =
+          list.where((user) {
+            final clubName = user.clubDetails?.clubName.toLowerCase() ?? '';
+            return clubName.contains(clubQuery);
+          }).toList();
 
       print("   - After club filter: $beforeCount → ${list.length}");
+    }
+
+    // 🎂 Filter by age range (only for players)
+    if (selectedAgeRange.value.isNotEmpty) {
+      final beforeCount = list.length;
+      final range = selectedAgeRange.value;
+
+      list =
+          list.where((user) {
+            // only apply to players
+            if (user.role != 'player') return false;
+
+            final dob = user.playerDetails?.dob;
+            return _matchesAgeRange(dob, range);
+          }).toList();
+
+      print("   - After age filter ($range): $beforeCount → ${list.length}");
     }
 
     // Update filtered list
@@ -411,18 +504,59 @@ class UserController extends GetxController {
     print("🔎 Filters applied: ${filteredUsers.length} results");
   }
 
-  Timer? _searchDebounce;
+  bool _matchesAgeRange(dynamic dob, String range) {
+    final age = _calculateAge(dob);
+    if (age == null) return false;
 
-  void onSearchChanged(String value) {
-    // Cancel previous timer
-    _searchDebounce?.cancel();
-
-    // Create new timer
-    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-      searchQuery.value = value;
-      applyFilters();
-    });
+    switch (range) {
+      case 'U18':
+        return age < 18;
+      case '18-20':
+        return age >= 18 && age <= 20;
+      case '21-29':
+        return age >= 21 && age <= 29;
+      case '30-34':
+        return age >= 30 && age <= 34;
+      case '35+':
+        return age >= 35;
+      default:
+        return true;
+    }
   }
+
+  int? _calculateAge(dynamic dob) {
+    if (dob == null) return null;
+
+    DateTime? birthDate;
+
+    // If your model stores dob as DateTime
+    if (dob is DateTime) {
+      birthDate = dob;
+    }
+
+    // If your model stores dob as String
+    if (dob is String && dob.trim().isNotEmpty) {
+      birthDate = DateTime.tryParse(dob);
+    }
+
+    if (birthDate == null) return null;
+
+    final now = DateTime.now();
+    int age = now.year - birthDate.year;
+
+    final hadBirthdayThisYear =
+        (now.month > birthDate.month) ||
+        (now.month == birthDate.month && now.day >= birthDate.day);
+
+    if (!hadBirthdayThisYear) age--;
+
+    // optional sanity
+    if (age < 0 || age > 80) return null;
+
+    return age;
+  }
+
+  Timer? _searchDebounce;
 
   void clearAllFilters() {
     searchQuery.value = '';
@@ -578,14 +712,13 @@ class UserController extends GetxController {
     }
   }
 
-
-
   Future<void> getPersonalPosts(String type) async {
     currentPostType = type;
 
     var localData = userRepo.getCachedPosts(type);
     if (localData.isNotEmpty) {
-      postCache[type] = localData.map((e) => PersonalPostModel.fromJson(e)).toList();
+      postCache[type] =
+          localData.map((e) => PersonalPostModel.fromJson(e)).toList();
       isFirstLoad = false;
       update();
     } else {
@@ -600,7 +733,8 @@ class UserController extends GetxController {
 
       userRepo.savePostsToCache(type, serverData);
 
-      postCache[type] = serverData.map((e) => PersonalPostModel.fromJson(e)).toList();
+      postCache[type] =
+          serverData.map((e) => PersonalPostModel.fromJson(e)).toList();
 
       isFirstLoad = false;
       update();
@@ -608,8 +742,4 @@ class UserController extends GetxController {
       print(response.body);
     }
   }
-
-
-
-
 }

@@ -11,6 +11,7 @@ import '../../models/user_model.dart';
 import '../../routes/routes.dart';
 import '../../utils/colors.dart';
 import '../../utils/dimensions.dart';
+import '../../utils/others.dart';
 import '../../widgets/custom_appbar.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/gift_bottom_modal.dart';
@@ -44,6 +45,12 @@ class _OthersProfileState extends State<OthersProfileScreen> {
         Get.back();
       }
     });
+  }
+
+  @override
+  void dispose() {
+
+    super.dispose();
   }
 
   @override
@@ -90,26 +97,9 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                           child: const BackButton(color: Colors.black),
                         ),
 
-                        ProfileAvatar(
+                        OtherProfileAvatar(
                           avatarUrl: user.profilePicture,
-                          onTap: () {
-                            if (user.profilePicture != null &&
-                                user.profilePicture!.isNotEmpty) {
-                              // 2. Navigate to the preview
-                              Get.to(
-                                () => FullScreenImageViewer(
-                                  imageUrl: user.profilePicture!,
-                                ),
-                                transition: Transition.fadeIn,
-                                // Smooth fade transition
-                                duration: const Duration(milliseconds: 300),
-                              );
-                            } else {
-                              CustomSnackBar.showToast(
-                                message: 'User has no Profile Image',
-                              );
-                            }
-                          },
+
                         ),
 
                         // 3. Action Buttons (Pinned Right)
@@ -242,7 +232,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                       children: [
                         _buildInfoTag('Position: ${player?.position ?? '-'}'),
                         _buildInfoTag('Height: ${player?.height ?? '-'}cm'),
-                        _buildInfoTag('Weight: ${player?.weight ?? '-'}kg'),
+                        _buildInfoTag('Age Range: ${_footballAgeRangeLabel(player?.dob)}'),
                       ],
                     ),
                   ),
@@ -521,8 +511,8 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                       ),
                       _buildDetailRow(
                         Icons.cake,
-                        'Date of Birth',
-                        _formatDate(user.playerDetails?.dob.toString()),
+                        'Age Range',
+                        _footballAgeRangeLabel(user.playerDetails?.dob),
                       ),
                     ],
 
@@ -589,6 +579,50 @@ class _OthersProfileState extends State<OthersProfileScreen> {
       isScrollControlled: true,
     );
   }
+
+  String _footballAgeRangeLabel(dynamic dob) {
+    final age = _calculateAge(dob);
+    if (age == null) return 'Not listed';
+
+    // Football-ish buckets
+    if (age < 18) return 'U18';
+    if (age < 21) return 'U21';
+    if (age < 30) return 'U30';
+    if (age < 35) return 'U34';
+    return '35+';
+  }
+
+  int? _calculateAge(dynamic dob) {
+    if (dob == null) return null;
+
+    DateTime? birthDate;
+
+    if (dob is DateTime) {
+      birthDate = dob;
+    } else if (dob is String && dob.trim().isNotEmpty) {
+      birthDate = DateTime.tryParse(dob);
+    } else {
+      return null;
+    }
+
+    if (birthDate == null) return null;
+
+    final now = DateTime.now();
+    int age = now.year - birthDate.year;
+
+    // if birthday hasn't happened yet this year, subtract 1
+    final hadBirthdayThisYear =
+        (now.month > birthDate.month) ||
+            (now.month == birthDate.month && now.day >= birthDate.day);
+
+    if (!hadBirthdayThisYear) age--;
+
+    // sanity check (optional)
+    if (age < 0 || age > 80) return null;
+
+    return age;
+  }
+
 
   Widget _buildSectionTitle(String title) {
     return Padding(
@@ -714,9 +748,19 @@ class _OthersProfileState extends State<OthersProfileScreen> {
         return GestureDetector(
           onTap: () {
             if (controller.currentExternalPostType == 'video') {
-              Get.to(
-                () => ProfileReelsPlayer(videos: posts, initialIndex: index,authorProfile: controller.othersProfile.value,),
-              );
+              final videoOnly = posts.where((p) => p.type == 'video').toList();
+              final converted = videoOnly
+                  .map((p) => personalToPostModel(p, authorProfile: controller.othersProfile.value))
+                  .toList();
+
+              final tapped = posts[index];
+              final tappedIndex = videoOnly.indexOf(tapped);
+
+              Get.to(() => ProfileReelsPlayer(
+                videos: converted,
+                initialIndex: tappedIndex == -1 ? 0 : tappedIndex,
+                authorProfile: controller.othersProfile.value,
+              ));
             } else {
               Get.to(
                   ()=> ProfileImageViewer(imageUrl: post.mediaUrl!)

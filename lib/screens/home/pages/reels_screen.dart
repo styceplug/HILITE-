@@ -26,6 +26,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
   final PostController controller = Get.find<PostController>();
   // final PageController pageController = PageController();
 
+  PostController postController = Get.find<PostController>();
   String currentType = "video";
 
   @override
@@ -105,6 +106,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
                       ),
                       child: InkWell(
                         onTap: () {
+                          postController.pauseAll();
                           Get.toNamed(AppRoutes.recommendedAccountsScreen);
                         },
                         child: Row(

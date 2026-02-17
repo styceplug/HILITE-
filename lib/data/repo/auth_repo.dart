@@ -10,6 +10,12 @@ class AuthRepo {
 
   AuthRepo({required this.apiClient,required this.sharedPreferences});
 
+
+
+  Future<Response> deleteAvatar() async {
+    return await apiClient.deleteData(AppConstants.DELETE_AVATAR);
+  }
+
   Future<Response> login(String username, String password) async {
     return await apiClient.postData(AppConstants.POST_LOGIN, {"username": username, "password": password});
   }
