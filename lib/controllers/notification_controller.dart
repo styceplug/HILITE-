@@ -17,8 +17,11 @@ class NotificationController extends GetxController {
   List<NotificationModel> _notificationList = [];
   List<NotificationModel> get notificationList => _notificationList;
 
-  int _unreadCount = 0;
-  int get unreadCount => _unreadCount;
+  // int _unreadCount = 0;
+  // int get unreadCount => _unreadCount;
+  var unreadCount = 0.obs;
+
+
 
   @override
   void onInit() {
@@ -38,7 +41,7 @@ class NotificationController extends GetxController {
       // Parse the nested data object
       var data = NotificationResponse.fromJson(response.body['data']);
       _notificationList = data.notifications ?? [];
-      _unreadCount = data.unreadCount ?? 0;
+      unreadCount.value = data.unreadCount ?? 0;
       print('Notification data : $data');
     } else {
       // Handle error
@@ -52,7 +55,7 @@ class NotificationController extends GetxController {
   Future<void> markAllAsRead() async {
     Response response = await notificationRepo.markAllAsRead();
     if (response.statusCode == 200) {
-      _unreadCount = 0;
+      unreadCount.value = 0;
       _notificationList = _notificationList.map((item) {
         return item.copyWith(isRead: true);
       }).toList();

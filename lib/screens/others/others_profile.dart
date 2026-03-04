@@ -221,19 +221,22 @@ class _OthersProfileState extends State<OthersProfileScreen> {
 
                 /// ⚽ Player Info
                 if (user.role == 'player') ...[
-                  Padding(
-                    padding: EdgeInsets.only(
-                      bottom: Dimensions.height15,
-                      left: Dimensions.width30,
-                      right: Dimensions.width30,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildInfoTag('Position: ${player?.position ?? '-'}'),
-                        _buildInfoTag('Height: ${player?.height ?? '-'}cm'),
-                        _buildInfoTag('Age Range: ${_footballAgeRangeLabel(player?.dob)}'),
-                      ],
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        bottom: Dimensions.height15,
+                        left: Dimensions.width30,
+                        right: Dimensions.width30,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildInfoTag('Position: ${player?.position ?? '-'}'),
+                          _buildInfoTag('Height: ${player?.height ?? '-'}cm'),
+                          _buildInfoTag('Age Range: ${_footballAgeRangeLabel(player?.dob)}'),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -862,6 +865,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
       horizontal: Dimensions.width10,
       vertical: Dimensions.height5,
     ),
+    margin: EdgeInsets.only(right: Dimensions.width20),
     decoration: BoxDecoration(
       color: AppColors.grey2,
       borderRadius: BorderRadius.circular(Dimensions.radius10),

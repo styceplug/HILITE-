@@ -637,10 +637,8 @@ class PostController extends GetxController {
 
       // 2. Add Listener (Optional: for other updates)
       controller.addListener(() {
-        // You generally don't need to update the whole item on every frame
-        // unless you are tracking position in the GetBuilder.
-        // Keeping this is fine, but usually overlay updates are handled by ValueListenableBuilder.
-        // update(['overlay_$index']);
+
+        update(['overlay_$index']);
       });
 
       // -----------------------------------------------------

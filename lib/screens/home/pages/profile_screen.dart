@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/notification_controller.dart';
 import 'package:hilite/controllers/post_controller.dart';
 import 'package:hilite/models/user_model.dart';
 import 'package:hilite/routes/routes.dart';
@@ -31,6 +32,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   UserController userController = Get.find<UserController>();
+  NotificationController notificationController =
+      Get.find<NotificationController>();
 
   @override
   void initState() {
@@ -82,15 +85,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      InkWell(
-                        onTap: () {
-                          Get.toNamed(AppRoutes.notificationsScreen);
-                        },
-                        child: Icon(
-                          CupertinoIcons.bell,
-                          size: Dimensions.iconSize30,
-                        ),
-                      ),
+                      Obx(() {
+                        final count = notificationController.unreadCount.value;
+                        return InkWell(
+                          onTap: () {
+                            Get.toNamed(AppRoutes.notificationsScreen);
+                          },
+                          child: Stack(
+                            children: [
+                              Icon(
+                                CupertinoIcons.bell,
+                                size: Dimensions.iconSize24,
+                              ),
+                              if (count > 0)
+                                Positioned(
+                                  right: 0,
+                                  top: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      count > 99 ? '99+' : '$count',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      }),
 
                       MyProfileAvatar(
                         avatarUrl: user.profilePicture,
@@ -307,13 +336,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               Expanded(
                                 child: CustomButton(
                                   onPressed: () {
-                                    Get.toNamed(AppRoutes.createCompetitionScreen);
+                                    Get.toNamed(
+                                      AppRoutes.createCompetitionScreen,
+                                    );
                                   },
                                   text: 'Create Competition',
                                   borderRadius: BorderRadius.circular(
                                     Dimensions.radius10,
                                   ),
-
                                 ),
                               ),
                             ],
@@ -414,15 +444,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return GestureDetector(
           onTap: () {
             if (postType == 'video') {
-              final videoOnlyList = allPosts.where((p) => p.type == 'video').toList();
-              final converted = videoOnlyList.map((p) => personalToPostModel(p)).toList();
+              final videoOnlyList =
+                  allPosts.where((p) => p.type == 'video').toList();
+              final converted =
+                  videoOnlyList.map((p) => personalToPostModel(p)).toList();
               final videoIndex = videoOnlyList.indexOf(post);
 
               if (videoIndex != -1) {
-                Get.to(() => ProfileReelsPlayer(
-                  videos: converted,
-                  initialIndex: videoIndex,
-                ));
+                Get.to(
+                  () => ProfileReelsPlayer(
+                    videos: converted,
+                    initialIndex: videoIndex,
+                  ),
+                );
               }
             } else {
               Get.to(() => ProfileImageViewer(imageUrl: post.mediaUrl!));

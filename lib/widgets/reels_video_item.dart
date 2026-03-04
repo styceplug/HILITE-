@@ -110,10 +110,18 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
               else
                 Container(color: Colors.black),
 
+              // 1. BACKGROUND
+              if (isReady && videoCtrl != null && videoCtrl.value.isInitialized)
+                Container(color: Colors.black)  // black bg when video is playing
+              else if (widget.post.video?.thumbnailUrl != null)
+                Image.network(widget.post.video!.thumbnailUrl!, fit: BoxFit.cover)  // thumbnail while loading
+              else
+                Container(color: Colors.black),
+
               // 2. VIDEO PLAYER
                 if (isReady && videoCtrl != null && videoCtrl.value.isInitialized)
                   FittedBox(
-                  fit: BoxFit.cover,
+                  fit: BoxFit.fitWidth,
                   child: SizedBox(
                     width: videoCtrl.value.size.width,
                     height: videoCtrl.value.size.height,
