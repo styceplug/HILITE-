@@ -1,5 +1,6 @@
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/chat_controller.dart';
 import 'package:hilite/controllers/competition_controller.dart';
 import 'package:hilite/controllers/notification_controller.dart';
 import 'package:hilite/controllers/post_controller.dart';
@@ -7,11 +8,13 @@ import 'package:hilite/controllers/trial_controller.dart';
 import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/controllers/wallet_controller.dart';
 import 'package:hilite/data/api/api_checker.dart';
+import 'package:hilite/data/repo/chat_repo.dart';
 import 'package:hilite/data/repo/competition_repo.dart';
 import 'package:hilite/data/repo/post_repo.dart';
 import 'package:hilite/data/repo/trial_repo.dart';
 import 'package:hilite/data/repo/user_repo.dart';
 import 'package:hilite/data/repo/wallet_repo.dart';
+import 'package:hilite/helpers/socket_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../controllers/app_controller.dart';
@@ -22,36 +25,33 @@ import '../data/repo/app_repo.dart';
 import '../data/repo/auth_repo.dart';
 import '../data/repo/notification_repo.dart';
 import '../data/repo/version_repo.dart';
+import '../models/message_model.dart';
 import '../utils/app_constants.dart';
 import 'global_loader_controller.dart';
 
 Future<void> init() async {
   final sharedPreferences = await SharedPreferences.getInstance();
-
   Get.put(sharedPreferences);
 
-  //api clients
+  // api clients
   Get.lazyPut(
-    () => ApiClient(
+        () => ApiClient(
       appBaseUrl: AppConstants.BASE_URL,
       sharedPreferences: Get.find(),
     ),
   );
-  Get.lazyPut(
-    () => ApiChecker(
-    ),
-  );
+  Get.lazyPut(() => ApiChecker());
 
   // repos
   Get.lazyPut(
-    () => AppRepo(apiClient: Get.find(), sharedPreferences: Get.find()),
+        () => AppRepo(apiClient: Get.find(), sharedPreferences: Get.find()),
   );
   Get.lazyPut(() => VersionRepo(apiClient: Get.find()));
   Get.lazyPut(
-    () => AuthRepo(apiClient: Get.find(), sharedPreferences: Get.find()),
+        () => AuthRepo(apiClient: Get.find(), sharedPreferences: Get.find()),
   );
   Get.lazyPut(
-    () => UserRepo(
+        () => UserRepo(
       apiClient: Get.find(),
       sharedPreferences: Get.find(),
       authRepo: Get.find(),
@@ -61,21 +61,45 @@ Future<void> init() async {
   Get.lazyPut(() => TrialRepo(apiClient: Get.find()));
   Get.lazyPut(() => NotificationRepo(apiClient: Get.find()));
   Get.lazyPut(() => CompetitionRepo(apiClient: Get.find()));
-  Get.lazyPut(() => WalletRepo(apiClient: Get.find()),fenix: true);
+  Get.lazyPut(() => WalletRepo(apiClient: Get.find()), fenix: true);
 
-  //controllers
+  // chat services
+  Get.lazyPut<SocketHelper>(() => SocketHelper(), fenix: true);
+  Get.lazyPut<ChatRepo>(() => ChatRepo(apiClient: Get.find()), fenix: true);
+
+  // controllers
   Get.lazyPut(() => AppController(appRepo: Get.find()));
   Get.lazyPut(() => VersionController(versionRepo: Get.find()));
   Get.lazyPut(
-    () => AuthController(authRepo: Get.find(), sharedPreferences: Get.find()),
+        () => AuthController(authRepo: Get.find(), sharedPreferences: Get.find()),
   );
   Get.lazyPut(
-    () => UserController(userRepo: Get.find(), sharedPreferences: Get.find()),
+        () => UserController(userRepo: Get.find(), sharedPreferences: Get.find()),
   );
   Get.lazyPut(() => GlobalLoaderController());
-  Get.lazyPut(() => WalletController(walletRepo: Get.find()),fenix: true);
+  Get.lazyPut(() => WalletController(walletRepo: Get.find()), fenix: true);
   Get.lazyPut(() => PostController(postRepo: Get.find()));
   Get.lazyPut(() => NotificationController(notificationRepo: Get.find()));
   Get.lazyPut(() => TrialController(trialRepo: Get.find()), fenix: true);
-  Get.lazyPut(() => CompetitionController(competitionRepo: Get.find()), fenix: true);
+  Get.lazyPut(
+        () => CompetitionController(competitionRepo: Get.find()),
+    fenix: true,
+  );
+
+  // chat controllers
+  Get.lazyPut(
+        () => ChatListController(
+      chatRepo: Get.find(),
+      socketHelper: Get.find(),
+    ),
+    fenix: true,
+  );
+
+  Get.lazyPut(
+        () => ChatController(
+      chatRepo: Get.find(),
+      socketHelper: Get.find(),
+    ),
+    fenix: true,
+  );
 }

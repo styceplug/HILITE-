@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/screens/authentication/create_account_screen.dart';
 import 'package:hilite/screens/authentication/forgot_password.dart';
 import 'package:hilite/screens/authentication/login_screen.dart';
@@ -30,7 +31,10 @@ import 'package:hilite/widgets/custom_appbar.dart';
 import 'package:hilite/widgets/reels_video_item.dart';
 
 import '../controllers/post_controller.dart';
+import '../models/message_model.dart';
 import '../models/post_model.dart';
+import '../screens/home/pages/activities_screen.dart';
+import '../screens/messaging/messaging_screen.dart';
 import '../screens/splash/splash.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/trials/create_trails_screen.dart';
@@ -52,10 +56,7 @@ class AppRoutes {
   static const String verifyProfileScreen = '/verify-profile-screen';
   static const String editProfileScreen = '/edit-profile-screen';
 
-
   static const String videoReelScreen = '/video-reel-screen';
-
-
 
   //forms
   static const String footballerForm = '/footballer-form';
@@ -79,6 +80,8 @@ class AppRoutes {
   static const String trialsScreen = '/trials-screen';
   static const String competitionDetailsScreen = '/competition-details-screen';
   static const String createCompetitionScreen = '/create-competition-screen';
+  static const String messagingScreen = '/messaging-screen';
+  static const String chatListScreen = '/chat-list-screen';
 
   //trials
   static const String createTrialScreen = '/create-trial-screen';
@@ -100,7 +103,7 @@ class AppRoutes {
           appBar: CustomAppbar(
             backgroundColor: Colors.transparent,
             leadingIcon: BackButton(
-              onPressed: (){
+              onPressed: () {
                 Get.offAllNamed(AppRoutes.homeScreen);
               },
             ),
@@ -131,7 +134,6 @@ class AppRoutes {
       transition: Transition.fadeIn,
     ),
 
-
     GetPage(
       name: createCompetitionScreen,
       page: () {
@@ -140,7 +142,50 @@ class AppRoutes {
       transition: Transition.fadeIn,
     ),
 
+    GetPage(
+      name: messagingScreen,
+      page: () {
+        final args = Get.arguments as Map<String, dynamic>?;
+        final userController = Get.find<UserController>();
+        final chat = args?['chat'] as Chat?;
 
+        if (chat == null) {
+          return const Scaffold(
+            body: Center(
+              child: Text('Chat not found'),
+            ),
+          );
+        }
+
+        return MessagingScreen(
+          myId: userController.user.value!.id,
+          chat: chat,
+        );
+      },
+      transition: Transition.fadeIn,
+    ),
+
+
+
+    GetPage(
+      name: AppRoutes.chatListScreen,
+      page: () {
+        final userController = Get.find<UserController>();
+
+        return ChatListScreen(
+          myId: userController.user.value!.id,
+          onChatTap: (chat) {
+            Get.toNamed(
+              AppRoutes.messagingScreen,
+              arguments: {
+                'chat': chat,
+              },
+            );
+          },
+        );
+      },
+      transition: Transition.fadeIn,
+    ),
 
     //general
     GetPage(

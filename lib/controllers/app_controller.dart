@@ -9,9 +9,15 @@ import 'package:hilite/screens/home/pages/live_score_screen.dart';
 import 'package:hilite/screens/home/pages/activities_screen.dart';
 import 'package:hilite/screens/home/pages/profile_screen.dart';
 import 'package:hilite/screens/home/pages/reels_screen.dart';
+import 'package:hilite/utils/app_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/repo/app_repo.dart';
+import '../data/repo/chat_repo.dart';
+import '../helpers/socket_helper.dart';
+import '../models/message_model.dart';
 import '../routes/routes.dart';
+import 'chat_controller.dart';
 
 class AppController extends GetxController {
   final AppRepo appRepo;
@@ -27,7 +33,6 @@ class AppController extends GetxController {
   UserController userController = Get.find<UserController>();
   PostController postController = Get.find<PostController>();
   late List<PostModel> post = postController.posts;
-
 
   final List<Widget> pages = [
     ReelsScreen(),
@@ -47,9 +52,21 @@ class AppController extends GetxController {
     await checkLoginAndNavigate();
     postController.loadRecommendedPosts("video");
     await userController.getUserProfile();
+
+    final sharedPreferences = Get.find<SharedPreferences>();
+    final token = sharedPreferences.getString(AppConstants.authToken) ?? '';
+
+    if (token.isNotEmpty) {
+      await Get.find<SocketHelper>().connect(
+        baseUrl: AppConstants.SOCKET_BASE_URL,
+        token: token,
+      );
+    }
+
     userController.getPersonalPosts('video');
     userController.getPersonalPosts('image');
   }
+
 
 
   Future<void> checkLoginAndNavigate() async {
@@ -101,4 +118,11 @@ class AppController extends GetxController {
 
     update();
   }
+
+
+
+
+
+
+
 }

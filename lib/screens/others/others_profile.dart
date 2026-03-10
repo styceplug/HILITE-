@@ -6,6 +6,8 @@ import 'package:hilite/screens/others/relationship_screen.dart';
 import 'package:hilite/widgets/snackbars.dart';
 import 'package:iconsax/iconsax.dart';
 
+import '../../data/repo/chat_repo.dart';
+import '../../models/message_model.dart';
 import '../../models/post_model.dart';
 import '../../models/user_model.dart';
 import '../../routes/routes.dart';
@@ -49,7 +51,6 @@ class _OthersProfileState extends State<OthersProfileScreen> {
 
   @override
   void dispose() {
-
     super.dispose();
   }
 
@@ -97,10 +98,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                           child: const BackButton(color: Colors.black),
                         ),
 
-                        OtherProfileAvatar(
-                          avatarUrl: user.profilePicture,
-
-                        ),
+                        OtherProfileAvatar(avatarUrl: user.profilePicture),
 
                         // 3. Action Buttons (Pinned Right)
                         Positioned(
@@ -234,7 +232,9 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                         children: [
                           _buildInfoTag('Position: ${player?.position ?? '-'}'),
                           _buildInfoTag('Height: ${player?.height ?? '-'}cm'),
-                          _buildInfoTag('Age Range: ${_footballAgeRangeLabel(player?.dob)}'),
+                          _buildInfoTag(
+                            'Age Range: ${_footballAgeRangeLabel(player?.dob)}',
+                          ),
                         ],
                       ),
                     ),
@@ -329,10 +329,38 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                             fontSize: Dimensions.font15,
                             fontWeight: FontWeight.w500,
                           ),
-                          onPressed: () {
-                            CustomSnackBar.showToast(
-                              message: 'Direct messaging coming soon!',
-                            );
+                          onPressed: () async {
+                            try {
+                              final chatRepo = Get.find<ChatRepo>();
+
+                              final response = await chatRepo.getOrCreateChat(user.id);
+
+                              if (response.statusCode == 200 && response.body['code'] == '00') {
+                                print('CHAT RAW DATA: ${response.body['data']}');
+
+                                final chat = Chat.fromJson(
+                                  Map<String, dynamic>.from(response.body['data']),
+                                );
+
+                                Get.toNamed(
+                                  AppRoutes.messagingScreen,
+                                  arguments: {
+                                    'chat': chat,
+                                    'peerName': user.name,
+                                    'peerUsername': user.username,
+                                    'peerProfilePicture': user.profilePicture,
+                                  },
+                                );
+                              } else {
+                                CustomSnackBar.failure(
+                                  message: response.body?['message'] ?? 'Unable to open chat',
+                                );
+                              }
+                            } catch (e, s) {
+                              print('OPEN CHAT ERROR: $e');
+                              print(s);
+                              CustomSnackBar.failure(message: 'Unable to open chat: $e');
+                            }
                           },
                           padding: EdgeInsets.symmetric(
                             horizontal: Dimensions.width20,
@@ -355,8 +383,8 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                   children: [
                     _buildTabItem(controller, 'video', 'Videos'),
                     _buildTabItem(controller, 'image', 'Photos'),
-                    if (user.role == 'club')
-                      _buildTabItem(controller, 'fixtures', 'Fixtures'),
+                    // if (user.role == 'club')
+                    //   _buildTabItem(controller, 'fixtures', 'Fixtures'),
                   ],
                 ),
                 SizedBox(height: Dimensions.height20),
@@ -616,7 +644,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
     // if birthday hasn't happened yet this year, subtract 1
     final hadBirthdayThisYear =
         (now.month > birthDate.month) ||
-            (now.month == birthDate.month && now.day >= birthDate.day);
+        (now.month == birthDate.month && now.day >= birthDate.day);
 
     if (!hadBirthdayThisYear) age--;
 
@@ -625,7 +653,6 @@ class _OthersProfileState extends State<OthersProfileScreen> {
 
     return age;
   }
-
 
   Widget _buildSectionTitle(String title) {
     return Padding(
@@ -752,22 +779,28 @@ class _OthersProfileState extends State<OthersProfileScreen> {
           onTap: () {
             if (controller.currentExternalPostType == 'video') {
               final videoOnly = posts.where((p) => p.type == 'video').toList();
-              final converted = videoOnly
-                  .map((p) => personalToPostModel(p, authorProfile: controller.othersProfile.value))
-                  .toList();
+              final converted =
+                  videoOnly
+                      .map(
+                        (p) => personalToPostModel(
+                          p,
+                          authorProfile: controller.othersProfile.value,
+                        ),
+                      )
+                      .toList();
 
               final tapped = posts[index];
               final tappedIndex = videoOnly.indexOf(tapped);
 
-              Get.to(() => ProfileReelsPlayer(
-                videos: converted,
-                initialIndex: tappedIndex == -1 ? 0 : tappedIndex,
-                authorProfile: controller.othersProfile.value,
-              ));
-            } else {
               Get.to(
-                  ()=> ProfileImageViewer(imageUrl: post.mediaUrl!)
+                () => ProfileReelsPlayer(
+                  videos: converted,
+                  initialIndex: tappedIndex == -1 ? 0 : tappedIndex,
+                  authorProfile: controller.othersProfile.value,
+                ),
               );
+            } else {
+              Get.to(() => ProfileImageViewer(imageUrl: post.mediaUrl!));
             }
           },
           child: _buildTileItem(post, controller.currentExternalPostType),
@@ -893,7 +926,8 @@ class FullScreenImageViewer extends StatelessWidget {
     final double size = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      backgroundColor: Colors.black, // TikTok uses a solid black/dark background
+      backgroundColor: Colors.black,
+      // TikTok uses a solid black/dark background
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -918,7 +952,8 @@ class FullScreenImageViewer extends StatelessWidget {
                   // Use width & height to force a square, which ClipOval turns into a circle
                   width: size,
                   height: size,
-                  fit: BoxFit.cover, // Ensures the image fills the circle
+                  fit: BoxFit.cover,
+                  // Ensures the image fills the circle
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
                     return SizedBox(
@@ -929,12 +964,17 @@ class FullScreenImageViewer extends StatelessWidget {
                       ),
                     );
                   },
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: size,
-                    height: size,
-                    color: Colors.grey[900],
-                    child: const Icon(Icons.error, color: Colors.white, size: 50),
-                  ),
+                  errorBuilder:
+                      (context, error, stackTrace) => Container(
+                        width: size,
+                        height: size,
+                        color: Colors.grey[900],
+                        child: const Icon(
+                          Icons.error,
+                          color: Colors.white,
+                          size: 50,
+                        ),
+                      ),
                 ),
               ),
             ),
