@@ -115,7 +115,7 @@ class UserModel {
       posts: json['posts'] ?? 0,
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updatedAt'] ?? '') ?? DateTime.now(),
-      isFollowed: json['isFollowed'] ?? followed,
+      isFollowed: json['isFollowing'] ?? json['isFollowed'] ?? false,
       isBlocked: json['isBlocked'] ?? false,
     );
   }

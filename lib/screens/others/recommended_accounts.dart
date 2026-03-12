@@ -892,6 +892,10 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                               icon: isFollowed ? Icons.check : Icons.add,
                               isPrimary: !isFollowed,
                               onTap: () {
+                                setState(() {
+                                  _followOverrides[user.id] = !isFollowed;
+                                });
+
                                 if (isFollowed) {
                                   userController.unfollowUser(user.id);
                                 } else {
