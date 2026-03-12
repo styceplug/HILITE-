@@ -333,13 +333,20 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                             try {
                               final chatRepo = Get.find<ChatRepo>();
 
-                              final response = await chatRepo.getOrCreateChat(user.id);
+                              final response = await chatRepo.getOrCreateChat(
+                                user.id,
+                              );
 
-                              if (response.statusCode == 200 && response.body['code'] == '00') {
-                                print('CHAT RAW DATA: ${response.body['data']}');
+                              if (response.statusCode == 200 &&
+                                  response.body['code'] == '00') {
+                                print(
+                                  'CHAT RAW DATA: ${response.body['data']}',
+                                );
 
                                 final chat = Chat.fromJson(
-                                  Map<String, dynamic>.from(response.body['data']),
+                                  Map<String, dynamic>.from(
+                                    response.body['data'],
+                                  ),
                                 );
 
                                 Get.toNamed(
@@ -353,13 +360,17 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                                 );
                               } else {
                                 CustomSnackBar.failure(
-                                  message: response.body?['message'] ?? 'Unable to open chat',
+                                  message:
+                                      response.body?['message'] ??
+                                      'Unable to open chat',
                                 );
                               }
                             } catch (e, s) {
                               print('OPEN CHAT ERROR: $e');
                               print(s);
-                              CustomSnackBar.failure(message: 'Unable to open chat: $e');
+                              CustomSnackBar.failure(
+                                message: 'Unable to open chat: $e',
+                              );
                             }
                           },
                           padding: EdgeInsets.symmetric(
@@ -376,44 +387,40 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                   ),
                 ),
 
-                SizedBox(height: Dimensions.height20),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildTabItem(controller, 'video', 'Videos'),
-                    _buildTabItem(controller, 'image', 'Photos'),
-                    // if (user.role == 'club')
-                    //   _buildTabItem(controller, 'fixtures', 'Fixtures'),
-                  ],
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: Dimensions.height20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.grid_view_rounded,
+                        size: Dimensions.iconSize20,
+                      ),
+                      SizedBox(width: Dimensions.width5),
+                      Text(
+                        'POSTS',
+                        style: TextStyle(
+                          fontSize: Dimensions.font16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                SizedBox(height: Dimensions.height20),
 
-                /// 🖼️ CONTENT GRID
                 Builder(
                   builder: (context) {
-                    // 1. Loading + Empty = Shimmer
-                    if (controller.isExternalPostsLoading &&
-                        controller
-                            .externalPostCache[controller
-                                .currentExternalPostType]!
-                            .isEmpty) {
-                      return const PostGridShimmer(); // Reuse your shimmer
+                    final posts = controller.externalPosts;
+
+                    if (controller.isExternalPostsLoading && posts.isEmpty) {
+                      return const PostGridShimmer();
                     }
 
-                    // 2. Not Loading + Empty = No Data Text
-                    if (controller
-                        .externalPostCache[controller.currentExternalPostType]!
-                        .isEmpty) {
-                      return Center(
-                        child: Text(
-                          "No ${controller.currentExternalPostType} found.",
-                        ),
-                      );
+                    if (posts.isEmpty) {
+                      return const Center(child: Text("No posts found."));
                     }
 
-                    // 3. Data Exists = Grid
-                    return _buildContentGrid(controller);
+                    return _buildCombinedContentGrid(controller);
                   },
                 ),
 
@@ -423,6 +430,105 @@ class _OthersProfileState extends State<OthersProfileScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildMixedTileItem(PersonalPostModel post) {
+    final isVideo = post.type == 'video';
+    final imageUrl =
+        isVideo
+            ? (post.thumbnail ?? post.mediaUrl ?? '')
+            : (post.mediaUrl ?? '');
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(
+            color: Colors.grey.shade200,
+            child:
+                imageUrl.isNotEmpty
+                    ? Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Icon(Icons.broken_image_outlined),
+                        );
+                      },
+                    )
+                    : const Center(
+                      child: Icon(Icons.image_not_supported_outlined),
+                    ),
+          ),
+
+          if (isVideo)
+            Container(
+              color: Colors.black.withOpacity(0.18),
+              child: const Center(
+                child: Icon(
+                  Icons.play_circle_fill_rounded,
+                  color: Colors.white,
+                  size: 34,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCombinedContentGrid(UserController controller) {
+    final posts = controller.externalPosts;
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 5,
+        mainAxisSpacing: 5,
+        childAspectRatio: 1,
+      ),
+      itemCount: posts.length,
+      itemBuilder: (context, index) {
+        final post = posts[index];
+
+        return GestureDetector(
+          onTap: () {
+            if (post.type == 'video') {
+              final videoOnly = posts.where((p) => p.type == 'video').toList();
+
+              final converted =
+                  videoOnly
+                      .map(
+                        (p) => personalToPostModel(
+                          p,
+                          authorProfile: controller.othersProfile.value,
+                        ),
+                      )
+                      .toList();
+
+              final tappedVideoIndex = videoOnly.indexWhere(
+                (p) => p.id == post.id,
+              );
+
+              Get.to(
+                () => ProfileReelsPlayer(
+                  videos: converted,
+                  initialIndex: tappedVideoIndex == -1 ? 0 : tappedVideoIndex,
+                  authorProfile: controller.othersProfile.value,
+                ),
+              );
+            } else {
+              Get.to(() => ProfileImageViewer(imageUrl: post.mediaUrl ?? ''));
+            }
+          },
+          child: _buildMixedTileItem(post),
+        );
+      },
     );
   }
 

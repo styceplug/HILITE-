@@ -101,6 +101,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     return InkWell(
       onTap: () {
+        notificationController.markSingleNotificationAsRead(notification.id);
         Get.toNamed(
           AppRoutes.othersProfileScreen,
           arguments: {'targetId': notification.url},

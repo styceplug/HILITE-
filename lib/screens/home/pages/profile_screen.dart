@@ -95,7 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               Icon(
                                 CupertinoIcons.bell,
-                                size: Dimensions.iconSize24,
+                                size: Dimensions.iconSize30,
                               ),
                               if (count > 0)
                                 Positioned(
@@ -111,7 +111,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       count > 99 ? '99+' : '$count',
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 10,
+                                        fontSize: 9,
                                       ),
                                     ),
                                   ),

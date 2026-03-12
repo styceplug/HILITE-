@@ -56,7 +56,7 @@ class UserController extends GetxController {
   bool isExternalPostsLoading = false;
   String currentExternalPostType = 'text';
   Timer? _debounce;
-
+  RxString selectedRegion = ''.obs;
   RxString selectedRole = ''.obs;
   RxString selectedPosition = ''.obs;
   RxString selectedClub = ''.obs;
@@ -65,6 +65,37 @@ class UserController extends GetxController {
   void onInit() {
     super.onInit();
     loadCachedUser();
+  }
+
+
+  List<PersonalPostModel> get externalPosts {
+    final videos = externalPostCache['video'] ?? <PersonalPostModel>[];
+    final images = externalPostCache['image'] ?? <PersonalPostModel>[];
+
+    final combined = <PersonalPostModel>[
+      ...videos,
+      ...images,
+    ];
+
+    combined.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return combined;
+  }
+
+
+
+  Future<void> getAllExternalUserPosts(String targetId) async {
+    isExternalPostsLoading = true;
+    update();
+
+    try {
+      await Future.wait([
+        getExternalUserPosts(targetId, 'video'),
+        getExternalUserPosts(targetId, 'image'),
+      ]);
+    } finally {
+      isExternalPostsLoading = false;
+      update();
+    }
   }
 
   void onSearchChanged(String query) {
@@ -425,6 +456,8 @@ class UserController extends GetxController {
     print("   - Selected position: '${selectedPosition.value}'");
     print("   - Selected club: '${selectedClub.value}'");
     print("   - Selected age range: '${selectedAgeRange.value}'");
+    print("   - Selected region: '${selectedRegion.value}'");
+    print("   - Search results: ${filteredUsers.length}");
 
     List<UserModel> list = List.from(recommendedUsers);
 
@@ -498,6 +531,18 @@ class UserController extends GetxController {
       print("   - After age filter ($range): $beforeCount → ${list.length}");
     }
 
+    // 🌍 Filter by region/state
+    if (selectedRegion.value.isNotEmpty) {
+      final beforeCount = list.length;
+      final region = selectedRegion.value.toLowerCase().trim();
+
+      list = list.where((user) {
+        return user.state.toLowerCase().trim() == region;
+      }).toList();
+
+      print("   - After region filter: $beforeCount → ${list.length}");
+    }
+
     // Update filtered list
     filteredUsers.assignAll(list);
 
@@ -563,6 +608,7 @@ class UserController extends GetxController {
     selectedRole.value = '';
     selectedPosition.value = '';
     selectedClub.value = '';
+    selectedRegion.value = '';
     applyFilters();
   }
 

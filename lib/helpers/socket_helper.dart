@@ -46,6 +46,7 @@ class SocketHelper extends GetxService {
     });
 
     _socket?.connect();
+
   }
 
   void disconnect() {
@@ -78,6 +79,8 @@ class SocketHelper extends GetxService {
       'isTyping': isTyping,
     });
   }
+
+
 
   void onNewMessage(Function(dynamic data) callback) {
     _socket?.off('new_message');

@@ -4,17 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-
+import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import '../../controllers/chat_controller.dart';
 import '../../models/message_model.dart';
+import 'package:file_picker/file_picker.dart';
 
+import '../../utils/app_constants.dart';
 
 class MessagingScreen extends StatefulWidget {
-  const MessagingScreen({
-    super.key,
-    required this.myId,
-    required this.chat,
-  });
+  const MessagingScreen({super.key, required this.myId, required this.chat});
 
   final String myId;
   final Chat chat;
@@ -29,6 +29,9 @@ class _MessagingScreenState extends State<MessagingScreen> {
   final _picker = ImagePicker();
 
   late final ChatController ctrl;
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  bool _isRecording = false;
+  String? _recordedPath;
 
   @override
   void initState() {
@@ -58,20 +61,83 @@ class _MessagingScreenState extends State<MessagingScreen> {
   }
 
   void _scrollToBottom() {
-    if (_scrollCtrl.hasClients) {
-      _scrollCtrl.animateTo(
-        _scrollCtrl.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(
+          _scrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _pickImage() async {
     final xfile = await _picker.pickImage(source: ImageSource.gallery);
     if (xfile == null) return;
+
     await ctrl.sendImage(File(xfile.path));
     _scrollToBottom();
+  }
+
+  Future<void> _pickAudio() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['mp3', 'wav', 'ogg', 'webm', 'm4a'],
+    );
+
+    if (result == null || result.files.single.path == null) return;
+
+    await ctrl.sendAudio(File(result.files.single.path!));
+    _scrollToBottom();
+  }
+
+  Future<void> _startRecording() async {
+    try {
+      if (await _audioRecorder.hasPermission()) {
+        final dir = await getTemporaryDirectory();
+        final path =
+            '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+        await _audioRecorder.start(
+          const RecordConfig(
+            encoder: AudioEncoder.aacLc,
+            bitRate: 128000,
+            sampleRate: 44100,
+          ),
+          path: path,
+        );
+
+        setState(() {
+          _isRecording = true;
+          _recordedPath = path;
+        });
+      } else {
+        Get.snackbar('Permission denied', 'Microphone permission is required');
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to start recording: $e');
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    try {
+      final path = await _audioRecorder.stop();
+
+      setState(() {
+        _isRecording = false;
+      });
+
+      if (path != null) {
+        await ctrl.sendAudio(File(path));
+        _scrollToBottom();
+      }
+    } catch (e) {
+      setState(() {
+        _isRecording = false;
+      });
+      Get.snackbar('Error', 'Failed to send voice note: $e');
+    }
   }
 
   Future<void> _sendText() async {
@@ -83,14 +149,15 @@ class _MessagingScreenState extends State<MessagingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final peer = widget.chat.peer(widget.myId);
+    final peer = ctrl.chat.peer(widget.myId);
+    final presence = peer != null ? ctrl.presenceMap[peer.id] : null;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
-            _ChatHeader(peer: peer, myId: widget.myId),
+            _ChatHeader(peer: peer, myId: widget.myId, presence: presence),
             Expanded(
               child: _MessageList(
                 ctrl: ctrl,
@@ -103,7 +170,11 @@ class _MessagingScreenState extends State<MessagingScreen> {
               ctrl: ctrl,
               onSend: _sendText,
               onPickImage: _pickImage,
+              onPickAudio: _pickAudio,
               onTyping: ctrl.notifyTyping,
+              onStartRecording: _startRecording,
+              onStopRecording: _stopRecording,
+              isRecording: _isRecording,
             ),
           ],
         ),
@@ -115,20 +186,27 @@ class _MessagingScreenState extends State<MessagingScreen> {
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 class _ChatHeader extends StatelessWidget {
-  const _ChatHeader({required this.peer, required this.myId});
+  const _ChatHeader({
+    required this.peer,
+    required this.myId,
+    required this.presence,
+  });
 
   final ChatParticipant? peer;
   final String myId;
+  final UserPresence? presence;
 
   @override
   Widget build(BuildContext context) {
-    final hasImage = (peer?.profilePicture?.isNotEmpty ?? false);
-    final hasName = (peer?.name.isNotEmpty ?? false);
+    final rawName = peer?.name?.trim() ?? '';
+    final displayName = rawName.isNotEmpty ? rawName : 'User';
 
-    final displayName = hasName ? peer!.name : 'User';
-    final avatarLetter = hasName
-        ? peer!.name.trim().substring(0, 1).toUpperCase()
-        : '?';
+    final avatarLetter =
+        rawName.isNotEmpty ? rawName.characters.first.toUpperCase() : '?';
+
+    final hasImage = (peer?.profilePicture?.trim().isNotEmpty ?? false);
+    final isOnline = presence?.isOnline ?? false;
+    final lastSeen = presence?.lastSeen ?? peer?.lastSeen;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
@@ -142,15 +220,35 @@ class _ChatHeader extends StatelessWidget {
             icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
             onPressed: () => Get.back(),
           ),
-          CircleAvatar(
-            radius: 20,
-            backgroundImage: hasImage ? NetworkImage(peer!.profilePicture!) : null,
-            child: !hasImage
-                ? Text(
-              avatarLetter,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            )
-                : null,
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundImage:
+                    hasImage ? NetworkImage(peer!.profilePicture!) : null,
+                child:
+                    !hasImage
+                        ? Text(
+                          avatarLetter,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        )
+                        : null,
+              ),
+              if (isOnline)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 11,
+                    height: 11,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF22C55E),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -165,6 +263,15 @@ class _ChatHeader extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                const SizedBox(height: 2),
+                Text(
+                  isOnline ? 'Online' : _formatLastSeen(lastSeen),
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
               ],
             ),
           ),
@@ -172,12 +279,31 @@ class _ChatHeader extends StatelessWidget {
       ),
     );
   }
+
+  String _formatLastSeen(DateTime? dt) {
+    if (dt == null) return 'Offline';
+
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+
+    if (diff.inMinutes < 1) return 'Last seen just now';
+    if (diff.inMinutes < 60) return 'Last seen ${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return 'Last seen ${diff.inHours}h ago';
+    if (diff.inDays == 1) return 'Last seen yesterday';
+
+    return 'Last seen ${DateFormat('MMM d, HH:mm').format(dt)}';
+  }
 }
 
 // ─── Message list ─────────────────────────────────────────────────────────────
 
 class _MessageList extends StatelessWidget {
-  const _MessageList({required this.ctrl, required this.myId, required this.scrollCtrl});
+  const _MessageList({
+    required this.ctrl,
+    required this.myId,
+    required this.scrollCtrl,
+  });
+
   final ChatController ctrl;
   final String myId;
   final ScrollController scrollCtrl;
@@ -191,19 +317,22 @@ class _MessageList extends StatelessWidget {
       return ListView.builder(
         controller: scrollCtrl,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        itemCount: groups.length + (ctrl.peerIsTyping.value ? 1 : 0) + (ctrl.isLoading.value ? 1 : 0),
+        itemCount:
+            groups.length +
+            (ctrl.peerIsTyping.value ? 1 : 0) +
+            (ctrl.isLoading.value ? 1 : 0),
         itemBuilder: (_, i) {
-          // Loading spinner at top
           if (ctrl.isLoading.value && i == 0) {
-            return const Center(child: Padding(
-              padding: EdgeInsets.all(12),
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ));
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
           }
 
           final adjustedI = ctrl.isLoading.value ? i - 1 : i;
 
-          // Typing indicator at end
           if (ctrl.peerIsTyping.value && adjustedI == groups.length) {
             return const Align(
               alignment: Alignment.centerLeft,
@@ -211,7 +340,9 @@ class _MessageList extends StatelessWidget {
             );
           }
 
-          if (adjustedI < 0 || adjustedI >= groups.length) return const SizedBox();
+          if (adjustedI < 0 || adjustedI >= groups.length) {
+            return const SizedBox();
+          }
 
           final group = groups[adjustedI];
           return Column(
@@ -220,6 +351,7 @@ class _MessageList extends StatelessWidget {
               ...group.messages.map((msg) {
                 final mine = msg.sender.id == myId;
                 final allRead = mine && msg.readBy.any((id) => id != myId);
+
                 return _MessageBubble(
                   msg: msg,
                   mine: mine,
@@ -237,24 +369,32 @@ class _MessageList extends StatelessWidget {
   void _showDeleteSheet(BuildContext context, String msgId) {
     showModalBottomSheet(
       context: context,
-      builder: (_) => SafeArea(
-        child: ListTile(
-          leading: const Icon(Icons.delete_outline, color: Colors.red),
-          title: const Text('Delete for me', style: TextStyle(color: Colors.red)),
-          onTap: () {
-            Navigator.pop(context);
-            ctrl.deleteMessage(msgId);
-          },
-        ),
-      ),
+      builder:
+          (_) => SafeArea(
+            child: ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text(
+                'Delete for me',
+                style: TextStyle(color: Colors.red),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                ctrl.deleteMessage(msgId);
+              },
+            ),
+          ),
     );
   }
 
-  List<({String label, List<ChatMessage> messages})> _groupByDate(List<ChatMessage> msgs) {
+  List<({String label, List<ChatMessage> messages})> _groupByDate(
+    List<ChatMessage> msgs,
+  ) {
     final map = <String, List<ChatMessage>>{};
+
     for (final m in msgs) {
       final now = DateTime.now();
       final d = m.createdAt;
+
       final String label;
       if (_isSameDay(d, now)) {
         label = 'Today';
@@ -263,8 +403,10 @@ class _MessageList extends StatelessWidget {
       } else {
         label = DateFormat('MMM d, yyyy').format(d);
       }
+
       map.putIfAbsent(label, () => []).add(m);
     }
+
     return map.entries.map((e) => (label: e.key, messages: e.value)).toList();
   }
 
@@ -274,6 +416,7 @@ class _MessageList extends StatelessWidget {
 
 class _DateLabel extends StatelessWidget {
   const _DateLabel({required this.label});
+
   final String label;
 
   @override
@@ -287,8 +430,14 @@ class _DateLabel extends StatelessWidget {
             color: const Color(0xFFF3F4F6),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Text(label,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w500)),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF9CA3AF),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ),
       ),
     );
@@ -316,21 +465,25 @@ class _MessageBubble extends StatelessWidget {
         onLongPress: onLongPress,
         child: Container(
           margin: const EdgeInsets.only(bottom: 4),
-          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.72,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: mine ? const Color(0xFF2563EB) : const Color(0xFFF3F4F6),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(16),
               topRight: const Radius.circular(16),
-              bottomLeft: mine ? const Radius.circular(16) : const Radius.circular(4),
-              bottomRight: mine ? const Radius.circular(4) : const Radius.circular(16),
+              bottomLeft:
+              mine ? const Radius.circular(16) : const Radius.circular(4),
+              bottomRight:
+              mine ? const Radius.circular(4) : const Radius.circular(16),
             ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _buildContent(),
+              _buildContent(context),
               const SizedBox(height: 2),
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -359,30 +512,65 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildContent() {
-    return switch (msg.type) {
-      'image' => ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Image.network(msg.image?.url ?? '', width: 200, fit: BoxFit.cover),
-      ),
-      'audio' => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.play_circle_fill, color: mine ? Colors.white : const Color(0xFF2563EB), size: 32),
-          const SizedBox(width: 6),
-          Text('Voice message',
-              style: TextStyle(color: mine ? Colors.white : const Color(0xFF0F0F0F), fontSize: 14)),
-        ],
-      ),
-      _ => Text(
-        msg.text ?? '',
-        style: TextStyle(
-          fontSize: 14,
-          color: mine ? Colors.white : const Color(0xFF0F0F0F),
-          height: 1.5,
-        ),
-      ),
-    };
+  Widget _buildContent(BuildContext context) {
+    final imageUrl = MediaUrlHelper.resolve(msg.image?.url);
+    final audioUrl = MediaUrlHelper.resolve(msg.audio?.url);
+
+    switch (msg.type) {
+      case 'image':
+        if (imageUrl == null) {
+          return const SizedBox(
+            width: 200,
+            height: 120,
+            child: Center(child: Icon(Icons.broken_image)),
+          );
+        }
+
+        return GestureDetector(
+          onTap: () {
+            Get.to(() => _FullScreenImageViewer(imageUrl: imageUrl));
+          },
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.network(
+              imageUrl,
+              width: 200,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const SizedBox(
+                width: 200,
+                height: 120,
+                child: Center(child: Icon(Icons.broken_image)),
+              ),
+            ),
+          ),
+        );
+
+      case 'audio':
+        if (audioUrl == null) {
+          return Text(
+            'Audio unavailable',
+            style: TextStyle(
+              color: mine ? Colors.white : const Color(0xFF0F0F0F),
+              fontSize: 14,
+            ),
+          );
+        }
+
+        return _AudioMessagePlayer(
+          url: audioUrl,
+          mine: mine,
+        );
+
+      default:
+        return Text(
+          msg.text ?? '',
+          style: TextStyle(
+            fontSize: 14,
+            color: mine ? Colors.white : const Color(0xFF0F0F0F),
+            height: 1.5,
+          ),
+        );
+    }
   }
 }
 
@@ -414,6 +602,7 @@ class _TypingBubble extends StatelessWidget {
 
 class _Dot extends StatefulWidget {
   const _Dot({required this.delay});
+
   final int delay;
 
   @override
@@ -427,11 +616,17 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _ac = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))
-      ..repeat(reverse: true);
-    _anim = Tween<double>(begin: 0, end: -5).animate(
-      CurvedAnimation(parent: _ac, curve: Curves.easeInOut),
-    );
+
+    _ac = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..repeat(reverse: true);
+
+    _anim = Tween<double>(
+      begin: 0,
+      end: -5,
+    ).animate(CurvedAnimation(parent: _ac, curve: Curves.easeInOut));
+
     Future.delayed(Duration(milliseconds: widget.delay), () {
       if (mounted) _ac.forward();
     });
@@ -447,14 +642,18 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, __) => Transform.translate(
-        offset: Offset(0, _anim.value),
-        child: Container(
-          width: 7,
-          height: 7,
-          decoration: const BoxDecoration(color: Color(0xFF9CA3AF), shape: BoxShape.circle),
-        ),
-      ),
+      builder:
+          (_, __) => Transform.translate(
+            offset: Offset(0, _anim.value),
+            child: Container(
+              width: 7,
+              height: 7,
+              decoration: const BoxDecoration(
+                color: Color(0xFF9CA3AF),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
     );
   }
 }
@@ -467,14 +666,22 @@ class _InputBar extends StatelessWidget {
     required this.ctrl,
     required this.onSend,
     required this.onPickImage,
+    required this.onPickAudio,
     required this.onTyping,
+    required this.onStartRecording,
+    required this.onStopRecording,
+    required this.isRecording,
   });
 
   final TextEditingController textCtrl;
   final ChatController ctrl;
   final VoidCallback onSend;
   final VoidCallback onPickImage;
+  final VoidCallback onPickAudio;
   final VoidCallback onTyping;
+  final VoidCallback onStartRecording;
+  final VoidCallback onStopRecording;
+  final bool isRecording;
 
   @override
   Widget build(BuildContext context) {
@@ -488,8 +695,38 @@ class _InputBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           IconButton(
-            icon: const Icon(Icons.attach_file_rounded, color: Color(0xFF6B7280)),
-            onPressed: onPickImage,
+            icon: const Icon(
+              Icons.attach_file_rounded,
+              color: Color(0xFF6B7280),
+            ),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                builder:
+                    (_) => SafeArea(
+                      child: Wrap(
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.image_outlined),
+                            title: const Text('Send image'),
+                            onTap: () {
+                              Navigator.pop(context);
+                              onPickImage();
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.mic_outlined),
+                            title: const Text('Send audio'),
+                            onTap: () {
+                              Navigator.pop(context);
+                              onPickAudio();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+              );
+            },
           ),
           Expanded(
             child: TextField(
@@ -499,10 +736,16 @@ class _InputBar extends StatelessWidget {
               minLines: 1,
               decoration: InputDecoration(
                 hintText: 'Message…',
-                hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+                hintStyle: const TextStyle(
+                  color: Color(0xFF9CA3AF),
+                  fontSize: 14,
+                ),
                 filled: true,
                 fillColor: const Color(0xFFF9FAFB),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
                   borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -519,29 +762,196 @@ class _InputBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          Obx(() => AnimatedOpacity(
-            opacity: ctrl.isSending.value ? 0.5 : 1.0,
-            duration: const Duration(milliseconds: 150),
-            child: GestureDetector(
-              onTap: ctrl.isSending.value ? null : onSend,
-              child: Container(
-                width: 42,
-                height: 42,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF2563EB),
-                  shape: BoxShape.circle,
-                ),
-                child: ctrl.isSending.value
-                    ? const Padding(
-                  padding: EdgeInsets.all(10),
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                )
-                    : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+
+          GestureDetector(
+            onLongPressStart: (_) => onStartRecording(),
+            onLongPressEnd: (_) => onStopRecording(),
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: isRecording ? Colors.red : const Color(0xFFF3F4F6),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.mic,
+                color: isRecording ? Colors.white : const Color(0xFF6B7280),
               ),
             ),
-          )),
+          ),
+          const SizedBox(width: 6),
+          Obx(
+            () => AnimatedOpacity(
+              opacity: ctrl.isSending.value ? 0.5 : 1.0,
+              duration: const Duration(milliseconds: 150),
+              child: GestureDetector(
+                onTap: ctrl.isSending.value ? null : onSend,
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF2563EB),
+                    shape: BoxShape.circle,
+                  ),
+                  child:
+                      ctrl.isSending.value
+                          ? const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                          : const Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class MediaUrlHelper {
+  static String? resolve(String? url) {
+    if (url == null || url.trim().isEmpty) return null;
+
+    final trimmed = url.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+
+    return '${AppConstants.SOCKET_BASE_URL}$trimmed';
+  }
+}
+
+
+class _FullScreenImageViewer extends StatelessWidget {
+  const _FullScreenImageViewer({required this.imageUrl});
+
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) =>
+            const Icon(Icons.broken_image, color: Colors.white, size: 40),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+class _AudioMessagePlayer extends StatefulWidget {
+  const _AudioMessagePlayer({
+    required this.url,
+    required this.mine,
+  });
+
+  final String url;
+  final bool mine;
+
+  @override
+  State<_AudioMessagePlayer> createState() => _AudioMessagePlayerState();
+}
+
+class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
+  late final AudioPlayer _player;
+  bool _loading = false;
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _player = AudioPlayer();
+
+    _player.playerStateStream.listen((state) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _togglePlay() async {
+    try {
+      if (_player.playing) {
+        await _player.pause();
+        return;
+      }
+
+      if (!_ready) {
+        setState(() => _loading = true);
+        await _player.setUrl(widget.url);
+        _ready = true;
+        setState(() => _loading = false);
+      }
+
+      await _player.play();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+      Get.snackbar('Error', 'Could not play audio message');
+    }
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final iconColor = widget.mine ? Colors.white : const Color(0xFF2563EB);
+    final textColor = widget.mine ? Colors.white : const Color(0xFF0F0F0F);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: _togglePlay,
+          child: _loading
+              ? SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: iconColor,
+            ),
+          )
+              : Icon(
+            _player.playing
+                ? Icons.pause_circle_filled
+                : Icons.play_circle_fill,
+            color: iconColor,
+            size: 32,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          _player.playing ? 'Playing...' : 'Voice message',
+          style: TextStyle(
+            color: textColor,
+            fontSize: 14,
+          ),
+        ),
+      ],
     );
   }
 }

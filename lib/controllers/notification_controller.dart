@@ -51,7 +51,7 @@ class NotificationController extends GetxController {
     update();
   }
 
-  /// Mark all as Read
+
   Future<void> markAllAsRead() async {
     Response response = await notificationRepo.markAllAsRead();
     if (response.statusCode == 200) {
@@ -61,6 +61,29 @@ class NotificationController extends GetxController {
       }).toList();
       update();
       Get.snackbar("Success", "All notifications marked as read");
+    }
+  }
+
+
+
+  Future<void> markSingleNotificationAsRead(String notificationId) async {
+    final index = _notificationList.indexWhere((item) => item.id == notificationId);
+
+    if (index == -1) return;
+    if (_notificationList[index].isRead == true) return;
+
+    Response response =
+    await notificationRepo.markSingleNotificationAsRead(notificationId);
+
+    if (response.statusCode == 200) {
+      _notificationList[index] = _notificationList[index].copyWith(isRead: true);
+
+      if (unreadCount.value > 0) {
+        unreadCount.value--;
+      }
+
+      update();
+      print("Notification: $notificationId, marked as read");
     }
   }
 

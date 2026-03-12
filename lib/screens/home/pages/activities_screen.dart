@@ -196,8 +196,11 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
 
 
 class ChatListScreen extends StatelessWidget {
-  const ChatListScreen(
-      {super.key, required this.myId, required this.onChatTap});
+  const ChatListScreen({
+    super.key,
+    required this.myId,
+    required this.onChatTap,
+  });
 
   final String myId;
   final void Function(Chat chat) onChatTap;
@@ -205,6 +208,7 @@ class ChatListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ctrl = Get.find<ChatListController>();
+    ctrl.currentUserId = myId;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -215,7 +219,12 @@ class ChatListScreen extends StatelessWidget {
             _Header(ctrl: ctrl),
             _SearchBar(ctrl: ctrl),
             Expanded(
-                child: _ChatList(ctrl: ctrl, myId: myId, onTap: onChatTap)),
+              child: _ChatList(
+                ctrl: ctrl,
+                myId: myId,
+                onTap: onChatTap,
+              ),
+            ),
           ],
         ),
       ),
@@ -260,29 +269,28 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _SearchBar extends StatefulWidget {
+class _SearchBar extends StatelessWidget {
   const _SearchBar({required this.ctrl});
 
   final ChatListController ctrl;
-
-  @override
-  State<_SearchBar> createState() => _SearchBarState();
-}
-
-class _SearchBarState extends State<_SearchBar> {
-  final _query = ''.obs;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: TextField(
-        onChanged: (v) => _query.value = v,
+        onChanged: ctrl.updateSearchQuery,
         decoration: InputDecoration(
           hintText: 'Search conversations…',
-          hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+          hintStyle: const TextStyle(
+            color: Color(0xFF9CA3AF),
+            fontSize: 14,
+          ),
           prefixIcon: const Icon(
-              Icons.search, color: Color(0xFF9CA3AF), size: 20),
+            Icons.search,
+            color: Color(0xFF9CA3AF),
+            size: 20,
+          ),
           filled: true,
           fillColor: const Color(0xFFF9FAFB),
           contentPadding: const EdgeInsets.symmetric(vertical: 10),
@@ -305,8 +313,11 @@ class _SearchBarState extends State<_SearchBar> {
 }
 
 class _ChatList extends StatelessWidget {
-  const _ChatList(
-      {required this.ctrl, required this.myId, required this.onTap});
+  const _ChatList({
+    required this.ctrl,
+    required this.myId,
+    required this.onTap,
+  });
 
   final ChatListController ctrl;
   final String myId;
@@ -321,26 +332,37 @@ class _ChatList extends StatelessWidget {
           itemBuilder: (_, __) => const _SkeletonTile(),
         );
       }
-      if (ctrl.chats.isEmpty) {
-        return const Center(
+
+      final filteredChats = ctrl.filteredChats;
+
+      if (filteredChats.isEmpty) {
+        return Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('💬', style: TextStyle(fontSize: 40)),
-              SizedBox(height: 12),
-              Text('No conversations yet',
-                  style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 15)),
+              const Text('💬', style: TextStyle(fontSize: 40)),
+              const SizedBox(height: 12),
+              Text(
+                ctrl.searchQuery.value.trim().isEmpty
+                    ? 'No conversations yet'
+                    : 'No matching conversations',
+                style: const TextStyle(
+                  color: Color(0xFF9CA3AF),
+                  fontSize: 15,
+                ),
+              ),
             ],
           ),
         );
       }
+
       return RefreshIndicator(
         onRefresh: ctrl.loadChats,
         child: ListView.separated(
-          itemCount: ctrl.chats.length,
+          itemCount: filteredChats.length,
           separatorBuilder: (_, __) => const Divider(height: 1, indent: 80),
           itemBuilder: (_, i) {
-            final chat = ctrl.chats[i];
+            final chat = filteredChats[i];
             final peer = chat.peer(myId);
             final presence = peer != null ? ctrl.presenceMap[peer.id] : null;
             final isOnline = presence?.isOnline ?? false;

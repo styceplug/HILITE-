@@ -2,6 +2,9 @@ import 'dart:io';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import '../api/api_client.dart';
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
+
 
 class ChatRepo {
   final ApiClient apiClient;
@@ -56,7 +59,17 @@ class ChatRepo {
     });
 
     request.fields['type'] = 'image';
-    request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+
+    final mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
+    final mimeParts = mimeType.split('/');
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'image',
+        imageFile.path,
+        contentType: MediaType(mimeParts[0], mimeParts[1]),
+      ),
+    );
 
     return await apiClient.postMultipartData(
       '/v1/chat/$chatId/messages',
@@ -78,7 +91,17 @@ class ChatRepo {
     });
 
     request.fields['type'] = 'audio';
-    request.files.add(await http.MultipartFile.fromPath('audio', audioFile.path));
+
+    final mimeType = lookupMimeType(audioFile.path) ?? 'audio/mpeg';
+    final mimeParts = mimeType.split('/');
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'audio',
+        audioFile.path,
+        contentType: MediaType(mimeParts[0], mimeParts[1]),
+      ),
+    );
 
     return await apiClient.postMultipartData(
       '/v1/chat/$chatId/messages',

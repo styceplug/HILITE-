@@ -25,6 +25,47 @@ class RecommendedAccountsScreen extends StatefulWidget {
 class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
   final UserController userController = Get.find<UserController>();
   final TextEditingController searchController = TextEditingController();
+  final Map<String, bool> _followOverrides = {};
+
+  static const List<String> _nigerianStates = [
+    'Abia',
+    'Adamawa',
+    'Akwa Ibom',
+    'Anambra',
+    'Bauchi',
+    'Bayelsa',
+    'Benue',
+    'Borno',
+    'Cross River',
+    'Delta',
+    'Ebonyi',
+    'Edo',
+    'Ekiti',
+    'Enugu',
+    'FCT',
+    'Gombe',
+    'Imo',
+    'Jigawa',
+    'Kaduna',
+    'Kano',
+    'Katsina',
+    'Kebbi',
+    'Kogi',
+    'Kwara',
+    'Lagos',
+    'Nasarawa',
+    'Niger',
+    'Ogun',
+    'Ondo',
+    'Osun',
+    'Oyo',
+    'Plateau',
+    'Rivers',
+    'Sokoto',
+    'Taraba',
+    'Yobe',
+    'Zamfara',
+  ];
 
   @override
   void initState() {
@@ -51,10 +92,7 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var posts =
-        userController.externalPostCache[userController
-            .currentExternalPostType] ??
-        [];
+
 
     return DefaultTabController(
       length: 3, // Accounts, Images, Videos
@@ -137,6 +175,14 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
     );
   }
 
+
+
+  bool _isUserFollowed(UserModel user) {
+    final override = _followOverrides[user.id];
+    if (override != null) return override;
+    return user.isFollowed;
+  }
+
   Widget _buildImageGrid(List<dynamic> images) {
     if (images.isEmpty)
       return _buildEmptyState(
@@ -184,10 +230,6 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
         message: "Try searching for highlights",
       );
 
-    var posts =
-        userController.externalPostCache[userController
-            .currentExternalPostType] ??
-        [];
 
     return GridView.builder(
       padding: EdgeInsets.all(Dimensions.width10),
@@ -441,6 +483,16 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
               ),
 
             ],
+            SizedBox(width: Dimensions.width10),
+
+            _buildFilterChip(
+              label: userController.selectedRegion.value.isEmpty
+                  ? 'Region'
+                  : userController.selectedRegion.value,
+              icon: Icons.location_city,
+              isSelected: userController.selectedRegion.value.isNotEmpty,
+              onTap: () => _showRegionBottomSheet(context),
+            ),
 
             SizedBox(width: Dimensions.width10),
 
@@ -482,6 +534,113 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
       );
     });
   }
+
+  void _showRegionBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Select Region',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Obx(() {
+                      final hasRegion = userController.selectedRegion.value.isNotEmpty;                      return hasRegion
+                          ? TextButton.icon(
+                        onPressed: () {
+                          userController.selectedRegion.value = '';
+                          userController.applyFilters();
+                          Navigator.pop(context);
+                        },
+                        icon: const Icon(Icons.clear, size: 18),
+                        label: const Text('Clear'),
+                      )
+                          : const SizedBox.shrink();
+                    }),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: _nigerianStates.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final region = _nigerianStates[index];
+                      return Obx(() {
+                        final selected = userController.selectedRegion.value == region;
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            backgroundColor: selected
+                                ? AppColors.primary.withOpacity(.15)
+                                : Colors.grey[100],
+                            child: Icon(
+                              Icons.location_city,
+                              color: selected
+                                  ? AppColors.primary
+                                  : Colors.grey[700],
+                            ),
+                          ),
+                          title: Text(
+                            region,
+                            style: TextStyle(
+                              fontWeight: selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                            ),
+                          ),
+                          trailing: selected
+                              ? Icon(
+                            Icons.check_circle,
+                            color: AppColors.primary,
+                          )
+                              : const Icon(Icons.chevron_right),
+                          onTap: () {
+                            userController.selectedRegion.value = region;
+                            userController.applyFilters();
+                            Navigator.pop(context);
+                          },
+                        );
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _showAgeBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -620,7 +779,8 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
 
   // Enhanced Account Card
   Widget _buildAccountCard(UserModel user) {
-    final isFollowed = user.isFollowed ?? false;
+    final isFollowed = _isUserFollowed(user);
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
@@ -631,11 +791,11 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
         elevation: 2,
         shadowColor: Colors.black.withOpacity(0.08),
         child: InkWell(
-          onTap:
-              () => Get.toNamed(
-                AppRoutes.othersProfileScreen,
-                arguments: {'targetId': user.id},
-              ),
+          onTap: () => Get.toNamed(
+            AppRoutes.othersProfileScreen,
+            arguments: {'targetId': user.id},
+          ),
+
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: EdgeInsets.all(Dimensions.width15),

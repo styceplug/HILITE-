@@ -1,3 +1,7 @@
+import 'package:get/get.dart';
+
+import '../controllers/user_controller.dart';
+
 class UserModel {
   final String id;
   final String name;
@@ -52,6 +56,24 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    final followersJson = json['followers'];
+    final followingJson = json['following'];
+    final blockedJson = json['blocked'];
+    final bookmarksJson = json['bookmarks'];
+
+    final currentUserId = Get.find<UserController>().user.value?.id;
+
+    bool followed = false;
+
+    if (followersJson is List) {
+      followed = followersJson.any((item) {
+        if (item is Map<String, dynamic>) {
+          return item['_id'] == currentUserId || item['id'] == currentUserId;
+        }
+        return false;
+      });
+    }
+
     return UserModel(
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
@@ -78,22 +100,22 @@ class UserModel {
       score: (json['score'] is int)
           ? (json['score'] as int).toDouble()
           : (json['score'] ?? 0.0),
-      followers: json['followers'] is List
-          ? (json['followers'] as List).length
-          : (json['followers'] ?? 0),
-      following: json['following'] is List
-          ? (json['following'] as List).length
-          : (json['following'] ?? 0),
-      blocked: json['blocked'] is List
-          ? (json['blocked'] as List).length
-          : (json['blocked'] ?? 0),
-      bookmarks: json['bookmarks'] is List
-          ? (json['bookmarks'] as List).length
-          : (json['bookmarks'] ?? 0),
+      followers: followersJson is List
+          ? followersJson.length
+          : (followersJson ?? 0),
+      following: followingJson is List
+          ? followingJson.length
+          : (followingJson ?? 0),
+      blocked: blockedJson is List
+          ? blockedJson.length
+          : (blockedJson ?? 0),
+      bookmarks: bookmarksJson is List
+          ? bookmarksJson.length
+          : (bookmarksJson ?? 0),
       posts: json['posts'] ?? 0,
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updatedAt'] ?? '') ?? DateTime.now(),
-      isFollowed: json['isFollowed'] ?? false,
+      isFollowed: json['isFollowed'] ?? followed,
       isBlocked: json['isBlocked'] ?? false,
     );
   }

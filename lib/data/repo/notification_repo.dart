@@ -16,4 +16,8 @@ class NotificationRepo extends GetxService {
   Future<Response> markAllAsRead() async {
     return await apiClient.putData(AppConstants.MARK_NOTIFICATIONS_AS_READ, {});
   }
+
+  Future<Response> markSingleNotificationAsRead(String notificationId) async {
+    return await apiClient.putData(AppConstants.MARK_SINGLE_NOTIFICATION_AS_READ(notificationId), {});
+  }
 }

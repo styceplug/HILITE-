@@ -20,18 +20,40 @@ class ChatListController extends GetxController {
   final ChatRepo chatRepo;
   final SocketHelper socketHelper;
 
-  String? myId;
+  String? currentUserId;
 
   final chats = <Chat>[].obs;
   final isLoading = false.obs;
   final errorMessage = RxnString();
   final presenceMap = <String, UserPresence>{}.obs;
+  final RxString searchQuery = ''.obs;
 
   @override
   void onInit() {
     super.onInit();
     loadChats();
     _subscribeSocket();
+  }
+
+  void updateSearchQuery(String value) {
+    searchQuery.value = value;
+  }
+
+  List<Chat> get filteredChats {
+    final query = searchQuery.value.trim().toLowerCase();
+
+    if (query.isEmpty) return chats;
+
+    return chats.where((chat) {
+      final peer = chat.peer(currentUserId ?? '');
+      final name = (peer?.name ?? '').toLowerCase();
+      final username = (peer?.username ?? '').toLowerCase();
+      final lastMessageText = (chat.lastMessage?.text ?? '').toLowerCase();
+
+      return name.contains(query) ||
+          username.contains(query) ||
+          lastMessageText.contains(query);
+    }).toList();
   }
 
   Future<void> loadChats() async {
@@ -45,7 +67,8 @@ class ChatListController extends GetxController {
         final List list = response.body['data']?['data'] ?? [];
         chats.assignAll(list.map((e) => Chat.fromJson(e)).toList());
       } else {
-        errorMessage.value = response.body?['message'] ?? 'Failed to load chats';
+        errorMessage.value =
+            response.body?['message'] ?? 'Failed to load chats';
       }
     } catch (e) {
       errorMessage.value = e.toString();
@@ -92,7 +115,6 @@ class ChatListController extends GetxController {
 }
 
 
-
 class ChatController extends GetxController {
   final ChatRepo chatRepo;
   final SocketHelper socketHelper;
@@ -108,6 +130,7 @@ class ChatController extends GetxController {
   RxBool isLoading = false.obs;
   RxBool isSending = false.obs;
   RxBool peerIsTyping = false.obs;
+  final presenceMap = <String, UserPresence>{}.obs;
 
   Chat? selectedChat;
   String? currentChatId;
@@ -119,6 +142,14 @@ class ChatController extends GetxController {
   bool _isTyping = false;
 
   bool get hasMore => _page < _totalPages;
+
+
+  Chat get chat {
+    if (selectedChat == null) {
+      throw Exception('Chat has not been initialized');
+    }
+    return selectedChat!;
+  }
 
   Future<void> initChat({
     required Chat chat,
@@ -296,6 +327,8 @@ class ChatController extends GetxController {
     );
   }
 
+
+
   void _bindSocketEvents() {
     socketHelper.onNewMessage((data) {
       if (data['chatId'] != currentChatId) return;
@@ -327,6 +360,11 @@ class ChatController extends GetxController {
       if (data['chatId'] != currentChatId) return;
       if (data['userId'] == currentUserId) return;
       peerIsTyping.value = data['isTyping'] == true;
+    });
+
+    socketHelper.onUserStatus((data) {
+      final presence = UserPresence.fromJson(data as Map<String, dynamic>);
+      presenceMap[presence.userId] = presence;
     });
   }
 
