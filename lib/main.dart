@@ -20,12 +20,12 @@ import 'helpers/global_loader_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: AppColors.primary,
       statusBarIconBrightness: Brightness.dark,
       statusBarBrightness: Brightness.light,
-
       systemNavigationBarColor: Colors.transparent,
       systemNavigationBarIconBrightness: Brightness.light,
       systemNavigationBarDividerColor: Colors.transparent,
@@ -36,19 +36,12 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: AppColors.primary,
-      statusBarIconBrightness: Brightness.dark,
-      statusBarBrightness: Brightness.light,
 
-      systemNavigationBarColor: AppColors.primary,
-      systemNavigationBarIconBrightness: Brightness.light,
-      systemNavigationBarDividerColor: Colors.transparent,
-    ),
-  );
+  await NotificationService().initialize();
+  await dep.init();
+
   final appLinks = AppLinks();
-  final uri = await appLinks.getInitialLink();
+
   try {
     final Uri? initialUri = await appLinks.getInitialLink();
     if (initialUri != null) {
@@ -58,17 +51,17 @@ Future<void> main() async {
     print("Initial link error: $e");
   }
 
-  appLinks.uriLinkStream.listen((Uri? uri) {
-    if (uri != null) {
-      _handleDeepLink(uri);
-    }
-  }, onError: (err) {
-    print("Link stream error: $err");
-  });
+  appLinks.uriLinkStream.listen(
+        (Uri? uri) {
+      if (uri != null) {
+        _handleDeepLink(uri);
+      }
+    },
+    onError: (err) {
+      print("Link stream error: $err");
+    },
+  );
 
-  await NotificationService().initialize();
-  await dep.init();
-  Get.put(GlobalLoaderController(), permanent: true);
   HardwareKeyboard.instance.clearState();
   runApp(const MyApp());
 }

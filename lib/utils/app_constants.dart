@@ -100,6 +100,9 @@ class AppConstants {
 
   static const String GET_MY_POSTS = '/v1/user/personal/posts';
 
+  static const String GET_MY_TRIALS = '/v1/trial/me';
+  static const String GET_MY_COMPETITIONS = '/v1/competition/me';
+
   static const String GET_NOTIFICATIONS = '/v1/notification';
   static const String MARK_NOTIFICATIONS_AS_READ = '/v1/notification';
 static String MARK_SINGLE_NOTIFICATION_AS_READ(String notificationId) => '/v1/notification/$notificationId/read';

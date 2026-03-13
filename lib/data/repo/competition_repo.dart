@@ -43,6 +43,10 @@ class CompetitionRepo {
     );
   }
 
+  Future<Response> getMyCompetition() async {
+    return await apiClient.getData(AppConstants.GET_MY_COMPETITIONS);
+  }
+
   Future<Response> getCompetition() async {
     return await apiClient.getData(AppConstants.GET_COMPETITION);
   }

@@ -23,7 +23,7 @@ class CompetitionCard extends StatelessWidget {
     String formattedDate = "Date TBA";
     if (competition.date != null) {
       try {
-        DateTime dt = DateTime.parse(competition.date!);
+        DateTime dt = DateTime.parse(competition.date.toString());
         formattedDate = DateFormat('MMM d, yyyy').format(dt);
       } catch (e) {
         // Fallback if parsing fails

@@ -12,6 +12,10 @@ class TrialRepo extends GetxService {
   TrialRepo({required this.apiClient});
 
 
+  Future<Response> getMyTrials() async {
+    return await apiClient.getData(AppConstants.GET_MY_TRIALS);
+  }
+
   Future<Response> getAllTrials() async {
     return await apiClient.getData(AppConstants.GET_TRIALS);
   }

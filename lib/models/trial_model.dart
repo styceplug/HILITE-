@@ -9,8 +9,8 @@ class TrialModel {
   final double registrationFee;
   final String? description;
   final TrialCreator? creator;
-  final List<dynamic> registeredIds; // Used in /v1/trial and trial creation
-  final List<RegisteredPlayer>? registeredPlayers; // Used in /v1/trial/{trialId}
+  final List<dynamic> registeredIds;
+  final List<RegisteredPlayer>? registeredPlayers;
 
   TrialModel({
     required this.id,
@@ -38,18 +38,24 @@ class TrialModel {
       type: json['type'] ?? 'open',
       registrationFee: (json['registrationFee'] as num?)?.toDouble() ?? 0.0,
       description: json['description'],
-      // Creator can be ID string (on creation) or object (on retrieval)
-      creator: json['creator'] is Map ? TrialCreator.fromJson(json['creator']) : null,
-
-      // Handles registered list from /v1/trial (list of IDs)
-      registeredIds: json['registered'] is List ? List<dynamic>.from(json['registered']) : [],
-
-      // Handles registered list from /v1/trial/{trialId} (list of objects)
-      registeredPlayers: json['registered'] is List && json['registered'].isNotEmpty && json['registered'][0] is Map
-          ? List<RegisteredPlayer>.from(json['registered'].map((x) => RegisteredPlayer.fromJson(x)))
+      creator: json['creator'] is Map<String, dynamic>
+          ? TrialCreator.fromJson(json['creator'])
+          : null,
+      registeredIds: json['registered'] is List
+          ? List<dynamic>.from(json['registered'])
+          : [],
+      registeredPlayers: json['registered'] is List &&
+          json['registered'].isNotEmpty &&
+          json['registered'][0] is Map
+          ? List<RegisteredPlayer>.from(
+        json['registered'].map((x) => RegisteredPlayer.fromJson(x)),
+      )
           : null,
     );
   }
+
+  int get registeredCount =>
+      registeredPlayers?.length ?? registeredIds.length;
 }
 
 class TrialCreator {
@@ -57,8 +63,25 @@ class TrialCreator {
   final String name;
   final String username;
   final String role;
+  final String? clubName;
+  final String? manager;
+  final String? clubType;
+  final String? profilePicture;
+  final String? state;
+  final String? country;
 
-  TrialCreator({required this.id, required this.name, required this.username, required this.role});
+  TrialCreator({
+    required this.id,
+    required this.name,
+    required this.username,
+    required this.role,
+    this.clubName,
+    this.manager,
+    this.clubType,
+    this.profilePicture,
+    this.state,
+    this.country,
+  });
 
   factory TrialCreator.fromJson(Map<String, dynamic> json) {
     return TrialCreator(
@@ -66,6 +89,12 @@ class TrialCreator {
       name: json['name'] ?? '',
       username: json['username'] ?? '',
       role: json['role'] ?? '',
+      clubName: json['clubDetails']?['clubName'],
+      manager: json['clubDetails']?['manager'],
+      clubType: json['clubDetails']?['clubType'],
+      profilePicture: json['profilePicture'],
+      state: json['state'],
+      country: json['country'],
     );
   }
 }

@@ -88,6 +88,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Get.toNamed(AppRoutes.bookmarksScreen);
                 },
               ),
+              if(userController.user.value?.role == 'club')...[
+                settingTile(
+                  icon: Icons.text_fields,
+                  title: "My Trials",
+                  onTap: () {
+                    Get.toNamed(AppRoutes.myTrialsScreen);
+                  },
+                ),
+                settingTile(
+                  icon: Iconsax.cup,
+                  title: "My Competitions",
+                  onTap: () {
+                    Get.toNamed(AppRoutes.myCompetitionsScreen);
+                  },
+                ),
+              ],
+
 
               SizedBox(height: Dimensions.height30),
 

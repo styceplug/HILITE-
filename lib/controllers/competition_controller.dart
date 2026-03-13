@@ -36,7 +36,7 @@ class CompetitionController extends GetxController {
   DateTime? selectedDate;
   XFile? bannerImage;
 
-  // ✅ FIX: Add this boolean so the UI button can spin
+  RxList<CompetitionModel> myCompetitions = <CompetitionModel>[].obs;
   bool _isRegistering = false;
 
   bool get isRegistering => _isRegistering;
@@ -47,6 +47,35 @@ class CompetitionController extends GetxController {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       getCompetitions();
     });
+  }
+
+
+
+  Future<void> getMyCompetitions() async {
+    try {
+      loader.showLoader();
+
+      Response response = await competitionRepo.getMyCompetition();
+
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          response.body['code'] == '00') {
+        final List data = response.body['data'] ?? [];
+        myCompetitions.assignAll(
+          data.map((e) => CompetitionModel.fromJson(e)).toList(),
+        );
+      } else {
+        CustomSnackBar.failure(
+          message: response.body?['message'] ?? 'Failed to fetch competitions',
+        );
+      }
+    } catch (e, s) {
+      print('getMyCompetitions error: $e');
+      print(s);
+      CustomSnackBar.failure(message: 'Something went wrong');
+    } finally {
+      loader.hideLoader();
+      update();
+    }
   }
 
 

@@ -13,6 +13,7 @@ import 'package:hilite/screens/others/bookmarks_screen.dart';
 import 'package:hilite/screens/others/competition_details_screen.dart';
 import 'package:hilite/screens/others/competitions_screen.dart';
 import 'package:hilite/screens/others/create_competition_screen.dart';
+import 'package:hilite/screens/others/my_competitions_screen.dart' hide CompetitionDetailsScreen;
 import 'package:hilite/screens/others/notification_screen.dart';
 import 'package:hilite/screens/others/others_profile.dart';
 import 'package:hilite/screens/others/recommended_accounts.dart';
@@ -26,6 +27,7 @@ import 'package:hilite/screens/settings/wallet_screen.dart';
 import 'package:hilite/screens/splash/no_internet_screen.dart';
 import 'package:hilite/screens/splash/onboarding_screen.dart';
 import 'package:hilite/screens/splash/update_app_screen.dart';
+import 'package:hilite/screens/trials/my_trials_screen.dart';
 import 'package:hilite/screens/trials/trials_screen_list.dart';
 import 'package:hilite/widgets/custom_appbar.dart';
 import 'package:hilite/widgets/reels_video_item.dart';
@@ -87,6 +89,8 @@ class AppRoutes {
   static const String createTrialScreen = '/create-trial-screen';
   static const String trialDetailScreen = '/trial-detail-screen';
   static const String trialListScreen = '/trial-list-screen';
+  static const String myTrialsScreen = '/my-trial-screen';
+  static const String myCompetitionsScreen = '/my-competitions-screen';
 
   static final routes = [
     GetPage(
@@ -138,6 +142,21 @@ class AppRoutes {
       name: createCompetitionScreen,
       page: () {
         return const CreateCompetitionScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+
+    GetPage(
+      name: myCompetitionsScreen,
+      page: () {
+        return const MyCompetitionsScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: myTrialsScreen,
+      page: () {
+        return const MyTrialsScreen();
       },
       transition: Transition.fadeIn,
     ),

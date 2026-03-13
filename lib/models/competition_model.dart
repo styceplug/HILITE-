@@ -3,7 +3,7 @@ class CompetitionModel {
   Creator? creator;
   String? name;
   String? location;
-  String? date;
+  DateTime? date;
   String? banner;
   String? clubsNeeded;
   int? registrationFee;
@@ -30,12 +30,13 @@ class CompetitionModel {
     creator = json['creator'] != null ? Creator.fromJson(json['creator']) : null;
     name = json['name'];
     location = json['location'];
-    date = json['date'];
+    date = DateTime.tryParse(json['date']?.toString() ?? '');
     banner = json['banner'];
-    clubsNeeded = json['clubsNeeded'];
+    clubsNeeded = json['clubsNeeded']?.toString();
     registrationFee = int.tryParse(json['registrationFee'].toString());
     prize = int.tryParse(json['prize'].toString());
     description = json['description'];
+
     if (json['registered'] != null) {
       registered = [];
       for (var v in json['registered']) {
@@ -45,7 +46,16 @@ class CompetitionModel {
           registered!.add(RegisteredClub.fromJson(v));
         }
       }
+    } else {
+      registered = [];
     }
+  }
+
+  int get registeredCount => registered?.length ?? 0;
+
+  List<RegisteredClub> get registeredClubs {
+    if (registered == null) return [];
+    return registered!.whereType<RegisteredClub>().toList();
   }
 }
 
@@ -55,8 +65,26 @@ class Creator {
   String? username;
   String? email;
   String? role;
+  String? clubName;
+  String? manager;
+  String? clubType;
+  String? state;
+  String? country;
+  String? profilePicture;
 
-  Creator({this.sId, this.name, this.username, this.email, this.role});
+  Creator({
+    this.sId,
+    this.name,
+    this.username,
+    this.email,
+    this.role,
+    this.clubName,
+    this.manager,
+    this.clubType,
+    this.state,
+    this.country,
+    this.profilePicture,
+  });
 
   Creator.fromJson(Map<String, dynamic> json) {
     sId = json['_id'];
@@ -64,6 +92,12 @@ class Creator {
     username = json['username'];
     email = json['email'];
     role = json['role'];
+    clubName = json['clubDetails']?['clubName'];
+    manager = json['clubDetails']?['manager'];
+    clubType = json['clubDetails']?['clubType'];
+    state = json['state'];
+    country = json['country'];
+    profilePicture = json['profilePicture'];
   }
 }
 
@@ -73,8 +107,18 @@ class RegisteredClub {
   String? username;
   String? email;
   String? role;
+  String? clubName;
+  String? profilePicture;
 
-  RegisteredClub({this.sId, this.name, this.username, this.email, this.role});
+  RegisteredClub({
+    this.sId,
+    this.name,
+    this.username,
+    this.email,
+    this.role,
+    this.clubName,
+    this.profilePicture,
+  });
 
   RegisteredClub.fromJson(Map<String, dynamic> json) {
     sId = json['_id'];
@@ -82,5 +126,7 @@ class RegisteredClub {
     username = json['username'];
     email = json['email'];
     role = json['role'];
+    clubName = json['clubDetails']?['clubName'];
+    profilePicture = json['profilePicture'];
   }
 }

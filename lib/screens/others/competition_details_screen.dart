@@ -63,7 +63,7 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
               competition.date != null
                   ? DateFormat(
                     'EEEE, MMM dd, yyyy',
-                  ).format(DateTime.parse(competition.date!))
+                  ).format(DateTime.parse(competition.date.toString()))
                   : "Date TBA";
 
           return CustomScrollView(

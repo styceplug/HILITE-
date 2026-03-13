@@ -1,24 +1,23 @@
 import 'package:get/get.dart';
+import 'package:hilite/helpers/global_loader_controller.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/repo/trial_repo.dart';
 import '../models/trial_model.dart';
 import '../widgets/snackbars.dart';
 
-
 class TrialController extends GetxController {
   final TrialRepo trialRepo;
 
   TrialController({required this.trialRepo});
 
-
   RxList<TrialModel> trialList = <TrialModel>[].obs;
   RxBool isLoadingTrials = false.obs;
-
+  GlobalLoaderController loaderController = Get.find<GlobalLoaderController>();
+  RxList<TrialModel> myTrials = <TrialModel>[].obs;
 
   RxBool isProcessing = false.obs;
   Rx<TrialModel?> currentTrialDetails = Rx<TrialModel?>(null);
-
 
   @override
   void onInit() {
@@ -26,7 +25,30 @@ class TrialController extends GetxController {
     fetchTrials();
   }
 
+  Future<void> getMyTrials() async {
+    try {
+      loader.showLoader();
 
+      Response response = await trialRepo.getMyTrials();
+
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          response.body['code'] == '00') {
+        final List data = response.body['data'] ?? [];
+        myTrials.assignAll(data.map((e) => TrialModel.fromJson(e)).toList());
+      } else {
+        CustomSnackBar.failure(
+          message: response.body?['message'] ?? 'Failed to fetch trials',
+        );
+      }
+    } catch (e, s) {
+      print('getMyTrials error: $e');
+      print(s);
+      CustomSnackBar.failure(message: 'Something went wrong');
+    } finally {
+      loader.hideLoader();
+      update();
+    }
+  }
 
   Future<void> fetchTrials() async {
     isLoadingTrials.value = true;
@@ -34,11 +56,13 @@ class TrialController extends GetxController {
       final response = await trialRepo.getAllTrials();
       if (response.statusCode == 200 && response.body['data'] is List) {
         final List<TrialModel> fetchedTrials = List<TrialModel>.from(
-            response.body['data'].map((i) => TrialModel.fromJson(i))
+          response.body['data'].map((i) => TrialModel.fromJson(i)),
         );
         trialList.assignAll(fetchedTrials);
       } else {
-        CustomSnackBar.failure(message: 'Failed to load trials, please try again');
+        CustomSnackBar.failure(
+          message: 'Failed to load trials, please try again',
+        );
       }
     } catch (e) {
       print('Error fetching trials: $e');
@@ -77,7 +101,6 @@ class TrialController extends GetxController {
     }
   }
 
-
   Future<bool> createTrial({
     required String name,
     required String location,
@@ -91,9 +114,14 @@ class TrialController extends GetxController {
     isProcessing.value = true;
     try {
       final response = await trialRepo.createNewTrial(
-        name: name, location: location, date: date, ageGroup: ageGroup,
-        registrationFee: registrationFee, type: type,
-        description: description, banner: banner,
+        name: name,
+        location: location,
+        date: date,
+        ageGroup: ageGroup,
+        registrationFee: registrationFee,
+        type: type,
+        description: description,
+        banner: banner,
       );
 
       if (response.statusCode == 201) {
@@ -101,7 +129,9 @@ class TrialController extends GetxController {
         fetchTrials(); // Refresh list
         return true;
       } else {
-        CustomSnackBar.failure(message: response.body['message'] ?? 'Failed to create trial.');
+        CustomSnackBar.failure(
+          message: response.body['message'] ?? 'Failed to create trial.',
+        );
         return false;
       }
     } catch (e) {
@@ -121,7 +151,9 @@ class TrialController extends GetxController {
         CustomSnackBar.success(message: 'Registered for trial!');
         fetchTrialDetails(trialId);
       } else {
-        CustomSnackBar.failure(message: response.body['message'] ?? 'Registration failed.');
+        CustomSnackBar.failure(
+          message: response.body['message'] ?? 'Registration failed.',
+        );
       }
     } catch (e) {
       CustomSnackBar.failure(message: 'Network error.');

@@ -16,7 +16,9 @@ class UserController extends GetxController {
   final UserRepo userRepo;
   final SharedPreferences sharedPreferences;
 
-  UserController({required this.userRepo, required this.sharedPreferences});
+  UserController({required this.userRepo, required this.sharedPreferences}) {
+    print('🟡 UserController constructor called: ${identityHashCode(this)}');
+  }
 
   GlobalLoaderController loader = Get.find<GlobalLoaderController>();
   Rx<UserModel?> user = Rx<UserModel?>(null);
@@ -61,9 +63,15 @@ class UserController extends GetxController {
   RxString selectedPosition = ''.obs;
   RxString selectedClub = ''.obs;
 
+  bool _hasInitialized = false;
+
   @override
   void onInit() {
     super.onInit();
+    print('🟢 UserController onInit called: ${identityHashCode(this)}');
+    if (_hasInitialized) return;
+    _hasInitialized = true;
+
     loadCachedUser();
   }
 
@@ -615,6 +623,7 @@ class UserController extends GetxController {
   @override
   void onClose() {
     _searchDebounce?.cancel();
+    print('🔴 UserController onClose called: ${identityHashCode(this)}');
     super.onClose();
   }
 
