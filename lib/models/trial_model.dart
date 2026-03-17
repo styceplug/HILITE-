@@ -1,3 +1,5 @@
+import 'package:hilite/models/post_model.dart';
+
 class TrialModel {
   final String id;
   final String name;
@@ -33,7 +35,7 @@ class TrialModel {
       name: json['name'] ?? 'Untitled Trial',
       location: json['location'] ?? 'TBD',
       date: DateTime.tryParse(json['date'] ?? '') ?? DateTime.now(),
-      banner: json['banner'],
+      banner: MediaUrlHelper.resolve(json['banner']),
       ageGroup: json['ageGroup'] ?? '',
       type: json['type'] ?? 'open',
       registrationFee: (json['registrationFee'] as num?)?.toDouble() ?? 0.0,
@@ -92,7 +94,7 @@ class TrialCreator {
       clubName: json['clubDetails']?['clubName'],
       manager: json['clubDetails']?['manager'],
       clubType: json['clubDetails']?['clubType'],
-      profilePicture: json['profilePicture'],
+      profilePicture: MediaUrlHelper.resolveAvatar(json['profilePicture']),
       state: json['state'],
       country: json['country'],
     );
@@ -120,7 +122,7 @@ class RegisteredPlayer {
       name: json['name'] ?? '',
       username: json['username'] ?? '',
       role: json['role'] ?? 'player',
-      profilePicture: json['profilePicture'], // <--- Map it here
+      profilePicture: MediaUrlHelper.resolveAvatar(json['profilePicture']),
     );
   }
 }

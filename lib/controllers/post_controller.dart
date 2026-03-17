@@ -595,62 +595,70 @@ class PostController extends GetxController {
 
   Future<File?> _cacheVideoFile(int index) async {
     if (index >= posts.length || posts[index].type != 'video') return null;
-    final url = posts[index].video?.url;
-    if (url == null) return null;
+
+    final rawUrl = posts[index].video?.url;
+    final url = MediaUrlHelper.resolve(rawUrl);
+
+    if (url.isEmpty) return null;
 
     try {
-      // This downloads to disk. If already downloaded, returns file instantly.
+      debugPrint('🎥 Cache video [$index]');
+      debugPrint('   rawUrl: $rawUrl');
+      debugPrint('   resolvedUrl: $url');
+
       return await DefaultCacheManager().getSingleFile(url);
     } catch (e) {
-      print("Cache error $index: $e");
+      debugPrint("Cache error $index: $e");
       return null;
     }
   }
 
   Future<void> _initController(int index) async {
     if (index >= posts.length || posts[index].type != 'video') {
-      print('Controller init skipped: Invalid index or not a video post.');
+      debugPrint('Controller init skipped: Invalid index or not a video post.');
       return;
     }
 
     if (videoControllers.containsKey(index)) return;
 
-    // Try getting local file first (Speed!)
+    final rawUrl = posts[index].video?.url;
+    final resolvedUrl = MediaUrlHelper.resolve(rawUrl);
+
+    if (resolvedUrl.isEmpty) {
+      debugPrint('❌ Empty resolved video URL at index $index');
+      return;
+    }
+
     File? file = await _cacheVideoFile(index);
 
-    VideoPlayerController controller;
+    late VideoPlayerController controller;
+
     if (file != null) {
+      debugPrint('📁 Using cached file for index $index: ${file.path}');
       controller = VideoPlayerController.file(file);
     } else {
-      // Fallback to network if cache failed
-      controller = VideoPlayerController.network(posts[index].video!.url!);
+      debugPrint('🌐 Using network URL for index $index: $resolvedUrl');
+      controller = VideoPlayerController.networkUrl(Uri.parse(resolvedUrl));
     }
 
     videoControllers[index] = controller;
 
     try {
       await controller.initialize();
-      controller.setLooping(true);
+      await controller.setLooping(true);
 
-      // 1. Add to set
       initializedIndexes.add(index);
 
-      // 2. Add Listener (Optional: for other updates)
       controller.addListener(() {
-
-        update(['overlay_$index']);
+        update(['overlay_$index', 'video_item_$index']);
       });
 
-      // -----------------------------------------------------
-      // 🚀 CRITICAL FIX: TELL THE UI WE ARE READY!
-      // -----------------------------------------------------
       update(['video_item_$index']);
-
     } catch (e) {
-      print("Error initializing video $index: $e");
+      debugPrint("Error initializing video $index: $e");
+      videoControllers[index]?.dispose();
       videoControllers.remove(index);
       initializedIndexes.remove(index);
-      // Update UI to show error state if needed
       update(['video_item_$index']);
     }
   }

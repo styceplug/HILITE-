@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:hilite/models/post_model.dart';
 
 import '../controllers/user_controller.dart';
 
@@ -11,7 +12,7 @@ class UserModel {
   final String number;
   final String country;
   final String state;
-  final String? profilePicture;
+  final String profilePicture;
   final String? bio;
   final String tokenBalance;
   final PlayerDetails? playerDetails;
@@ -39,7 +40,7 @@ class UserModel {
     required this.state,
     required this.tokenBalance,
     this.bio,
-    this.profilePicture,
+    required this.profilePicture,
     this.playerDetails,
     this.agentDetails,
     this.clubDetails,
@@ -87,7 +88,7 @@ class UserModel {
           ? json['tokenBalance'].toString()
           : '0',
       bio: json['bio'],
-      profilePicture: json['profilePicture'],
+      profilePicture: MediaUrlHelper.resolveAvatar(json['profilePicture']),
       playerDetails: json['playerDetails'] != null
           ? PlayerDetails.fromJson(json['playerDetails'])
           : null,

@@ -1,3 +1,5 @@
+import 'package:hilite/models/post_model.dart';
+
 class CommentUserModel {
   final String id;
   final String name;
@@ -16,7 +18,7 @@ class CommentUserModel {
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
       username: json['username'] ?? '',
-      profilePicture: json['profilePicture'],
+      profilePicture: MediaUrlHelper.resolveAvatar(json['profilePicture']),
     );
   }
 }

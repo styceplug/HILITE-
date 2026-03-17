@@ -1,4 +1,8 @@
+import 'package:flutter/material.dart';
 
+
+const String defaultAvatar =
+    "https://ui-avatars.com/api/?background=444&color=fff&name=User";
 
 class PostModel {
   final String id;
@@ -28,19 +32,20 @@ class PostModel {
   });
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
-    // 🛡️ 1. UNWRAP DATA IF NESTED
-    // Mongoose sometimes returns data inside '_doc' or 'post' key
     Map<String, dynamic> data = json;
     if (json.containsKey('_doc') && json['_doc'] is Map) {
-      data = json['_doc'];
-      // Copy top-level flags (isLiked/isBookmarked) into data if they exist outside _doc
+      data = Map<String, dynamic>.from(json['_doc']);
       if (json.containsKey('isLiked')) data['isLiked'] = json['isLiked'];
       if (json.containsKey('isBookmarked')) data['isBookmarked'] = json['isBookmarked'];
     } else if (json.containsKey('post') && json['post'] is Map) {
-      data = json['post'];
+      data = Map<String, dynamic>.from(json['post']);
     }
 
-    // 🛡️ 2. Safe Author Parsing
+    debugPrint('🧩 Parsing PostModel: ${data['_id']}');
+    debugPrint('   authorPic(raw): ${data['author'] is Map ? data['author']['profilePicture'] : null}');
+    debugPrint('   videoUrl(raw): ${data['video']?['url']}');
+    debugPrint('   thumb(raw): ${data['video']?['thumbnailUrl']}');
+
     Author? parsedAuthor;
     String? parsedAuthorId;
 
@@ -66,6 +71,8 @@ class PostModel {
     );
   }
 
+
+
 }
 
 class Author {
@@ -73,12 +80,16 @@ class Author {
   final String id;
   final String profilePicture;
 
-  Author({required this.username, required this.profilePicture,required this.id});
+  Author({
+    required this.username,
+    required this.id,
+    required this.profilePicture,
+  });
 
   factory Author.fromJson(Map<String, dynamic> json) {
     return Author(
       username: json['username'] ?? "Unknown",
-      profilePicture: json['profilePicture'] ?? "",
+      profilePicture: MediaUrlHelper.resolveAvatar(json['profilePicture']),
       id: json['_id'] ?? "",
     );
   }
@@ -101,10 +112,10 @@ class ContentDetails {
 
   factory ContentDetails.fromJson(Map<String, dynamic> json) {
     return ContentDetails(
-      url: json['url'],
+      url: MediaUrlHelper.resolve(json['url']),
       title: json['title'],
       description: json['description'],
-      thumbnailUrl: json['thumbnailUrl'],
+      thumbnailUrl: MediaUrlHelper.resolveNullable(json['thumbnailUrl']),
       duration: (json['duration'] is int)
           ? (json['duration'] as int).toDouble()
           : json['duration'],
@@ -136,20 +147,17 @@ class PersonalPostModel {
     String? extractedThumbnail;
     double? extractedDuration;
 
-    // 🔧 Handle nested JSON structure
     if (json['type'] == 'image' && json['image'] != null) {
-      extractedMediaUrl = json['image']['url'];
-    }
-    else if (json['type'] == 'video' && json['video'] != null) {
-      extractedMediaUrl = json['video']['url'];
-      extractedThumbnail = json['video']['thumbnailUrl'] ?? json['video']['thumbnail'];
-      // Parse duration safely
+      extractedMediaUrl = MediaUrlHelper.resolve(json['image']['url']);
+    } else if (json['type'] == 'video' && json['video'] != null) {
+      extractedMediaUrl = MediaUrlHelper.resolve(json['video']['url']);
+      extractedThumbnail = MediaUrlHelper.resolve(
+        json['video']['thumbnailUrl'] ?? json['video']['thumbnail'],
+      );
       var dur = json['video']['duration'];
       extractedDuration = (dur is int) ? dur.toDouble() : dur;
-    }
-    else {
-      // Fallback
-      extractedMediaUrl = json['mediaUrl'] ?? json['file'];
+    } else {
+      extractedMediaUrl = MediaUrlHelper.resolve(json['mediaUrl'] ?? json['file']);
     }
 
     return PersonalPostModel(
@@ -159,8 +167,66 @@ class PersonalPostModel {
       mediaUrl: extractedMediaUrl,
       thumbnail: extractedThumbnail,
       duration: extractedDuration,
-      // 🗓️ Parse Date (Default to now if missing to prevent sort crash)
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
     );
   }
 }
+
+class MediaUrlHelper {
+  static const String baseUrl = 'https://api.hiliteapp.net';
+
+  static const String defaultAvatar =
+      "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+  static String resolveAvatar(dynamic path) {
+    if (path == null) return defaultAvatar;
+
+    final value = path.toString().trim();
+    if (value.isEmpty) return defaultAvatar;
+
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return value;
+    }
+
+    if (value.startsWith('/')) {
+      return '$baseUrl$value';
+    }
+
+    return '$baseUrl/$value';
+  }
+
+  static String resolve(dynamic path) {
+    if (path == null) return '';
+
+    final value = path.toString().trim();
+    if (value.isEmpty) return '';
+
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return value;
+    }
+
+    if (value.startsWith('/')) {
+      return '$baseUrl$value';
+    }
+
+    return '$baseUrl/$value';
+  }
+
+  static String? resolveNullable(dynamic path) {
+    if (path == null) return null;
+
+    final value = path.toString().trim();
+    if (value.isEmpty) return null;
+
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return value;
+    }
+
+    if (value.startsWith('/')) {
+      return '$baseUrl$value';
+    }
+
+    return '$baseUrl/$value';
+  }
+}
+

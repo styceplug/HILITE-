@@ -72,7 +72,10 @@ class _ReelsScreenState extends State<ReelsScreen> {
                       post: post,
                       controller: controller,
                     );
+
                   }
+
+                  return const SizedBox.shrink();
                 },
               ),
 

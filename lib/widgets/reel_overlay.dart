@@ -50,12 +50,21 @@ class ReelsInteractionOverlay extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      post.author?.username.capitalizeFirst ?? '',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: Dimensions.font22,
+                    InkWell(
+                      onTap: () async {
+                        postController.pauseAll();
+                        Get.toNamed(
+                          AppRoutes.othersProfileScreen,
+                          arguments: {'targetId': post.author?.id},
+                        );
+                      },
+                      child: Text(
+                        post.author?.username.capitalizeFirst ?? '',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: Dimensions.font22,
+                        ),
                       ),
                     ),
 
@@ -158,12 +167,16 @@ class ReelsInteractionOverlay extends StatelessWidget {
                   }),
                   const SizedBox(height: 20),
                   Obx(() {
-
-                    final isBookmarked = postController.isPostBookmarked(post.id);
+                    final isBookmarked = postController.isPostBookmarked(
+                      post.id,
+                    );
                     return InkWell(
-                      onTap: ()=> postController.toggleBookmark(post.id),
+                      onTap: () => postController.toggleBookmark(post.id),
                       child: _InteractionIcon(
-                        icon: isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                        icon:
+                            isBookmarked
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
                         color: isBookmarked ? AppColors.white : Colors.white,
                         label: 'Save',
                       ),
@@ -186,7 +199,6 @@ class ReelsInteractionOverlay extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
-
 
                   GestureDetector(
                     onTap: () {

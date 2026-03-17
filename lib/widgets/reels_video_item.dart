@@ -105,10 +105,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
             fit: StackFit.expand,
             children: [
               // 1. THUMBNAIL
-              if (widget.post.video?.thumbnailUrl != null)
-                Image.network(widget.post.video!.thumbnailUrl!, fit: BoxFit.cover)
-              else
-                Container(color: Colors.black),
+              _buildThumbnail(),
 
               // 1. BACKGROUND
               if (isReady && videoCtrl != null && videoCtrl.value.isInitialized)
@@ -205,7 +202,23 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
       },
     );
   }
+  Widget _buildThumbnail() {
+    final thumb = MediaUrlHelper.resolve(widget.post.video?.thumbnailUrl);
 
+    if (thumb.isEmpty) {
+      return Container(color: Colors.black);
+    }
+
+    return Image.network(
+      thumb,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Container(color: Colors.black),
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return Container(color: Colors.black);
+      },
+    );
+  }
   Widget _buildProgressBar(VideoPlayerController controller) {
     return ValueListenableBuilder(
       valueListenable: controller,

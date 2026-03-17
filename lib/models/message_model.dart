@@ -1,16 +1,18 @@
 // ─── Sender ───────────────────────────────────────────────────────────────────
 
+import 'package:hilite/models/post_model.dart';
+
 class Sender {
   final String id;
   final String name;
   final String username;
-  final String? profilePicture;
+  final String profilePicture;
 
   const Sender({
     required this.id,
     required this.name,
     required this.username,
-    this.profilePicture,
+    required this.profilePicture,
   });
 
   factory Sender.fromJson(dynamic j) {
@@ -19,7 +21,7 @@ class Sender {
         id: j,
         name: '',
         username: '',
-        profilePicture: null,
+        profilePicture: MediaUrlHelper.defaultAvatar,
       );
     }
 
@@ -27,7 +29,7 @@ class Sender {
       id: j['_id']?.toString() ?? j['id']?.toString() ?? '',
       name: j['name']?.toString() ?? '',
       username: j['username']?.toString() ?? '',
-      profilePicture: j['profilePicture']?.toString(),
+      profilePicture: MediaUrlHelper.resolveAvatar(j['profilePicture']),
     );
   }
 }
@@ -98,7 +100,7 @@ class AudioAttachment {
   });
 
   factory AudioAttachment.fromJson(Map<String, dynamic> j) => AudioAttachment(
-    url: j['url']?.toString() ?? '',
+    url: MediaUrlHelper.resolve(j['url']),
     size: (j['size'] as num?)?.toInt() ?? 0,
     length: (j['length'] as num?)?.toInt() ?? 0,
   );
@@ -114,7 +116,7 @@ class ImageAttachment {
   });
 
   factory ImageAttachment.fromJson(Map<String, dynamic> j) => ImageAttachment(
-    url: j['url']?.toString() ?? '',
+    url: MediaUrlHelper.resolve(j['url']),
     size: (j['size'] as num?)?.toInt() ?? 0,
   );
 }
@@ -126,14 +128,14 @@ class ChatParticipant {
   final String id;
   final String name;
   final String username;
-  final String? profilePicture;
+  final String profilePicture;
   final DateTime? lastSeen;
 
   const ChatParticipant({
     required this.id,
     required this.name,
     required this.username,
-    this.profilePicture,
+    required this.profilePicture,
     this.lastSeen,
   });
 
@@ -143,7 +145,7 @@ class ChatParticipant {
         id: j,
         name: '',
         username: '',
-        profilePicture: null,
+        profilePicture: MediaUrlHelper.defaultAvatar,
         lastSeen: null,
       );
     }
@@ -152,7 +154,7 @@ class ChatParticipant {
       id: j['_id']?.toString() ?? j['id']?.toString() ?? '',
       name: j['name']?.toString() ?? '',
       username: j['username']?.toString() ?? '',
-      profilePicture: j['profilePicture']?.toString(),
+      profilePicture: MediaUrlHelper.resolveAvatar(j['profilePicture']),
       lastSeen: j['lastSeen'] != null
           ? DateTime.tryParse(j['lastSeen'].toString())
           : null,

@@ -1,3 +1,5 @@
+import 'package:hilite/models/post_model.dart';
+
 class CompetitionModel {
   String? sId;
   Creator? creator;
@@ -31,7 +33,7 @@ class CompetitionModel {
     name = json['name'];
     location = json['location'];
     date = DateTime.tryParse(json['date']?.toString() ?? '');
-    banner = json['banner'];
+    banner = MediaUrlHelper.resolve(json['banner']);
     clubsNeeded = json['clubsNeeded']?.toString();
     registrationFee = int.tryParse(json['registrationFee'].toString());
     prize = int.tryParse(json['prize'].toString());
@@ -97,7 +99,7 @@ class Creator {
     clubType = json['clubDetails']?['clubType'];
     state = json['state'];
     country = json['country'];
-    profilePicture = json['profilePicture'];
+    profilePicture = MediaUrlHelper.resolveAvatar(json['profilePicture']);
   }
 }
 
@@ -127,6 +129,6 @@ class RegisteredClub {
     email = json['email'];
     role = json['role'];
     clubName = json['clubDetails']?['clubName'];
-    profilePicture = json['profilePicture'];
+    profilePicture = MediaUrlHelper.resolveAvatar(json['profilePicture']);
   }
 }
