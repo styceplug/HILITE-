@@ -139,7 +139,7 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
                   Get.toNamed(AppRoutes.recommendedAccountsScreen);
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:  EdgeInsets.symmetric(horizontal: 20, vertical: Dimensions.height5),
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(15),

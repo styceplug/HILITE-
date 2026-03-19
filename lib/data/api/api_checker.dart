@@ -23,7 +23,7 @@ class ApiChecker {
       CustomSnackBar.failure(message: 'Request timed out. Please try again.');
     } else if (response.statusCode == 500) {
       print('💥 Server error');
-      CustomSnackBar.failure(message: 'Server error. Please try again later.');
+      CustomSnackBar.failure(message: 'Internet error. Please try again later.');
     } else if (response.statusCode == 0 || response.statusCode == 1) {
       print('📡 No internet / unknown error');
       CustomSnackBar.failure(message: 'No internet connection. Please reconnect.');

@@ -8,11 +8,13 @@ import 'package:hilite/models/post_model.dart';
 import 'package:hilite/widgets/snackbars.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:camera/camera.dart';
+import 'package:camera/camera.dart' hide ImageFormat;
+import 'package:video_thumbnail/video_thumbnail.dart';
 import '../data/api/api_checker.dart';
 import '../data/repo/post_repo.dart';
 import 'dart:io';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import '../data/services/upload_services.dart';
 import '../models/comment_model.dart';
 import '../models/gift_model.dart';
 import '../routes/routes.dart';
@@ -272,8 +274,96 @@ class PostController extends GetxController {
     }
   }
 
-
   Future<void> uploadMediaPost({
+    required XFile file,
+    required bool isVideo,
+    required String title,
+    required String description,
+    required String text,
+    required bool isPublic,
+  }) async {
+    final uploadService = Get.find<UploadService>();
+
+    // Prevent starting a second upload while one is in progress
+    if (uploadService.isUploading) {
+      CustomSnackBar.failure(message: 'An upload is already in progress.');
+      return;
+    }
+
+    // ── 1. Generate thumbnail (video only) ───────────────────────────────────
+    String? thumbnailPath;
+    if (isVideo) {
+      try {
+        thumbnailPath = await VideoThumbnail.thumbnailFile(
+          video: file.path,
+          imageFormat: ImageFormat.JPEG,
+          maxWidth: 120,
+          quality: 60,
+        );
+      } catch (e) {
+        debugPrint('Thumbnail generation failed (non-fatal): $e');
+        // Continue without thumbnail — pill will show a camera icon instead
+      }
+    }
+
+    // ── 2. Navigate away immediately so user can browse ──────────────────────
+    // Close the PostDetailsScreen and return to the home feed
+    Get.offAllNamed(AppRoutes.homeScreen);
+    AppController appController = Get.find<AppController>();
+    appController.changeCurrentAppPage(0);
+
+    // ── 3. Start upload in background ────────────────────────────────────────
+    // We intentionally do NOT await this — fire and forget.
+    // UploadService's reactive state drives the pill widget.
+    _runUploadInBackground(
+      file: file,
+      isVideo: isVideo,
+      title: title,
+      description: description,
+      text: text,
+      isPublic: isPublic,
+      thumbnailPath: thumbnailPath,
+    );
+  }
+
+  Future<void> _runUploadInBackground({
+    required XFile file,
+    required bool isVideo,
+    required String title,
+    required String description,
+    required String text,
+    required bool isPublic,
+    String? thumbnailPath,
+  }) async {
+    try {
+      final response = isVideo
+          ? await postRepo.uploadVideoPost(
+        videoFile: file,
+        title: title,
+        description: description,
+        text: text,
+        isPublic: isPublic,
+        thumbnailPath: thumbnailPath,
+      )
+          : await postRepo.uploadImagePost(
+        imageFile: file,
+        title: title,
+        description: description,
+        text: text,
+        isPublic: isPublic,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Refresh the feed so the new post appears
+        await loadRecommendedPosts(isVideo ? 'video' : 'image');
+      }
+      // UploadService already set success/failure state — pill handles UI
+    } catch (e) {
+      debugPrint('Background upload error: $e');
+      // UploadService already set failure state — pill shows the error strip
+    }
+  }
+ /* Future<void> uploadMediaPost({
     required XFile file,
     required bool isVideo,
     required String title,
@@ -330,7 +420,7 @@ class PostController extends GetxController {
     } finally {
       isLoading.value = false;
     }
-  }
+  }*/
 
   Future<void> submitComment(String postId, String content) async {
     if (content.trim().isEmpty) return;

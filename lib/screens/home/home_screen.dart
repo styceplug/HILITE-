@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/post_controller.dart';
+import 'package:hilite/widgets/upload_progress_pill.dart';
 
 import '../../controllers/app_controller.dart';
 import '../../utils/dimensions.dart';
@@ -86,6 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     bottom: 0,
                     child: HomeScreenBottomNavBar(),
                   ),
+                  UploadProgressPill(),
                 ],
               ),
             );

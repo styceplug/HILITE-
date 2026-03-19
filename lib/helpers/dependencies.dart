@@ -25,6 +25,7 @@ import '../data/repo/app_repo.dart';
 import '../data/repo/auth_repo.dart';
 import '../data/repo/notification_repo.dart';
 import '../data/repo/version_repo.dart';
+import '../data/services/upload_services.dart';
 import '../models/message_model.dart';
 import '../utils/app_constants.dart';
 import 'global_loader_controller.dart';
@@ -44,6 +45,8 @@ Future<void> init() async {
 
   final sharedPreferences = await SharedPreferences.getInstance();
   Get.put(sharedPreferences);
+  Get.put(UploadService(), permanent: true);
+
 
   Get.lazyPut(
     () => ApiClient(
