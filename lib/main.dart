@@ -13,9 +13,10 @@ import 'package:hilite/widgets/app_loading_overlay.dart';
 import 'controllers/app_controller.dart';
 import 'controllers/post_controller.dart';
 import 'firebase_options.dart';
-import 'helpers/dependencies.dart' as VersionService;
+// import 'helpers/dependencies.dart' as VersionService;
 import 'helpers/dependencies.dart' as dep;
 import 'helpers/global_loader_controller.dart';
+import 'helpers/version_service.dart';
 
 
 Future<void> main() async {

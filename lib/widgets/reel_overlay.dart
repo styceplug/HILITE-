@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/post_controller.dart';
+import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/routes/routes.dart';
 import 'package:hilite/utils/app_constants.dart';
 import 'package:hilite/utils/dimensions.dart';
@@ -22,6 +23,7 @@ class ReelsInteractionOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     PostController postController = Get.find<PostController>();
+    UserController userController = Get.find<UserController>();
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -52,11 +54,16 @@ class ReelsInteractionOverlay extends StatelessWidget {
                   children: [
                     InkWell(
                       onTap: () async {
-                        postController.pauseAll();
-                        Get.toNamed(
-                          AppRoutes.othersProfileScreen,
-                          arguments: {'targetId': post.author?.id},
-                        );
+                        if (post.author?.id != null || post.author?.id != userController.user.value?.id) {
+                          postController.pauseAll();
+                          Get.toNamed(
+                            AppRoutes.othersProfileScreen,
+                            arguments: {'targetId': post.author?.id},
+                          );
+                        } else {
+                          print('This is your profile');
+                        }
+
                       },
                       child: Text(
                         post.author?.username.capitalizeFirst ?? '',

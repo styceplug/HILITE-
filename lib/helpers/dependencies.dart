@@ -73,7 +73,7 @@ Future<void> init() async {
   Get.lazyPut(() => CompetitionRepo(apiClient: Get.find()));
   Get.lazyPut(() => WalletRepo(apiClient: Get.find()), fenix: true);
 
-  Get.lazyPut<SocketHelper>(() => SocketHelper(), fenix: true);
+  Get.put(SocketHelper(),permanent: true);
   Get.lazyPut<ChatRepo>(() => ChatRepo(apiClient: Get.find()), fenix: true);
 
   Get.lazyPut(() => AppController(appRepo: Get.find()));

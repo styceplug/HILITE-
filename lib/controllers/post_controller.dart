@@ -51,6 +51,15 @@ class PostController extends GetxController {
 
 
 
+  void playVideo(int index) {
+    _playAtIndex(index);
+  }
+
+  void disposeAllControllers() {
+    _disposeAll();
+  }
+
+
   Future<void> deleteUserPost(String postId, String type) async {
     loader.showLoader();
 

@@ -15,6 +15,8 @@ import '../../../utils/dimensions.dart';
 import '../../../widgets/reel_overlay.dart';
 import '../../../widgets/reels_video_item.dart';
 
+import 'package:visibility_detector/visibility_detector.dart';
+
 class ReelsScreen extends StatefulWidget {
   const ReelsScreen({Key? key}) : super(key: key);
 
@@ -22,141 +24,146 @@ class ReelsScreen extends StatefulWidget {
   State<ReelsScreen> createState() => _ReelsScreenState();
 }
 
-class _ReelsScreenState extends State<ReelsScreen> {
+class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
   final PostController controller = Get.find<PostController>();
-  // final PageController pageController = PageController();
-
-  PostController postController = Get.find<PostController>();
-  String currentType = "video";
+  final String currentType = "video";
+  bool _isScreenVisible = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // Listen for app backgrounding
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (controller.posts.isEmpty) {
         controller.loadRecommendedPosts(currentType);
+      } else {
+        // If returning to this tab, resume the current video
+        _resumeVideo();
       }
     });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // Important: We don't necessarily delete the controller here
+    // if it's a main-tab controller, but we MUST stop the hardware.
+    controller.pauseAll();
     super.dispose();
+  }
+
+  // 1. Handle App Lifecycle (Phone calls, Minimizing)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      controller.pauseAll();
+    } else if (state == AppLifecycleState.resumed && _isScreenVisible) {
+      _resumeVideo();
+    }
+  }
+
+  void _resumeVideo() {
+    // Logic to play the current page index when returning
+    int currentIndex = controller.reelsPageController.hasClients
+        ? controller.reelsPageController.page?.round() ?? 0
+        : 0;
+    controller.playVideo(currentIndex);
   }
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: () {
-        controller.loadRecommendedPosts(currentType);
-        return Future.delayed(const Duration(seconds: 1));
-      },
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Obx(() {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      // 2. Wrap the entire body in VisibilityDetector
+      // This handles Tab Switching (Home -> Profile)
+      body: VisibilityDetector(
+        key: const Key('reels-screen-key'),
+        onVisibilityChanged: (visibilityInfo) {
+          _isScreenVisible = visibilityInfo.visibleFraction > 0.5;
+          if (!_isScreenVisible) {
+            controller.pauseAll();
+          } else {
+            _resumeVideo();
+          }
+        },
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await controller.loadRecommendedPosts(currentType);
+          },
+          child: Obx(() {
+            if (controller.posts.isEmpty && controller.isLoading.value) {
+              return const Center(child: CircularProgressIndicator(color: Colors.white));
+            }
 
-
-          return Stack(
-            children: [
-              // 1. The Vertical Feed
-              PageView.builder(
-                controller: controller.reelsPageController,
-                scrollDirection: Axis.vertical,
-                itemCount: controller.posts.length,
-                onPageChanged: (index) => controller.onPageChanged(index),
-                itemBuilder: (_, index) {
-                  final post = controller.posts[index];
-                  if (post.type == 'video' || post.type == 'image') {
+            return Stack(
+              children: [
+                PageView.builder(
+                  controller: controller.reelsPageController,
+                  scrollDirection: Axis.vertical,
+                  itemCount: controller.posts.length,
+                  onPageChanged: (index) => controller.onPageChanged(index),
+                  itemBuilder: (_, index) {
                     return ReelsVideoItem(
                       index: index,
-                      post: post,
+                      post: controller.posts[index],
                       controller: controller,
                     );
+                  },
+                ),
+                _buildTopSearchBar(context),
+              ],
+            );
+          }),
+        ),
+      ),
+    );
+  }
 
-                  }
-
-                  return const SizedBox.shrink();
+  Widget _buildTopSearchBar(BuildContext context) {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 10,
+      left: 20,
+      right: 20,
+      child: Hero(
+        tag: 'search_bar', // Added Hero for smooth transition to search screen
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+            child: Material( // Wrap in Material to fix text rendering in Hero
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  controller.pauseAll();
+                  Get.toNamed(AppRoutes.recommendedAccountsScreen);
                 },
-              ),
-
-              // 2. Top Tabs (Search Bar)
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 10,
-                left: Dimensions.width20,
-                right: Dimensions.width20,
-                child: ClipRRect(
-                  // 1. Clip the blur effect to the rounded corners
-                  borderRadius: BorderRadius.circular(Dimensions.radius15),
-                  child: BackdropFilter(
-                    // 2. The Blur Effect (Frosted Glass)
-                    // This blurs the video behind the search bar, ensuring text readability
-                    filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: Dimensions.width20,
-                        vertical: Dimensions.height10,
-                      ),
-                      decoration: BoxDecoration(
-                        // 3. Semi-transparent dark background
-                        // This ensures white text pops even on bright white videos
-                        color: Colors.black.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(Dimensions.radius15),
-                        border: Border.all(
-                          // 4. Subtle white border for contrast
-                          color: Colors.white.withOpacity(0.2),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: InkWell(
-                        onTap: () {
-                          postController.pauseAll();
-                          Get.toNamed(AppRoutes.recommendedAccountsScreen);
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            // 5. Icons and Text are always WHITE to contrast with the dark tint
-                            Icon(
-                                CupertinoIcons.search,
-                                color: Colors.white,
-                                size: Dimensions.iconSize24
-                            ),
-                            SizedBox(width: Dimensions.width15),
-                            Text(
-                              'Search...',
-                              style: TextStyle(
-                                fontSize: Dimensions.font16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white.withOpacity(0.9), // Slightly softer white
-                                shadows: [
-                                  // 6. Tiny drop shadow for extra legibility on chaotic backgrounds
-                                  Shadow(
-                                    color: Colors.black.withOpacity(0.5),
-                                    offset: const Offset(0, 1),
-                                    blurRadius: 2,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Spacer(),
-                            InkWell(
-                              onTap: () {},
-                              child: Icon(
-                                  Iconsax.people,
-                                  size: Dimensions.iconSize24,
-                                  color: Colors.white
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(CupertinoIcons.search, color: Colors.white, size: 24),
+                      const SizedBox(width: 15),
+                      const Text('Search...', style: TextStyle(color: Colors.white)),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Iconsax.people, color: Colors.white),
+                        onPressed: () {},
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      )
+                    ],
                   ),
                 ),
               ),
-            ],
-          );
-        }),
+            ),
+          ),
+        ),
       ),
     );
   }

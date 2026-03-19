@@ -20,181 +20,184 @@ class PostDetailsScreen extends StatefulWidget {
 }
 
 class _PostDetailsScreenState extends State<PostDetailsScreen> {
-  PostController postController = Get.find<PostController>();
+  final PostController postController = Get.find<PostController>();
   late TextEditingController _descController;
   VideoPlayerController? _videoController;
+
   late XFile file;
   late bool isVideo;
+  final int _maxCaptionLength = 2200;
 
   @override
   void initState() {
     super.initState();
     _descController = TextEditingController();
-    _descController.addListener(() => setState(() {}));
 
+    // Extract arguments safely
     final args = Get.arguments as Map<String, dynamic>;
     file = args['file'] as XFile;
     isVideo = args['isVideo'] as bool? ?? false;
 
     if (isVideo) {
-      _videoController = VideoPlayerController.file(File(file.path))
-        ..initialize().then((_) {
-          if (mounted) setState(() {});
-        })
-        ..setLooping(true)
-        ..setVolume(0) // Mute preview by default so it's not annoying
-        ..play();
+      _initVideoPreview();
     }
+  }
+
+  void _initVideoPreview() {
+    _videoController = VideoPlayerController.file(File(file.path))
+      ..initialize().then((_) {
+        if (mounted) setState(() {});
+      })
+      ..setLooping(true)
+      ..setVolume(0)
+      ..play();
   }
 
   @override
   void dispose() {
     _descController.dispose();
+    _videoController?.pause(); // Explicitly pause before dispose
     _videoController?.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white, // Clean white background
-      appBar: CustomAppbar(
-        title: 'New Post',
-        leadingIcon: const BackButton(color: Colors.black),
-        actionIcon: _buildShareTextButton(), // specialized "Post" button in app bar
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
+  // 1. IMPROVED: The "Spam" Proof Upload Logic
+  void _uploadPost() {
+    // Immediate Guard: Prevent multiple clicks
+    if (postController.isLoading.value) return;
 
-                  // 1️⃣ THE COMPOSE ROW (Thumbnail + Caption)
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildThumbnail(),
-                        SizedBox(width: Dimensions.width15),
-                        Expanded(child: _buildCaptionField()),
-                      ],
-                    ),
-                  ),
+    final String caption = _descController.text.trim();
 
+    // Close keyboard
+    FocusScope.of(context).unfocus();
 
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-
+    // Trigger Upload
+    postController.uploadMediaPost(
+      file: file,
+      isVideo: isVideo,
+      title: caption,
+      description: caption,
+      text: caption,
+      isPublic: true,
     );
   }
 
-  // --- WIDGETS ---
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(), // Dismiss keyboard on tap outside
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: CustomAppbar(
+          title: 'New Post',
+          leadingIcon: BackButton(
+            color: Colors.black,
+            onPressed: () => Get.back(),
+          ),
+          actionIcon: _buildShareButton(),
+        ),
+        body: Column(
+          children: [
+            // Linear Progress bar at the top if uploading
+            Obx(() => postController.isLoading.value
+                ? const LinearProgressIndicator(minHeight: 2, color: Colors.blue)
+                : const Divider(height: 1, thickness: 0.5)),
 
-  Widget _buildThumbnail() {
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildMediaPreview(),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildCaptionField()),
+                      ],
+                    ),
+                    const Divider(height: 40),
+                    // You can add "Location", "Tag People", etc. here later
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMediaPreview() {
     return Container(
-      height: 100, // Fixed height
-      width: 80,   // Fixed width (Vertical aspect ratio)
+      width: 80,
+      height: 110,
       decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))
+        ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         child: isVideo
-            ? (_videoController?.value.isInitialized ?? false)
-            ? FittedBox(
-          fit: BoxFit.cover,
-          child: SizedBox(
-            width: _videoController!.value.size.width,
-            height: _videoController!.value.size.height,
-            child: VideoPlayer(_videoController!),
-          ),
+            ? (_videoController?.value.isInitialized ?? false
+            ? AspectRatio(
+          aspectRatio: _videoController!.value.aspectRatio,
+          child: VideoPlayer(_videoController!),
         )
-            : const Center(child: CircularProgressIndicator(strokeWidth: 2))
-            : Image.file(
-          File(file.path),
-          fit: BoxFit.cover,
-        ),
+            : const Center(child: CircularProgressIndicator(strokeWidth: 2)))
+            : Image.file(File(file.path), fit: BoxFit.cover),
       ),
     );
   }
 
   Widget _buildCaptionField() {
-    return TextField(
-      controller: _descController,
-      maxLines: 5, // Allows multi-line typing
-      minLines: 1,
-      style: TextStyle(
-        fontSize: Dimensions.font16,
-        color: Colors.black87,
-      ),
-      decoration: InputDecoration(
-        hintText: 'Write a caption...',
-        hintStyle: TextStyle(
-          color: Colors.grey[400],
-          fontSize: Dimensions.font16,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        TextField(
+          controller: _descController,
+          maxLines: 8,
+          minLines: 1,
+          maxLength: _maxCaptionLength,
+          onChanged: (val) => setState(() {}),
+          decoration: InputDecoration(
+            hintText: 'Write a caption...',
+            hintStyle: TextStyle(color: Colors.grey[400]),
+            border: InputBorder.none,
+            counterText: "", // Hide default counter to use custom one
+          ),
         ),
-        border: InputBorder.none,
-        contentPadding: EdgeInsets.zero,
-      ),
+        Text(
+          "${_descController.text.length}/$_maxCaptionLength",
+          style: TextStyle(color: Colors.grey[400], fontSize: 12),
+        ),
+      ],
     );
   }
 
-  Widget _buildShareTextButton() {
+  Widget _buildShareButton() {
     return Obx(() {
-      // 1. Check loading state
       bool isLoading = postController.isLoading.value;
 
-      // 2. We remove the text check.
-      // As long as we have media (which we do), the post is valid.
-      bool isInvalid = false;
-
-      if (isLoading) {
-        return Padding(
-          padding: EdgeInsets.only(right: Dimensions.width20),
-          child: const Center(
-            child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2)
-            ),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: TextButton(
+          onPressed: isLoading ? null : _uploadPost,
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            disabledForegroundColor: Colors.grey,
           ),
-        );
-      }
-
-      return CustomButton(
-        onPressed: _uploadPost,
-        text:
-          'Share',
-        backgroundColor: AppColors.white,
-        // isDisabled: _descController.text.isEmpty,
+          child: isLoading
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text(
+            'Share',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+        ),
       );
     });
-  }
-
-  void _uploadPost() {
-    print("🔘 Share button tapped!");
-
-    FocusScope.of(context).unfocus();
-
-    final String caption = _descController.text.trim();
-
-    postController.uploadMediaPost(
-      file: file,
-      isVideo: isVideo,
-      title: caption ?? '',
-      description: caption ?? '',
-      text: caption ?? '',
-      isPublic: true,
-    );
   }
 }

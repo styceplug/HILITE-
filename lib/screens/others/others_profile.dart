@@ -52,6 +52,8 @@ class _OthersProfileState extends State<OthersProfileScreen> {
   @override
   void dispose() {
     super.dispose();
+    userController.clearExternalCache();
+
   }
 
   @override
@@ -829,138 +831,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
     }
   }
 
-  /// 🔘 Tab Helper
-  Widget _buildTabItem(UserController controller, String type, String label) {
-    bool isSelected = controller.currentExternalPostType == type;
-    return InkWell(
-      onTap: () {
-        if (targetId != null) {
-          controller.getExternalUserPosts(targetId!, type);
-        }
-      },
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: Dimensions.font16,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? AppColors.primary : AppColors.grey4,
-            ),
-          ),
-          SizedBox(height: 5),
-          if (isSelected)
-            Container(
-              height: 3,
-              width: 40,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 
-  /// 📱 Grid Helper
-  Widget _buildContentGrid(UserController controller) {
-    var posts =
-        controller.externalPostCache[controller.currentExternalPostType] ?? [];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 5,
-        mainAxisSpacing: 5,
-        childAspectRatio: 1,
-      ),
-      itemCount: posts.length,
-      itemBuilder: (context, index) {
-        var post = posts[index];
-        return GestureDetector(
-          onTap: () {
-            if (controller.currentExternalPostType == 'video') {
-              final videoOnly = posts.where((p) => p.type == 'video').toList();
-              final converted =
-                  videoOnly
-                      .map(
-                        (p) => personalToPostModel(
-                          p,
-                          authorProfile: controller.othersProfile.value,
-                        ),
-                      )
-                      .toList();
-
-              final tapped = posts[index];
-              final tappedIndex = videoOnly.indexOf(tapped);
-
-              Get.to(
-                () => ProfileReelsPlayer(
-                  videos: converted,
-                  initialIndex: tappedIndex == -1 ? 0 : tappedIndex,
-                  authorProfile: controller.othersProfile.value,
-                ),
-              );
-            } else {
-              Get.to(() => ProfileImageViewer(imageUrl: post.mediaUrl!));
-            }
-          },
-          child: _buildTileItem(post, controller.currentExternalPostType),
-        );
-      },
-    );
-  }
-
-  /// 🧱 Tile Helper (Copy of your Personal Profile Logic)
-  Widget _buildTileItem(PersonalPostModel post, String type) {
-    if (type == 'text') {
-      return Container(
-        padding: const EdgeInsets.all(8),
-        color: AppColors.grey2,
-        child: Center(
-          child: Text(
-            post.text ?? '',
-            maxLines: 4,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: Dimensions.font12),
-          ),
-        ),
-      );
-    } else if (type == 'image') {
-      if (post.mediaUrl == null || post.mediaUrl!.isEmpty) {
-        return Container(
-          color: AppColors.grey2,
-          child: const Icon(Icons.broken_image),
-        );
-      }
-      return Container(
-        decoration: BoxDecoration(
-          color: AppColors.grey2,
-          image: DecorationImage(
-            image: NetworkImage(post.mediaUrl!),
-            fit: BoxFit.cover,
-          ),
-        ),
-      );
-    } else {
-      // Video
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          Container(color: AppColors.black),
-          if (post.thumbnail != null && post.thumbnail!.isNotEmpty)
-            Image.network(post.thumbnail!, fit: BoxFit.cover),
-          const Center(
-            child: Icon(Icons.play_circle_fill, color: Colors.white, size: 30),
-          ),
-        ],
-      );
-    }
-  }
 
   /// 🧩 Stats Box
   Widget _buildStat(String label, String value, String type) => InkWell(
@@ -991,12 +862,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
     ),
   );
 
-  /// ┆ Divider
-  Widget _divider() => Container(
-    width: 0.5,
-    height: Dimensions.height50,
-    color: AppColors.grey4,
-  );
+
 
   /// 🔖 Info Tag
   Widget _buildInfoTag(String text) => Container(

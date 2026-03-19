@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:hilite/utils/dimensions.dart';
 import 'package:hilite/widgets/reel_overlay.dart';
 import 'package:video_player/video_player.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import '../controllers/post_controller.dart';
 import '../controllers/user_controller.dart';
@@ -281,13 +282,15 @@ class ProfileReelsPlayer extends StatefulWidget {
   State<ProfileReelsPlayer> createState() => _ProfileReelsPlayerState();
 }
 
-class _ProfileReelsPlayerState extends State<ProfileReelsPlayer> {
+class _ProfileReelsPlayerState extends State<ProfileReelsPlayer> with WidgetsBindingObserver{
   late PostController _profileController;
   final String _controllerTag = 'profile_reels';
 
   @override
   void initState() {
     super.initState();
+    // 2. Register the observer to listen for app backgrounding
+    WidgetsBinding.instance.addObserver(this);
 
     _profileController = Get.put(
       PostController(postRepo: Get.find()),
@@ -306,8 +309,20 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer> {
 
   @override
   void dispose() {
+    // 3. Clean up hardware and observers
+    WidgetsBinding.instance.removeObserver(this);
+    _profileController.pauseAll();
+    _profileController.disposeAllControllers();
     Get.delete<PostController>(tag: _controllerTag);
     super.dispose();
+  }
+
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _profileController.pauseAll();
+    }
   }
 
   @override
@@ -316,19 +331,28 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          PageView.builder(
-            controller: _profileController.reelsPageController,
-            scrollDirection: Axis.vertical,
-            itemCount: _profileController.posts.length,
-            onPageChanged: (index) => _profileController.onPageChanged(index),
-            itemBuilder: (_, index) {
-              return ReelsVideoItem(
-                index: index,
-                post: _profileController.posts[index],
-                controller: _profileController,
-                tag: _controllerTag,
-              );
+          VisibilityDetector(
+            key: Key(_controllerTag),
+            onVisibilityChanged: (visibilityInfo) {
+              var visiblePercentage = visibilityInfo.visibleFraction * 100;
+              if (visiblePercentage < 1) {
+                _profileController.pauseAll();
+              }
             },
+            child: PageView.builder(
+              controller: _profileController.reelsPageController,
+              scrollDirection: Axis.vertical,
+              itemCount: _profileController.posts.length,
+              onPageChanged: (index) => _profileController.onPageChanged(index),
+              itemBuilder: (_, index) {
+                return ReelsVideoItem(
+                  index: index,
+                  post: _profileController.posts[index],
+                  controller: _profileController,
+                  tag: _controllerTag,
+                );
+              },
+            ),
           ),
           Positioned(
             top: 40,
