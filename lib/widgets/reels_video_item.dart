@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hilite/helpers/dependencies.dart';
 import 'package:hilite/utils/dimensions.dart';
+import 'package:hilite/widgets/pulse_loader.dart';
 import 'package:hilite/widgets/reel_overlay.dart';
 import 'package:video_player/video_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -15,7 +17,6 @@ import 'dart:ui'; // For blur effect if needed
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
-
 
 class ReelsVideoItem extends StatefulWidget {
   final int index;
@@ -35,7 +36,8 @@ class ReelsVideoItem extends StatefulWidget {
   State<ReelsVideoItem> createState() => _ReelsVideoItemState();
 }
 
-class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProviderStateMixin {
+class _ReelsVideoItemState extends State<ReelsVideoItem>
+    with SingleTickerProviderStateMixin {
   bool _isSpeedingUp = false;
   bool _isDragging = false;
 
@@ -49,7 +51,10 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _speedOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(_speedAnimController);
+    _speedOpacity = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(_speedAnimController);
   }
 
   @override
@@ -83,11 +88,13 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
       tag: widget.tag,
       builder: (controller) {
         final videoCtrl = widget.controller.videoControllers[widget.index];
-        final isReady = widget.controller.initializedIndexes.contains(widget.index);
-
+        final isReady = widget.controller.initializedIndexes.contains(
+          widget.index,
+        );
 
         return GestureDetector(
-          behavior: HitTestBehavior.opaque, // Ensures taps are caught
+          behavior: HitTestBehavior.opaque,
+          // Ensures taps are caught
           onTap: () => widget.controller.togglePlayPause(widget.index),
           onTapDown: (details) {
             if (isReady && videoCtrl != null) _startSpeedUp(details, videoCtrl);
@@ -110,15 +117,18 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
 
               // 1. BACKGROUND
               if (isReady && videoCtrl != null && videoCtrl.value.isInitialized)
-                Container(color: Colors.black)  // black bg when video is playing
+                Container(color: Colors.black) // black bg when video is playing
               else if (widget.post.video?.thumbnailUrl != null)
-                Image.network(widget.post.video!.thumbnailUrl!, fit: BoxFit.cover)  // thumbnail while loading
+                Image.network(
+                  widget.post.video!.thumbnailUrl!,
+                  fit: BoxFit.cover,
+                ) // thumbnail while loading
               else
-                Container(color: Colors.black),
+                const PulseLoader(),
 
               // 2. VIDEO PLAYER
-                if (isReady && videoCtrl != null && videoCtrl.value.isInitialized)
-                  FittedBox(
+              if (isReady && videoCtrl != null && videoCtrl.value.isInitialized)
+                FittedBox(
                   fit: BoxFit.fitWidth,
                   child: SizedBox(
                     width: videoCtrl.value.size.width,
@@ -139,16 +149,29 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.black.withOpacity(0.6),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Row(
                             children: [
-                              Icon(Icons.fast_forward_rounded, color: Colors.white, size: 16),
+                              Icon(
+                                Icons.fast_forward_rounded,
+                                color: Colors.white,
+                                size: 16,
+                              ),
                               SizedBox(width: 8),
-                              Text("2x Speed", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              Text(
+                                "2x Speed",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -163,7 +186,8 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
                   child: ValueListenableBuilder(
                     valueListenable: videoCtrl,
                     builder: (context, VideoPlayerValue value, child) {
-                      if (_isSpeedingUp || _isDragging) return const SizedBox.shrink();
+                      if (_isSpeedingUp || _isDragging)
+                        return const SizedBox.shrink();
 
                       if (!value.isPlaying && !value.isBuffering) {
                         return Container(
@@ -172,11 +196,15 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
                             shape: BoxShape.circle,
                           ),
                           padding: const EdgeInsets.all(15),
-                          child: const Icon(Icons.play_arrow_rounded, size: 50, color: Colors.white),
+                          child: const Icon(
+                            Icons.play_arrow_rounded,
+                            size: 50,
+                            color: Colors.white,
+                          ),
                         );
                       }
                       if (value.isBuffering) {
-                        return const CircularProgressIndicator(color: Colors.white);
+                        return const PulseLoader();
                       }
                       return const SizedBox.shrink();
                     },
@@ -186,13 +214,13 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
               // 5. INTERACTION OVERLAY
               // (Buttons like "Like", "Comment" inside this widget will still work
               // because they sit on top and consume their own touch events)
-              if (!_isDragging)
-                ReelsInteractionOverlay(post: widget.post),
+              if (!_isDragging) ReelsInteractionOverlay(post: widget.post),
 
               // 6. PROGRESS BAR
               if (isReady && videoCtrl != null)
                 Positioned(
-                  bottom: Dimensions.bottomNavIconHeight+Dimensions.height10*9,
+                  bottom:
+                      Dimensions.bottomNavIconHeight + Dimensions.height10 * 9,
                   left: 0,
                   right: 0,
                   child: _buildProgressBar(videoCtrl),
@@ -203,6 +231,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
       },
     );
   }
+
   Widget _buildThumbnail() {
     final thumb = MediaUrlHelper.resolve(widget.post.video?.thumbnailUrl);
 
@@ -210,17 +239,38 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
       return Container(color: Colors.black);
     }
 
-    return Image.network(
-      thumb,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => Container(color: Colors.black),
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-        return Container(color: Colors.black);
-      },
+    return Stack(
+      children: [
+        Image.network(
+          thumb,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(color: Colors.black),
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return Container(color: Colors.black);
+          },
+        ),
+        PulseLoader(),
+      ],
     );
   }
+
   Widget _buildProgressBar(VideoPlayerController controller) {
+    late AnimationController _progressAnimController;
+    late Animation<double> _progressOpacity;
+
+    void initState() {
+      _progressAnimController = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 800),
+      )..repeat(reverse: true);
+
+      _progressOpacity = Tween(
+        begin: 0.4,
+        end: 1.0,
+      ).animate(_progressAnimController);
+    }
+
     return ValueListenableBuilder(
       valueListenable: controller,
       builder: (context, VideoPlayerValue value, child) {
@@ -243,28 +293,41 @@ class _ReelsVideoItemState extends State<ReelsVideoItem> with SingleTickerProvid
             thumbColor: Colors.white,
             overlayColor: Colors.white.withOpacity(0.4),
           ),
-          child: Slider(
-            value: current,
-            min: 0.0,
-            max: max,
-            onChangeStart: (_) {
-              setState(() => _isDragging = true);
-              controller.pause();
-            },
-            onChangeEnd: (_) {
-              setState(() => _isDragging = false);
-              controller.play();
-            },
-            onChanged: (val) {
-              controller.seekTo(Duration(milliseconds: val.toInt()));
-            },
+          child: FadeTransition(
+            opacity:
+                value.isBuffering
+                    ? _progressOpacity
+                    : AlwaysStoppedAnimation(1),
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 2.0,
+                activeTrackColor: Colors.white,
+                inactiveTrackColor: Colors.white.withOpacity(0.2),
+                thumbColor: Colors.white,
+              ),
+              child: Slider(
+                value: current,
+                min: 0.0,
+                max: max,
+                onChangeStart: (_) {
+                  setState(() => _isDragging = true);
+                  controller.pause();
+                },
+                onChangeEnd: (_) {
+                  setState(() => _isDragging = false);
+                  controller.play();
+                },
+                onChanged: (val) {
+                  controller.seekTo(Duration(milliseconds: val.toInt()));
+                },
+              ),
+            ),
           ),
         );
       },
     );
   }
 }
-
 
 class ProfileReelsPlayer extends StatefulWidget {
   final List<PostModel> videos;
@@ -282,7 +345,8 @@ class ProfileReelsPlayer extends StatefulWidget {
   State<ProfileReelsPlayer> createState() => _ProfileReelsPlayerState();
 }
 
-class _ProfileReelsPlayerState extends State<ProfileReelsPlayer> with WidgetsBindingObserver{
+class _ProfileReelsPlayerState extends State<ProfileReelsPlayer>
+    with WidgetsBindingObserver {
   late PostController _profileController;
   final String _controllerTag = 'profile_reels';
 
@@ -317,10 +381,10 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer> with WidgetsBin
     super.dispose();
   }
 
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       _profileController.pauseAll();
     }
   }
@@ -359,14 +423,13 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer> with WidgetsBin
             left: 20,
             child: Container(
               decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  shape: BoxShape.circle
+                color: Colors.black.withOpacity(0.5),
+                shape: BoxShape.circle,
               ),
               child: IconButton(
-
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: () {
-                      Get.back();
+                  Get.back();
                 },
               ),
             ),
