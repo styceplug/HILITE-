@@ -41,10 +41,10 @@ class PostModel {
       data = Map<String, dynamic>.from(json['post']);
     }
 
-    debugPrint('🧩 Parsing PostModel: ${data['_id']}');
-    debugPrint('   authorPic(raw): ${data['author'] is Map ? data['author']['profilePicture'] : null}');
-    debugPrint('   videoUrl(raw): ${data['video']?['url']}');
-    debugPrint('   thumb(raw): ${data['video']?['thumbnailUrl']}');
+    // debugPrint('🧩 Parsing PostModel: ${data['_id']}');
+    // debugPrint('   authorPic(raw): ${data['author'] is Map ? data['author']['profilePicture'] : null}');
+    // debugPrint('   videoUrl(raw): ${data['video']?['url']}');
+    // debugPrint('   thumb(raw): ${data['video']?['thumbnailUrl']}');
 
     Author? parsedAuthor;
     String? parsedAuthorId;

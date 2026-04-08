@@ -701,9 +701,9 @@ class PostController extends GetxController {
     if (url.isEmpty) return null;
 
     try {
-      debugPrint('🎥 Cache video [$index]');
-      debugPrint('   rawUrl: $rawUrl');
-      debugPrint('   resolvedUrl: $url');
+      // debugPrint('🎥 Cache video [$index]');
+      // debugPrint('   rawUrl: $rawUrl');
+      // debugPrint('   resolvedUrl: $url');
 
       return await DefaultCacheManager().getSingleFile(url);
     } catch (e) {
@@ -733,10 +733,10 @@ class PostController extends GetxController {
     late VideoPlayerController controller;
 
     if (file != null) {
-      debugPrint('📁 Using cached file for index $index: ${file.path}');
+      // debugPrint('📁 Using cached file for index $index: ${file.path}');
       controller = VideoPlayerController.file(file);
     } else {
-      debugPrint('🌐 Using network URL for index $index: $resolvedUrl');
+      // debugPrint('🌐 Using network URL for index $index: $resolvedUrl');
       controller = VideoPlayerController.networkUrl(Uri.parse(resolvedUrl));
     }
 

@@ -50,11 +50,19 @@ class HomeScreenBottomNavBar extends StatelessWidget {
                 },
               ),
               BottomBarItem(
-                name: 'Profile',
-                image: 'nav4',
+                name: 'Messages',
+                image: 'messenger',
                 isActive: appController.currentAppPage.value == 2,
                 onClick: () {
                   appController.changeCurrentAppPage(2);
+                },
+              ),
+              BottomBarItem(
+                name: 'Profile',
+                image: 'nav4',
+                isActive: appController.currentAppPage.value == 3,
+                onClick: () {
+                  appController.changeCurrentAppPage(3);
                 },
 
               ),

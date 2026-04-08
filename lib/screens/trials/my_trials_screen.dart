@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../controllers/trial_controller.dart';
+import '../../controllers/user_controller.dart';
+import '../../data/repo/chat_repo.dart';
+import '../../models/message_model.dart';
+import '../../routes/routes.dart';
 import '../../utils/app_constants.dart';
 import '../../utils/colors.dart';
 import '../../utils/dimensions.dart';
 import '../../widgets/custom_appbar.dart';
+import '../../widgets/custom_button.dart';
+import '../../widgets/snackbars.dart';
 
 class MyTrialsScreen extends StatefulWidget {
   const MyTrialsScreen({super.key});
@@ -35,13 +41,8 @@ class _MyTrialsScreenState extends State<MyTrialsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgColor,
-      appBar: CustomAppbar(
-        title: 'My Trials',
-        leadingIcon: const BackButton(),
-      ),
+      appBar: CustomAppbar(title: 'My Trials', leadingIcon: const BackButton()),
       body: Obx(() {
-
-
         if (trialController.myTrials.isEmpty) {
           return const Center(child: Text('No trials found'));
         }
@@ -74,12 +75,13 @@ class _MyTrialsScreenState extends State<MyTrialsScreen> {
                         height: 80,
                         width: 90,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          height: 80,
-                          width: 90,
-                          color: AppColors.grey2,
-                          child: const Icon(Icons.image_outlined),
-                        ),
+                        errorBuilder:
+                            (_, __, ___) => Container(
+                              height: 80,
+                              width: 90,
+                              color: AppColors.grey2,
+                              child: const Icon(Icons.image_outlined),
+                            ),
                       ),
                     ),
                     SizedBox(width: Dimensions.width15),
@@ -138,7 +140,6 @@ class _MyTrialsScreenState extends State<MyTrialsScreen> {
   }
 }
 
-
 class TrialDetailsScreen extends StatefulWidget {
   final String trialId;
 
@@ -150,6 +151,8 @@ class TrialDetailsScreen extends StatefulWidget {
 
 class _TrialDetailsScreenState extends State<TrialDetailsScreen> {
   final TrialController trialController = Get.find<TrialController>();
+  UserController userController = Get.find<UserController>();
+  late final user = userController.othersProfile.value;
 
   @override
   void initState() {
@@ -219,12 +222,13 @@ class _TrialDetailsScreenState extends State<TrialDetailsScreen> {
                   height: 220,
                   width: Dimensions.screenWidth,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 220,
-                    width: Dimensions.screenWidth,
-                    color: AppColors.grey2,
-                    child: const Icon(Icons.image_outlined, size: 40),
-                  ),
+                  errorBuilder:
+                      (_, __, ___) => Container(
+                        height: 220,
+                        width: Dimensions.screenWidth,
+                        color: AppColors.grey2,
+                        child: const Icon(Icons.image_outlined, size: 40),
+                      ),
                 ),
               ),
               SizedBox(height: Dimensions.height20),
@@ -236,8 +240,7 @@ class _TrialDetailsScreenState extends State<TrialDetailsScreen> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: Dimensions.height10
-),
+              SizedBox(height: Dimensions.height10),
 
               Text(
                 trial.creator?.clubName ??
@@ -283,8 +286,7 @@ class _TrialDetailsScreenState extends State<TrialDetailsScreen> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: Dimensions.height10
-),
+              SizedBox(height: Dimensions.height10),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
@@ -305,8 +307,7 @@ class _TrialDetailsScreenState extends State<TrialDetailsScreen> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: Dimensions.height10
-),
+              SizedBox(height: Dimensions.height10),
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -319,14 +320,16 @@ class _TrialDetailsScreenState extends State<TrialDetailsScreen> {
                     CircleAvatar(
                       radius: 24,
                       backgroundColor: AppColors.grey2,
-                      backgroundImage: (trial.creator?.profilePicture != null &&
-                          trial.creator!.profilePicture!.isNotEmpty)
-                          ? NetworkImage(trial.creator!.profilePicture!)
-                          : null,
-                      child: (trial.creator?.profilePicture == null ||
-                          trial.creator!.profilePicture!.isEmpty)
-                          ? const Icon(Icons.person)
-                          : null,
+                      backgroundImage:
+                          (trial.creator?.profilePicture != null &&
+                                  trial.creator!.profilePicture!.isNotEmpty)
+                              ? NetworkImage(trial.creator!.profilePicture!)
+                              : null,
+                      child:
+                          (trial.creator?.profilePicture == null ||
+                                  trial.creator!.profilePicture!.isEmpty)
+                              ? const Icon(Icons.person)
+                              : null,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -337,9 +340,7 @@ class _TrialDetailsScreenState extends State<TrialDetailsScreen> {
                             trial.creator?.clubName ??
                                 trial.creator?.name ??
                                 '-',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 4),
                           Text('@${trial.creator?.username ?? '-'}'),
@@ -395,14 +396,16 @@ class _TrialDetailsScreenState extends State<TrialDetailsScreen> {
                         children: [
                           CircleAvatar(
                             backgroundColor: AppColors.grey2,
-                            backgroundImage: (player.profilePicture != null &&
-                                player.profilePicture!.isNotEmpty)
-                                ? NetworkImage(player.profilePicture!)
-                                : null,
-                            child: (player.profilePicture == null ||
-                                player.profilePicture!.isEmpty)
-                                ? const Icon(Icons.person)
-                                : null,
+                            backgroundImage:
+                                (player.profilePicture != null &&
+                                        player.profilePicture!.isNotEmpty)
+                                    ? NetworkImage(player.profilePicture!)
+                                    : null,
+                            child:
+                                (player.profilePicture == null ||
+                                        player.profilePicture!.isEmpty)
+                                    ? const Icon(Icons.person)
+                                    : null,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -419,7 +422,69 @@ class _TrialDetailsScreenState extends State<TrialDetailsScreen> {
                               ],
                             ),
                           ),
-                          Text(player.role),
+
+                          SizedBox(width: Dimensions.width5),
+                          CustomButton(
+                            text: 'Send a dm',
+                            textStyle: TextStyle(
+                              color: AppColors.white,
+                              fontSize: Dimensions.font10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            onPressed: () async {
+                              try {
+                                final chatRepo = Get.find<ChatRepo>();
+
+                                final response = await chatRepo.getOrCreateChat(
+                                  user!.id,
+                                );
+
+                                if (response.statusCode == 200 &&
+                                    response.body['code'] == '00') {
+                                  print(
+                                    'CHAT RAW DATA: ${response.body['data']}',
+                                  );
+
+                                  final chat = Chat.fromJson(
+                                    Map<String, dynamic>.from(
+                                      response.body['data'],
+                                    ),
+                                  );
+
+                                  Get.toNamed(
+                                    AppRoutes.messagingScreen,
+                                    arguments: {
+                                      'chat': chat,
+                                      'peerName': player.name,
+                                      'peerUsername': player.username,
+                                      'peerProfilePicture':
+                                          player.profilePicture,
+                                    },
+                                  );
+                                } else {
+                                  CustomSnackBar.failure(
+                                    message:
+                                        response.body?['message'] ??
+                                        'Unable to open chat',
+                                  );
+                                }
+                              } catch (e, s) {
+                                print('OPEN CHAT ERROR: $e');
+                                print(s);
+                                CustomSnackBar.failure(
+                                  message: 'Unable to open chat: $e',
+                                );
+                              }
+                            },
+                            padding: EdgeInsets.symmetric(
+                              horizontal: Dimensions.width5,
+                              vertical: Dimensions.height5,
+                            ),
+                            backgroundColor: AppColors.primary,
+                            borderRadius: BorderRadius.circular(
+                              Dimensions.radius5,
+                            ),
+                          ),
                         ],
                       ),
                     );

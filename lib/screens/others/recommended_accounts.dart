@@ -730,7 +730,6 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
   }
 
 
-
   Widget _buildFilterChip({
     required String label,
     required IconData icon,
@@ -845,9 +844,8 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              user.role == 'club'
-                                  ? (user.clubDetails?.clubName ?? 'Unknown')
-                                  : (user.name.capitalizeFirst ?? 'Unknown'),
+
+                              user.displayName,
                               style: TextStyle(
                                 fontSize: Dimensions.font17,
                                 fontWeight: FontWeight.w700,

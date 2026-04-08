@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hilite/routes/routes.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
@@ -49,6 +50,7 @@ class _MessagingScreenState extends State<MessagingScreen> {
     ctrl.closeChat();
     _textCtrl.dispose();
     _scrollCtrl.dispose();
+    ctrl.dispose();
     super.dispose();
   }
 
@@ -252,27 +254,34 @@ class _ChatHeader extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+            child: InkWell(
+              onTap: (){
+                Get.toNamed(AppRoutes.othersProfileScreen,arguments: {
+                  'targetId': peer?.id,
+                });
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayName,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  isOnline ? 'Online' : _formatLastSeen(lastSeen),
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6B7280),
+                  const SizedBox(height: 2),
+                  Text(
+                    isOnline ? 'Online' : _formatLastSeen(lastSeen),
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF6B7280),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

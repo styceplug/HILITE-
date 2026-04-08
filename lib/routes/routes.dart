@@ -36,6 +36,7 @@ import '../controllers/post_controller.dart';
 import '../models/message_model.dart';
 import '../models/post_model.dart';
 import '../screens/home/pages/activities_screen.dart';
+import '../screens/messaging/chat_list_screen.dart';
 import '../screens/messaging/messaging_screen.dart';
 import '../screens/splash/splash.dart';
 import '../screens/splash/splash_screen.dart';

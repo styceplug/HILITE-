@@ -126,12 +126,12 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
       left: 20,
       right: 20,
       child: Hero(
-        tag: 'search_bar', // Added Hero for smooth transition to search screen
+        tag: 'search_bar',
         child: ClipRRect(
           borderRadius: BorderRadius.circular(15),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-            child: Material( // Wrap in Material to fix text rendering in Hero
+            child: Material(
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {

@@ -17,6 +17,7 @@ import '../data/repo/chat_repo.dart';
 import '../helpers/socket_helper.dart';
 import '../models/message_model.dart';
 import '../routes/routes.dart';
+import '../screens/messaging/chat_list_screen.dart';
 import 'chat_controller.dart';
 
 class AppController extends GetxController {
@@ -37,6 +38,7 @@ class AppController extends GetxController {
   final List<Widget> pages = [
     ReelsScreen(),
     ActivitiesScreen(),
+    ChatListScreen(),
     ProfileScreen(),
   ];
 
@@ -50,8 +52,7 @@ class AppController extends GetxController {
     await userController.saveDeviceToken();
     await checkFirstTimeUse();
     await checkLoginAndNavigate();
-    postController.loadRecommendedPosts("video");
-    await userController.getUserProfile();
+
 
     final sharedPreferences = Get.find<SharedPreferences>();
     final token = sharedPreferences.getString(AppConstants.authToken) ?? '';
@@ -61,10 +62,13 @@ class AppController extends GetxController {
         baseUrl: AppConstants.SOCKET_BASE_URL,
         token: token,
       );
+
+      userController.getPersonalPosts('video');
+      userController.getPersonalPosts('image');
+      postController.loadRecommendedPosts("video");
+      await userController.getUserProfile();
     }
 
-    userController.getPersonalPosts('video');
-    userController.getPersonalPosts('image');
   }
 
 
