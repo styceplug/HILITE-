@@ -1,12 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/post_controller.dart';
 import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/routes/routes.dart';
-import 'package:hilite/utils/app_constants.dart';
 import 'package:hilite/utils/dimensions.dart';
-import 'package:hilite/widgets/snackbars.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -16,13 +15,16 @@ import 'gift_bottom_modal.dart';
 
 class ReelsInteractionOverlay extends StatelessWidget {
   final PostModel post;
+  final PostController controller;
 
-  const ReelsInteractionOverlay({Key? key, required this.post})
-    : super(key: key);
+  const ReelsInteractionOverlay({
+    Key? key,
+    required this.post,
+    required this.controller,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    PostController postController = Get.find<PostController>();
     UserController userController = Get.find<UserController>();
 
     return Container(
@@ -54,11 +56,16 @@ class ReelsInteractionOverlay extends StatelessWidget {
                   children: [
                     InkWell(
                       onTap: () async {
-                        if (post.author?.id != null || post.author?.id != userController.user.value?.id) {
-                          postController.pauseAll();
+                        final authorId = post.author?.id;
+                        final currentUserId = userController.user.value?.id;
+
+                        if (authorId != null &&
+                            authorId.isNotEmpty &&
+                            authorId != currentUserId) {
+                          unawaited(controller.deactivatePlayback());
                           Get.toNamed(
                             AppRoutes.othersProfileScreen,
-                            arguments: {'targetId': post.author?.id},
+                            arguments: {'targetId': authorId},
                           );
                         } else {
                           print('This is your profile');
@@ -125,20 +132,21 @@ class ReelsInteractionOverlay extends StatelessWidget {
                   _ProfileAvatar(
                     url: post.author?.profilePicture,
                     argument: post.author?.id,
+                    controller: controller,
                   ),
                   const SizedBox(height: 20),
 
                   // Likes
                   Obx(() {
                     final currentPost =
-                        postController.posts.firstWhereOrNull(
+                        controller.posts.firstWhereOrNull(
                           (p) => p.id == post.id,
                         ) ??
                         post;
                     final bool isLiked = currentPost.isLiked;
 
                     return GestureDetector(
-                      onTap: () => postController.toggleLike(currentPost.id),
+                      onTap: () => controller.toggleLike(currentPost.id),
                       child: _InteractionIcon(
                         icon: isLiked ? Iconsax.heart5 : Iconsax.heart,
                         // Filled vs. Outline
@@ -156,7 +164,7 @@ class ReelsInteractionOverlay extends StatelessWidget {
                   Obx(() {
                     // Find the updated post model from the observable list.
                     final currentPost =
-                        postController.posts.firstWhereOrNull(
+                        controller.posts.firstWhereOrNull(
                           (p) => p.id == post.id,
                         ) ??
                         post;
@@ -164,7 +172,7 @@ class ReelsInteractionOverlay extends StatelessWidget {
                     return GestureDetector(
                       onTap: () {
                         // 🚀 Call the function that handles fetching and displaying the UI
-                        postController.showCommentsForPost(currentPost.id);
+                        controller.showCommentsForPost(currentPost.id);
                       },
                       child: _InteractionIcon(
                         icon: Iconsax.message,
@@ -174,11 +182,11 @@ class ReelsInteractionOverlay extends StatelessWidget {
                   }),
                   const SizedBox(height: 20),
                   Obx(() {
-                    final isBookmarked = postController.isPostBookmarked(
+                    final isBookmarked = controller.isPostBookmarked(
                       post.id,
                     );
                     return InkWell(
-                      onTap: () => postController.toggleBookmark(post.id),
+                      onTap: () => controller.toggleBookmark(post.id),
                       child: _InteractionIcon(
                         icon:
                             isBookmarked
@@ -192,7 +200,8 @@ class ReelsInteractionOverlay extends StatelessWidget {
                   const SizedBox(height: 20),
                   GestureDetector(
                     onTap: () {
-                      String link = "https://api.hiliteapp.net/post/${post.id}";
+                      controller.pauseAll();
+                      final link = "https://api.hiliteapp.net/post/${post.id}";
 
                       Share.share(
                         'Check out this video on Hilite! $link',
@@ -268,20 +277,25 @@ class _InteractionIcon extends StatelessWidget {
 class _ProfileAvatar extends StatelessWidget {
   final String? url;
   final String? argument;
+  final PostController controller;
 
-  const _ProfileAvatar({Key? key, this.url, this.argument}) : super(key: key);
+  const _ProfileAvatar({
+    Key? key,
+    this.url,
+    this.argument,
+    required this.controller,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
         if (argument != null && argument!.isNotEmpty) {
+          unawaited(controller.deactivatePlayback());
           Get.toNamed(
             AppRoutes.othersProfileScreen,
             arguments: {'targetId': argument},
           );
-          PostController postController = Get.find<PostController>();
-          postController.pauseAll();
         } else {
           print("Cannot navigate: Author ID is missing.");
         }

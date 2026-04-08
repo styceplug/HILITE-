@@ -1,20 +1,14 @@
+import 'dart:async';
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:chewie/chewie.dart';
-import 'package:hilite/widgets/custom_button.dart';
-import 'package:hilite/widgets/custom_textfield.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../controllers/post_controller.dart';
-import '../../../models/post_model.dart';
 import '../../../routes/routes.dart';
-import '../../../utils/colors.dart';
 import '../../../utils/dimensions.dart';
-import '../../../widgets/reel_overlay.dart';
 import '../../../widgets/reels_video_item.dart';
-
 import 'package:visibility_detector/visibility_detector.dart';
 
 class ReelsScreen extends StatefulWidget {
@@ -36,6 +30,7 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (controller.posts.isEmpty) {
+        controller.activatePlayback();
         controller.loadRecommendedPosts(currentType);
       } else {
         // If returning to this tab, resume the current video
@@ -47,9 +42,7 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    // Important: We don't necessarily delete the controller here
-    // if it's a main-tab controller, but we MUST stop the hardware.
-    controller.pauseAll();
+    unawaited(controller.deactivatePlayback());
     super.dispose();
   }
 
@@ -57,7 +50,7 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      controller.pauseAll();
+      unawaited(controller.deactivatePlayback());
     } else if (state == AppLifecycleState.resumed && _isScreenVisible) {
       _resumeVideo();
     }
@@ -68,6 +61,7 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
     int currentIndex = controller.reelsPageController.hasClients
         ? controller.reelsPageController.page?.round() ?? 0
         : 0;
+    controller.activatePlayback();
     controller.playVideo(currentIndex);
   }
 
@@ -82,7 +76,7 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
         onVisibilityChanged: (visibilityInfo) {
           _isScreenVisible = visibilityInfo.visibleFraction > 0.5;
           if (!_isScreenVisible) {
-            controller.pauseAll();
+            unawaited(controller.deactivatePlayback());
           } else {
             _resumeVideo();
           }
@@ -135,7 +129,7 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
-                  controller.pauseAll();
+                  unawaited(controller.deactivatePlayback());
                   Get.toNamed(AppRoutes.recommendedAccountsScreen);
                 },
                 child: Container(

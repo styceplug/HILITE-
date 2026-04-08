@@ -1,8 +1,9 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/app_controller.dart';
 import 'package:hilite/controllers/user_controller.dart';
-import 'package:hilite/controllers/wallet_controller.dart';
 import 'package:hilite/helpers/global_loader_controller.dart';
 import 'package:hilite/models/post_model.dart';
 import 'package:hilite/widgets/snackbars.dart';
@@ -12,14 +13,11 @@ import 'package:camera/camera.dart' hide ImageFormat;
 import 'package:video_thumbnail/video_thumbnail.dart';
 import '../data/api/api_checker.dart';
 import '../data/repo/post_repo.dart';
-import 'dart:io';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../data/services/upload_services.dart';
 import '../models/comment_model.dart';
-import '../models/gift_model.dart';
 import '../routes/routes.dart';
 import '../widgets/comment_bottom_sheet.dart';
-import '../widgets/gift_bottom_modal.dart';
 
 class PostController extends GetxController {
   final PostRepo postRepo;
@@ -42,23 +40,35 @@ class PostController extends GetxController {
   int _currentIndex = 0;
 
   final PageController reelsPageController = PageController();
+  final Map<int, Future<void>> _controllerInitFutures = {};
+  int _controllerGeneration = 0;
+  int _playRequestId = 0;
+  bool _isPlaybackActive = true;
 
   @override
   void onClose() {
     reelsPageController.dispose();
-    _disposeAll();
+    unawaited(_disposeAll());
     super.onClose();
   }
 
-
-
-
-  void playVideo(int index) {
-    _playAtIndex(index);
+  Future<void> playVideo(int index) async {
+    _currentIndex = index;
+    await _playAtIndex(index);
   }
 
-  void disposeAllControllers() {
-    _disposeAll();
+  Future<void> disposeAllControllers() async {
+    await _disposeAll();
+  }
+
+  void activatePlayback() {
+    _isPlaybackActive = true;
+  }
+
+  Future<void> deactivatePlayback() async {
+    _isPlaybackActive = false;
+    _playRequestId++;
+    await pauseAll();
   }
 
 
@@ -93,7 +103,7 @@ class PostController extends GetxController {
 
     // 1. Lock feed & Pause
     isHandlingDeepLink = true;
-    pauseAll();
+    await pauseAll();
     loader.showLoader();
 
     try {
@@ -162,8 +172,9 @@ class PostController extends GetxController {
 
           // 8. Initialize & Play Index 0
           // Use caching logic specifically for the first video
+          activatePlayback();
           await _initController(0);
-          videoControllers[0]?.play();
+          await _playAtIndex(0);
 
           // 9. Preload next
           if (posts.length > 1) _preloadNext(1);
@@ -188,12 +199,7 @@ class PostController extends GetxController {
 
   // Helper for safe disposal
   Future<void> _disposeAllControllersSafe() async {
-    for (var controller in videoControllers.values) {
-      await controller.pause();
-      await controller.dispose();
-    }
-    videoControllers.clear();
-    initializedIndexes.clear();
+    await _disposeAll();
   }
 
   Future<void> getBookmarks() async {
@@ -521,7 +527,7 @@ class PostController extends GetxController {
   }
 
   void showCommentsForPost(String postId) async {
-    pauseAll();
+    await pauseAll();
 
     await fetchComments(postId);
 
@@ -666,7 +672,8 @@ class PostController extends GetxController {
 
 
     loader.showLoader();
-    _disposeAll();
+    isLoading.value = true;
+    await _disposeAll();
     posts.clear();
 
     try {
@@ -679,6 +686,7 @@ class PostController extends GetxController {
     } catch (e) {
       print("Error: $e");
     } finally {
+      isLoading.value = false;
       loader.hideLoader();
     }
 
@@ -713,12 +721,44 @@ class PostController extends GetxController {
   }
 
   Future<void> _initController(int index) async {
-    if (index >= posts.length || posts[index].type != 'video') {
+    if (!_isValidVideoIndex(index)) {
       debugPrint('Controller init skipped: Invalid index or not a video post.');
       return;
     }
 
     if (videoControllers.containsKey(index)) return;
+
+    final pendingInit = _controllerInitFutures[index];
+    if (pendingInit != null) {
+      await pendingInit;
+      return;
+    }
+
+    final postId = posts[index].id;
+    final generation = _controllerGeneration;
+
+    final initFuture = _initializeControllerForIndex(
+      index: index,
+      postId: postId,
+      generation: generation,
+    );
+    _controllerInitFutures[index] = initFuture;
+
+    try {
+      await initFuture;
+    } finally {
+      _controllerInitFutures.remove(index);
+    }
+  }
+
+  Future<void> _initializeControllerForIndex({
+    required int index,
+    required String postId,
+    required int generation,
+  }) async {
+    if (!_matchesGeneration(index, postId, generation)) {
+      return;
+    }
 
     final rawUrl = posts[index].video?.url;
     final resolvedUrl = MediaUrlHelper.resolve(rawUrl);
@@ -728,7 +768,7 @@ class PostController extends GetxController {
       return;
     }
 
-    File? file = await _cacheVideoFile(index);
+    final file = await _cacheVideoFile(index);
 
     late VideoPlayerController controller;
 
@@ -740,11 +780,15 @@ class PostController extends GetxController {
       controller = VideoPlayerController.networkUrl(Uri.parse(resolvedUrl));
     }
 
-    videoControllers[index] = controller;
-
     try {
       await controller.initialize();
+      if (!_matchesGeneration(index, postId, generation)) {
+        await _disposeControllerSafely(controller);
+        return;
+      }
+
       await controller.setLooping(true);
+      videoControllers[index] = controller;
 
       initializedIndexes.add(index);
 
@@ -755,7 +799,7 @@ class PostController extends GetxController {
       update(['video_item_$index']);
     } catch (e) {
       debugPrint("Error initializing video $index: $e");
-      videoControllers[index]?.dispose();
+      await _disposeControllerSafely(controller);
       videoControllers.remove(index);
       initializedIndexes.remove(index);
       update(['video_item_$index']);
@@ -766,32 +810,27 @@ class PostController extends GetxController {
 
   void onPageChanged(int index) {
     _currentIndex = index;
+    unawaited(_handlePageChanged(index));
+  }
 
-    // 1. Play Current
-    _playAtIndex(index);
+  Future<void> _handlePageChanged(int index) async {
+    await _playAtIndex(index);
 
-    // 2. Preload Next (Buffer ahead)
     if (index + 1 < posts.length) {
       _preloadNext(index + 1);
-      // Init controller but pause it
-      _initController(
-        index + 1,
-      ).then((_) => videoControllers[index + 1]?.pause());
+      await _initController(index + 1);
+      await _pauseControllerSafely(videoControllers[index + 1]);
     }
 
-    // 3. Keep Previous (Paused, for quick back nav)
     if (index - 1 >= 0) {
-      videoControllers[index - 1]?.pause();
+      await _pauseControllerSafely(videoControllers[index - 1]);
     }
 
-    // 4. Dispose Distant (Memory Management)
-    videoControllers.keys.toList().forEach((key) {
+    for (final key in videoControllers.keys.toList()) {
       if (key < index - 1 || key > index + 1) {
-        videoControllers[key]?.dispose();
-        videoControllers.remove(key);
-        initializedIndexes.remove(key);
+        await _disposeControllerAtIndex(key);
       }
-    });
+    }
   }
 
   void _preloadNext(int startIndex) {
@@ -801,11 +840,30 @@ class PostController extends GetxController {
     }
   }
 
-  void _playAtIndex(int index) async {
+  Future<void> _playAtIndex(int index) async {
+    if (!_isPlaybackActive || !_isValidVideoIndex(index)) {
+      return;
+    }
+
+    final requestId = ++_playRequestId;
+
     if (!videoControllers.containsKey(index)) {
       await _initController(index);
     }
-    videoControllers[index]?.play();
+
+    if (!_isPlaybackActive ||
+        _currentIndex != index ||
+        requestId != _playRequestId) {
+      return;
+    }
+
+    final controller = videoControllers[index];
+    if (controller == null || !controller.value.isInitialized) {
+      return;
+    }
+
+    await _pauseAllExcept(index);
+    await controller.play();
   }
 
   void togglePlayPause(int index) {
@@ -816,13 +874,73 @@ class PostController extends GetxController {
     }
   }
 
-  void pauseAll() {
-    videoControllers.values.forEach((c) => c.pause());
+  Future<void> pauseAll() async {
+    final controllers = videoControllers.values.toList(growable: false);
+    for (final controller in controllers) {
+      await _pauseControllerSafely(controller);
+    }
   }
 
-  void _disposeAll() {
-    videoControllers.values.forEach((c) => c.dispose());
+  Future<void> _disposeAll() async {
+    _controllerGeneration++;
+    _playRequestId++;
+
+    final controllers = videoControllers.values.toList(growable: false);
     videoControllers.clear();
     initializedIndexes.clear();
+    _controllerInitFutures.clear();
+
+    for (final controller in controllers) {
+      await _disposeControllerSafely(controller);
+    }
+  }
+
+  Future<void> _pauseAllExcept(int activeIndex) async {
+    for (final entry in videoControllers.entries) {
+      if (entry.key == activeIndex) continue;
+      await _pauseControllerSafely(entry.value);
+    }
+  }
+
+  Future<void> _disposeControllerAtIndex(int index) async {
+    final controller = videoControllers.remove(index);
+    initializedIndexes.remove(index);
+    if (controller != null) {
+      await _disposeControllerSafely(controller);
+    }
+  }
+
+  Future<void> _pauseControllerSafely(VideoPlayerController? controller) async {
+    if (controller == null) return;
+    try {
+      await controller.pause();
+    } catch (_) {}
+  }
+
+  Future<void> _disposeControllerSafely(
+    VideoPlayerController? controller,
+  ) async {
+    if (controller == null) return;
+
+    try {
+      await controller.pause();
+    } catch (_) {}
+
+    try {
+      await controller.dispose();
+    } catch (_) {}
+  }
+
+  bool _isValidVideoIndex(int index) {
+    return index >= 0 &&
+        index < posts.length &&
+        posts[index].type == 'video';
+  }
+
+  bool _matchesGeneration(int index, String postId, int generation) {
+    return generation == _controllerGeneration &&
+        index >= 0 &&
+        index < posts.length &&
+        posts[index].id == postId;
   }
 }

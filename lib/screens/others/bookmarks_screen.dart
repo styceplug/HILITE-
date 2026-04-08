@@ -1,8 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/post_controller.dart';
 
-import '../../controllers/user_controller.dart';
 import '../../models/post_model.dart';
 import '../../utils/dimensions.dart';
 import '../../widgets/custom_appbar.dart';
@@ -135,20 +136,26 @@ class BookmarkPlayerScreen extends StatefulWidget {
 }
 
 class _BookmarkPlayerScreenState extends State<BookmarkPlayerScreen> {
-  // We use the existing PostController to leverage its video playing logic
-  final PostController controller = Get.find<PostController>();
+  late final PostController controller;
+  late final String _controllerTag;
   late PageController pageController;
 
   @override
   void initState() {
     super.initState();
+    _controllerTag =
+        'bookmark_player_${DateTime.now().microsecondsSinceEpoch}';
+    controller = Get.put(
+      PostController(postRepo: Get.find()),
+      tag: _controllerTag,
+    );
     pageController = PageController(initialPage: widget.initialIndex);
-
 
     controller.posts.assignAll(widget.posts);
 
     // 3. Initialize the first video (the one tapped)
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.activatePlayback();
       controller.onPageChanged(widget.initialIndex);
     });
   }
@@ -156,7 +163,9 @@ class _BookmarkPlayerScreenState extends State<BookmarkPlayerScreen> {
   @override
   void dispose() {
     // Stop all videos when leaving this screen
-    controller.pauseAll();
+    unawaited(controller.deactivatePlayback());
+    unawaited(controller.disposeAllControllers());
+    Get.delete<PostController>(tag: _controllerTag);
     pageController.dispose();
     super.dispose();
   }
@@ -179,6 +188,7 @@ class _BookmarkPlayerScreenState extends State<BookmarkPlayerScreen> {
                 index: index,
                 post: post,
                 controller: controller,
+                tag: _controllerTag,
               );
             },
           ),

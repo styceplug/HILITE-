@@ -1,6 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hilite/helpers/dependencies.dart';
 import 'package:hilite/utils/dimensions.dart';
 import 'package:hilite/widgets/pulse_loader.dart';
 import 'package:hilite/widgets/reel_overlay.dart';
@@ -11,12 +12,6 @@ import '../controllers/post_controller.dart';
 import '../controllers/user_controller.dart';
 import '../models/post_model.dart';
 import '../models/user_model.dart';
-import '../utils/colors.dart';
-
-import 'dart:ui'; // For blur effect if needed
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:video_player/video_player.dart';
 
 class ReelsVideoItem extends StatefulWidget {
   final int index;
@@ -37,12 +32,14 @@ class ReelsVideoItem extends StatefulWidget {
 }
 
 class _ReelsVideoItemState extends State<ReelsVideoItem>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _isSpeedingUp = false;
   bool _isDragging = false;
 
   late AnimationController _speedAnimController;
   late Animation<double> _speedOpacity;
+  late AnimationController _bufferingAnimController;
+  late Animation<double> _bufferingOpacity;
 
   @override
   void initState() {
@@ -55,11 +52,22 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
       begin: 0.0,
       end: 1.0,
     ).animate(_speedAnimController);
+
+    _bufferingAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+
+    _bufferingOpacity = Tween<double>(
+      begin: 0.4,
+      end: 1.0,
+    ).animate(_bufferingAnimController);
   }
 
   @override
   void dispose() {
     _speedAnimController.dispose();
+    _bufferingAnimController.dispose();
     super.dispose();
   }
 
@@ -214,7 +222,11 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
               // 5. INTERACTION OVERLAY
               // (Buttons like "Like", "Comment" inside this widget will still work
               // because they sit on top and consume their own touch events)
-              if (!_isDragging) ReelsInteractionOverlay(post: widget.post),
+              if (!_isDragging)
+                ReelsInteractionOverlay(
+                  post: widget.post,
+                  controller: widget.controller,
+                ),
 
               // 6. PROGRESS BAR
               if (isReady && videoCtrl != null)
@@ -256,21 +268,6 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
   }
 
   Widget _buildProgressBar(VideoPlayerController controller) {
-    late AnimationController _progressAnimController;
-    late Animation<double> _progressOpacity;
-
-    void initState() {
-      _progressAnimController = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 800),
-      )..repeat(reverse: true);
-
-      _progressOpacity = Tween(
-        begin: 0.4,
-        end: 1.0,
-      ).animate(_progressAnimController);
-    }
-
     return ValueListenableBuilder(
       valueListenable: controller,
       builder: (context, VideoPlayerValue value, child) {
@@ -296,7 +293,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
           child: FadeTransition(
             opacity:
                 value.isBuffering
-                    ? _progressOpacity
+                    ? _bufferingOpacity
                     : AlwaysStoppedAnimation(1),
             child: SliderTheme(
               data: SliderTheme.of(context).copyWith(
@@ -367,6 +364,7 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer>
       if (_profileController.reelsPageController.hasClients) {
         _profileController.reelsPageController.jumpToPage(widget.initialIndex);
       }
+      _profileController.activatePlayback();
       _profileController.onPageChanged(widget.initialIndex);
     });
   }
@@ -375,8 +373,8 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer>
   void dispose() {
     // 3. Clean up hardware and observers
     WidgetsBinding.instance.removeObserver(this);
-    _profileController.pauseAll();
-    _profileController.disposeAllControllers();
+    unawaited(_profileController.deactivatePlayback());
+    unawaited(_profileController.disposeAllControllers());
     Get.delete<PostController>(tag: _controllerTag);
     super.dispose();
   }
@@ -385,7 +383,9 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      _profileController.pauseAll();
+      unawaited(_profileController.deactivatePlayback());
+    } else if (state == AppLifecycleState.resumed) {
+      _resumeCurrentVideo();
     }
   }
 
@@ -398,9 +398,11 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer>
           VisibilityDetector(
             key: Key(_controllerTag),
             onVisibilityChanged: (visibilityInfo) {
-              var visiblePercentage = visibilityInfo.visibleFraction * 100;
+              final visiblePercentage = visibilityInfo.visibleFraction * 100;
               if (visiblePercentage < 1) {
-                _profileController.pauseAll();
+                unawaited(_profileController.deactivatePlayback());
+              } else {
+                _resumeCurrentVideo();
               }
             },
             child: PageView.builder(
@@ -484,5 +486,16 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer>
       isLiked: false,
       image: null,
     );
+  }
+
+  void _resumeCurrentVideo() {
+    final currentIndex =
+        _profileController.reelsPageController.hasClients
+            ? _profileController.reelsPageController.page?.round() ??
+                widget.initialIndex
+            : widget.initialIndex;
+
+    _profileController.activatePlayback();
+    _profileController.playVideo(currentIndex);
   }
 }

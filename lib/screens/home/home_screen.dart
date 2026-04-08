@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -77,7 +79,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                       }
                       if (index !=0) {
-                        postController.pauseAll();
+                        unawaited(postController.deactivatePlayback());
+                      } else {
+                        postController.activatePlayback();
                       }
                     },
                   ),

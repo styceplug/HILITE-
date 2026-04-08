@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -24,7 +25,8 @@ class MessagingScreen extends StatefulWidget {
   State<MessagingScreen> createState() => _MessagingScreenState();
 }
 
-class _MessagingScreenState extends State<MessagingScreen> {
+class _MessagingScreenState extends State<MessagingScreen>
+    with WidgetsBindingObserver {
   final _textCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   final _picker = ImagePicker();
@@ -32,11 +34,11 @@ class _MessagingScreenState extends State<MessagingScreen> {
   late final ChatController ctrl;
   final AudioRecorder _audioRecorder = AudioRecorder();
   bool _isRecording = false;
-  String? _recordedPath;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     ctrl = Get.find<ChatController>();
     ctrl.initChat(chat: widget.chat, myId: widget.myId);
 
@@ -47,11 +49,29 @@ class _MessagingScreenState extends State<MessagingScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     ctrl.closeChat();
     _textCtrl.dispose();
     _scrollCtrl.dispose();
-    ctrl.dispose();
+    unawaited(_AudioMessagePlaybackCoordinator.stopActive());
+    unawaited(_audioRecorder.stop());
+    unawaited(_audioRecorder.dispose());
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      unawaited(_AudioMessagePlaybackCoordinator.stopActive());
+      if (_isRecording) {
+        unawaited(_audioRecorder.stop());
+        if (mounted) {
+          setState(() {
+            _isRecording = false;
+          });
+        }
+      }
+    }
   }
 
   void _onScroll() {
@@ -112,7 +132,6 @@ class _MessagingScreenState extends State<MessagingScreen> {
 
         setState(() {
           _isRecording = true;
-          _recordedPath = path;
         });
       } else {
         Get.snackbar('Permission denied', 'Microphone permission is required');
@@ -256,6 +275,7 @@ class _ChatHeader extends StatelessWidget {
           Expanded(
             child: InkWell(
               onTap: (){
+                unawaited(_AudioMessagePlaybackCoordinator.stopActive());
                 Get.toNamed(AppRoutes.othersProfileScreen,arguments: {
                   'targetId': peer?.id,
                 });
@@ -537,6 +557,7 @@ class _MessageBubble extends StatelessWidget {
 
         return GestureDetector(
           onTap: () {
+            unawaited(_AudioMessagePlaybackCoordinator.stopActive());
             Get.to(() => _FullScreenImageViewer(imageUrl: imageUrl));
           },
           child: ClipRRect(
@@ -867,6 +888,42 @@ class _FullScreenImageViewer extends StatelessWidget {
   }
 }
 
+class _AudioMessagePlaybackCoordinator {
+  static AudioPlayer? _activePlayer;
+
+  static Future<void> activate(AudioPlayer player) async {
+    if (identical(_activePlayer, player)) return;
+
+    final previousPlayer = _activePlayer;
+    _activePlayer = player;
+
+    if (previousPlayer != null) {
+      try {
+        await previousPlayer.stop();
+      } catch (_) {}
+    }
+  }
+
+  static Future<void> release(AudioPlayer player) async {
+    if (!identical(_activePlayer, player)) return;
+    _activePlayer = null;
+
+    try {
+      await player.stop();
+    } catch (_) {}
+  }
+
+  static Future<void> stopActive() async {
+    final player = _activePlayer;
+    _activePlayer = null;
+
+    if (player == null) return;
+
+    try {
+      await player.stop();
+    } catch (_) {}
+  }
+}
 
 class _AudioMessagePlayer extends StatefulWidget {
   const _AudioMessagePlayer({
@@ -883,6 +940,7 @@ class _AudioMessagePlayer extends StatefulWidget {
 
 class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
   late final AudioPlayer _player;
+  StreamSubscription<PlayerState>? _playerStateSub;
   bool _loading = false;
   bool _ready = false;
 
@@ -891,12 +949,14 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
     super.initState();
     _player = AudioPlayer();
 
-    _player.playerStateStream.listen((state) {
+    _playerStateSub = _player.playerStateStream.listen((state) {
       if (mounted) setState(() {});
     });
   }
 
   Future<void> _togglePlay() async {
+    if (_loading) return;
+
     try {
       if (_player.playing) {
         await _player.pause();
@@ -910,6 +970,7 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
         setState(() => _loading = false);
       }
 
+      await _AudioMessagePlaybackCoordinator.activate(_player);
       await _player.play();
     } catch (e) {
       if (mounted) {
@@ -921,7 +982,9 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
 
   @override
   void dispose() {
-    _player.dispose();
+    _playerStateSub?.cancel();
+    unawaited(_AudioMessagePlaybackCoordinator.release(_player));
+    unawaited(_player.dispose());
     super.dispose();
   }
 

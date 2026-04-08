@@ -1,29 +1,67 @@
-import 'package:get/get.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'dart:math';
 import 'package:confetti/confetti.dart';
-
-
-
-
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class CustomSnackBar {
   static OverlayEntry? _overlayEntry;
   static bool _isVisible = false;
+
+  static OverlayState? _resolveOverlay() {
+    final navigatorOverlay = Get.key.currentState?.overlay;
+    if (navigatorOverlay != null && navigatorOverlay.mounted) {
+      return navigatorOverlay;
+    }
+
+    final overlayContext = Get.overlayContext;
+    if (overlayContext != null) {
+      final overlay = Overlay.maybeOf(overlayContext, rootOverlay: true);
+      if (overlay != null && overlay.mounted) {
+        return overlay;
+      }
+    }
+
+    final currentContext = Get.context;
+    if (currentContext != null) {
+      final overlay =
+          Navigator.maybeOf(currentContext, rootNavigator: true)?.overlay;
+      if (overlay != null && overlay.mounted) {
+        return overlay;
+      }
+    }
+
+    return null;
+  }
 
   /// --- 🔹 Top Slide-in SnackBar
   static void _show({
     required String message,
     required Color color,
     required IconData icon,
+    bool retryOnNextFrame = true,
   }) {
     if (_isVisible) return;
-    _isVisible = true;
 
-    final overlay = Overlay.of(Get.overlayContext!);
+    final overlay = _resolveOverlay();
+    if (overlay == null) {
+      if (retryOnNextFrame) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _show(
+            message: message,
+            color: color,
+            icon: icon,
+            retryOnNextFrame: false,
+          );
+        });
+      } else {
+        debugPrint('CustomSnackBar skipped: no overlay available');
+      }
+      return;
+    }
+
+    _isVisible = true;
     final animationController = AnimationController(
-      vsync: overlay!,
+      vsync: overlay,
       duration: const Duration(milliseconds: 300),
     );
 
@@ -84,8 +122,15 @@ class CustomSnackBar {
     animationController.forward();
 
     Future.delayed(const Duration(seconds: 2), () async {
-      await animationController.reverse();
-      _overlayEntry?.remove();
+      try {
+        if (animationController.status != AnimationStatus.dismissed) {
+          await animationController.reverse();
+        }
+      } catch (_) {}
+
+      if (_overlayEntry?.mounted ?? false) {
+        _overlayEntry?.remove();
+      }
       _overlayEntry = null;
       _isVisible = false;
       animationController.dispose();
@@ -124,9 +169,24 @@ class CustomSnackBar {
     required String message,
     Color backgroundColor = Colors.black12,
     Duration duration = const Duration(seconds: 2),
+    bool retryOnNextFrame = true,
   }) {
-    final overlay = Overlay.of(Get.overlayContext!);
-    if (overlay == null) return;
+    final overlay = _resolveOverlay();
+    if (overlay == null) {
+      if (retryOnNextFrame) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showToast(
+            message: message,
+            backgroundColor: backgroundColor,
+            duration: duration,
+            retryOnNextFrame: false,
+          );
+        });
+      } else {
+        debugPrint('CustomSnackBar toast skipped: no overlay available');
+      }
+      return;
+    }
 
     final opacityNotifier = ValueNotifier<double>(0.0);
 
@@ -179,7 +239,9 @@ class CustomSnackBar {
     Future.delayed(duration, () {
       opacityNotifier.value = 0.0;
       Future.delayed(const Duration(milliseconds: 250), () {
-        overlayEntry.remove();
+        if (overlayEntry.mounted) {
+          overlayEntry.remove();
+        }
       });
     });
   }
