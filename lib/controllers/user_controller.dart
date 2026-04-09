@@ -69,6 +69,35 @@ class UserController extends GetxController {
   String? _activeOthersProfileId;
   int _othersProfileRequestToken = 0;
 
+  bool isCurrentUser(String? targetId) {
+    final currentUserId = user.value?.id;
+    return currentUserId != null &&
+        targetId != null &&
+        targetId.isNotEmpty &&
+        currentUserId == targetId;
+  }
+
+  List<UserModel> _excludeCurrentUser(Iterable<UserModel> users) {
+    return users.where((candidate) => !isCurrentUser(candidate.id)).toList();
+  }
+
+  void _removeCurrentUserFromAllCollections() {
+    if (user.value == null) return;
+
+    recommendedUsers.removeWhere((candidate) => isCurrentUser(candidate.id));
+    filteredUsers.removeWhere((candidate) => isCurrentUser(candidate.id));
+    searchUsers.removeWhere((candidate) => isCurrentUser(candidate.id));
+    searchResults.removeWhere((candidate) => isCurrentUser(candidate.id));
+    _relationshipList.removeWhere((candidate) => isCurrentUser(candidate.id));
+    _filteredRelationshipList.removeWhere(
+      (candidate) => isCurrentUser(candidate.id),
+    );
+
+    if (searchQuery.value.isEmpty) {
+      applyFilters();
+    }
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -79,21 +108,15 @@ class UserController extends GetxController {
     loadCachedUser();
   }
 
-
   List<PersonalPostModel> get externalPosts {
     final videos = externalPostCache['video'] ?? <PersonalPostModel>[];
     final images = externalPostCache['image'] ?? <PersonalPostModel>[];
 
-    final combined = <PersonalPostModel>[
-      ...videos,
-      ...images,
-    ];
+    final combined = <PersonalPostModel>[...videos, ...images];
 
     combined.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return combined;
   }
-
-
 
   Future<void> getAllExternalUserPosts(String targetId) async {
     _activeOthersProfileId = targetId;
@@ -149,7 +172,9 @@ class UserController extends GetxController {
 
         // 1. Parse Users (You already did this correctly)
         searchUsers.assignAll(
-          (data['users'] as List).map((e) => UserModel.fromJson(e)).toList(),
+          _excludeCurrentUser(
+            (data['users'] as List).map((e) => UserModel.fromJson(e)),
+          ),
         );
 
         // 2. Parse Images (FIXED: Added mapping)
@@ -211,7 +236,9 @@ class UserController extends GetxController {
     // 3. Process Response
     if (response.statusCode == 200) {
       List<dynamic> rawList = response.body['data'];
-      _relationshipList = rawList.map((e) => UserModel.fromJson(e)).toList();
+      _relationshipList = _excludeCurrentUser(
+        rawList.map((e) => UserModel.fromJson(e)),
+      );
       _filteredRelationshipList = List.from(
         _relationshipList,
       ); // Init search list
@@ -349,6 +376,7 @@ class UserController extends GetxController {
   Future<void> saveUser(UserModel userModel) async {
     user.value = userModel;
     await userRepo.cacheUserData(userModel.toJson());
+    _removeCurrentUserFromAllCollections();
     update();
   }
 
@@ -356,6 +384,7 @@ class UserController extends GetxController {
     final cachedData = userRepo.getCachedUserData();
     if (cachedData != null) {
       user.value = UserModel.fromJson(cachedData);
+      _removeCurrentUserFromAllCollections();
       update();
       print("✅ Loaded user from cache");
     }
@@ -373,6 +402,7 @@ class UserController extends GetxController {
       if (response.statusCode == 200 && response.body['code'] == '00') {
         user.value = UserModel.fromJson(response.body['data']);
         await userRepo.cacheUserData(response.body['data']);
+        _removeCurrentUserFromAllCollections();
         print("💾 User profile cached successfully");
       } else {
         print("⚠️ Server responded with: ${response.body}");
@@ -437,8 +467,9 @@ class UserController extends GetxController {
         final data = response.body['data'];
 
         if (data is List) {
-          recommendedUsers.value =
-              data.map((e) => UserModel.fromJson(e)).toList();
+          recommendedUsers.value = _excludeCurrentUser(
+            data.map((e) => UserModel.fromJson(e)),
+          );
 
           // Since API returns only unfollowed users, initialize followedUserIds as empty
           // followedUserIds.clear();
@@ -572,12 +603,15 @@ class UserController extends GetxController {
       final beforeCount = list.length;
       final region = selectedRegion.value.toLowerCase().trim();
 
-      list = list.where((user) {
-        return user.state.toLowerCase().trim() == region;
-      }).toList();
+      list =
+          list.where((user) {
+            return user.state.toLowerCase().trim() == region;
+          }).toList();
 
       print("   - After region filter: $beforeCount → ${list.length}");
     }
+
+    list = _excludeCurrentUser(list);
 
     // Update filtered list
     filteredUsers.assignAll(list);
@@ -656,6 +690,11 @@ class UserController extends GetxController {
   }
 
   Future<void> followUser(String targetId) async {
+    if (isCurrentUser(targetId)) {
+      CustomSnackBar.failure(message: 'You cannot follow your own account');
+      return;
+    }
+
     if (isFollowActionInProgress(targetId)) return;
 
     final wasFollowed = _isUserFollowedLocally(targetId);
@@ -691,6 +730,8 @@ class UserController extends GetxController {
   }
 
   Future<void> unfollowUser(String targetId) async {
+    if (isCurrentUser(targetId)) return;
+
     if (isFollowActionInProgress(targetId)) return;
 
     final wasFollowed = _isUserFollowedLocally(targetId);
@@ -885,6 +926,10 @@ class UserController extends GetxController {
   }
 
   void _setFollowState(String targetId, bool isFollowed) {
+    if (isCurrentUser(targetId)) {
+      return;
+    }
+
     final previousState = _isUserFollowedLocally(targetId);
     if (previousState == isFollowed) {
       return;
@@ -900,10 +945,7 @@ class UserController extends GetxController {
     _updateFollowStateInList(_filteredRelationshipList, targetId, isFollowed);
 
     if (othersProfile.value?.id == targetId) {
-      othersProfile.value = _applyFollowState(
-        othersProfile.value!,
-        isFollowed,
-      );
+      othersProfile.value = _applyFollowState(othersProfile.value!, isFollowed);
     }
 
     if (user.value != null) {

@@ -61,7 +61,8 @@ class _MessagingScreenState extends State<MessagingScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       unawaited(_AudioMessagePlaybackCoordinator.stopActive());
       if (_isRecording) {
         unawaited(_audioRecorder.stop());
@@ -274,11 +275,12 @@ class _ChatHeader extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: InkWell(
-              onTap: (){
+              onTap: () {
                 unawaited(_AudioMessagePlaybackCoordinator.stopActive());
-                Get.toNamed(AppRoutes.othersProfileScreen,arguments: {
-                  'targetId': peer?.id,
-                });
+                Get.toNamed(
+                  AppRoutes.othersProfileScreen,
+                  arguments: {'targetId': peer?.id},
+                );
               },
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,9 +506,9 @@ class _MessageBubble extends StatelessWidget {
               topLeft: const Radius.circular(16),
               topRight: const Radius.circular(16),
               bottomLeft:
-              mine ? const Radius.circular(16) : const Radius.circular(4),
+                  mine ? const Radius.circular(16) : const Radius.circular(4),
               bottomRight:
-              mine ? const Radius.circular(4) : const Radius.circular(16),
+                  mine ? const Radius.circular(4) : const Radius.circular(16),
             ),
           ),
           child: Column(
@@ -566,11 +568,12 @@ class _MessageBubble extends StatelessWidget {
               imageUrl,
               width: 200,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const SizedBox(
-                width: 200,
-                height: 120,
-                child: Center(child: Icon(Icons.broken_image)),
-              ),
+              errorBuilder:
+                  (_, __, ___) => const SizedBox(
+                    width: 200,
+                    height: 120,
+                    child: Center(child: Icon(Icons.broken_image)),
+                  ),
             ),
           ),
         );
@@ -586,10 +589,7 @@ class _MessageBubble extends StatelessWidget {
           );
         }
 
-        return _AudioMessagePlayer(
-          url: audioUrl,
-          mine: mine,
-        );
+        return _AudioMessagePlayer(url: audioUrl, mine: mine);
 
       default:
         return Text(
@@ -860,7 +860,6 @@ class MediaUrlHelper {
   }
 }
 
-
 class _FullScreenImageViewer extends StatelessWidget {
   const _FullScreenImageViewer({required this.imageUrl});
 
@@ -879,8 +878,12 @@ class _FullScreenImageViewer extends StatelessWidget {
           child: Image.network(
             imageUrl,
             fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) =>
-            const Icon(Icons.broken_image, color: Colors.white, size: 40),
+            errorBuilder:
+                (_, __, ___) => const Icon(
+                  Icons.broken_image,
+                  color: Colors.white,
+                  size: 40,
+                ),
           ),
         ),
       ),
@@ -891,6 +894,18 @@ class _FullScreenImageViewer extends StatelessWidget {
 class _AudioMessagePlaybackCoordinator {
   static AudioPlayer? _activePlayer;
 
+  static Future<void> _resetPlayer(AudioPlayer player) async {
+    try {
+      if (player.playing) {
+        await player.pause();
+      }
+    } catch (_) {}
+
+    try {
+      await player.seek(Duration.zero);
+    } catch (_) {}
+  }
+
   static Future<void> activate(AudioPlayer player) async {
     if (identical(_activePlayer, player)) return;
 
@@ -898,9 +913,7 @@ class _AudioMessagePlaybackCoordinator {
     _activePlayer = player;
 
     if (previousPlayer != null) {
-      try {
-        await previousPlayer.stop();
-      } catch (_) {}
+      await _resetPlayer(previousPlayer);
     }
   }
 
@@ -908,9 +921,7 @@ class _AudioMessagePlaybackCoordinator {
     if (!identical(_activePlayer, player)) return;
     _activePlayer = null;
 
-    try {
-      await player.stop();
-    } catch (_) {}
+    await _resetPlayer(player);
   }
 
   static Future<void> stopActive() async {
@@ -919,17 +930,12 @@ class _AudioMessagePlaybackCoordinator {
 
     if (player == null) return;
 
-    try {
-      await player.stop();
-    } catch (_) {}
+    await _resetPlayer(player);
   }
 }
 
 class _AudioMessagePlayer extends StatefulWidget {
-  const _AudioMessagePlayer({
-    required this.url,
-    required this.mine,
-  });
+  const _AudioMessagePlayer({required this.url, required this.mine});
 
   final String url;
   final bool mine;
@@ -967,16 +973,22 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
         return;
       }
 
-      if (!_ready) {
+      final processingState = _player.playerState.processingState;
+
+      if (!_ready || processingState == ProcessingState.idle) {
         setState(() => _loading = true);
         await _player.setUrl(widget.url);
         _ready = true;
         setState(() => _loading = false);
+      } else if (processingState == ProcessingState.completed) {
+        await _player.seek(Duration.zero);
       }
 
       await _AudioMessagePlaybackCoordinator.activate(_player);
       await _player.play();
     } catch (e) {
+      debugPrint('Audio message playback error (${widget.url}): $e');
+      _ready = false;
       if (mounted) {
         setState(() => _loading = false);
       }
@@ -1022,30 +1034,28 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
       children: [
         GestureDetector(
           onTap: _togglePlay,
-          child: _loading
-              ? SizedBox(
-            width: 32,
-            height: 32,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: iconColor,
-            ),
-          )
-              : Icon(
-            isPlayingActive
-                ? Icons.pause_circle_filled
-                : Icons.play_circle_fill,
-            color: iconColor,
-            size: 32,
-          ),
+          child:
+              _loading
+                  ? SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: iconColor,
+                    ),
+                  )
+                  : Icon(
+                    isPlayingActive
+                        ? Icons.pause_circle_filled
+                        : Icons.play_circle_fill,
+                    color: iconColor,
+                    size: 32,
+                  ),
         ),
         const SizedBox(width: 6),
         Text(
           isPlayingActive ? 'Playing...' : 'Voice message',
-          style: TextStyle(
-            color: textColor,
-            fontSize: 14,
-          ),
+          style: TextStyle(color: textColor, fontSize: 14),
         ),
       ],
     );

@@ -88,11 +88,8 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
-
-
     return DefaultTabController(
       length: 3, // Accounts, Images, Videos
       child: Scaffold(
@@ -161,7 +158,12 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
   }
 
   Widget _buildUserList(List<UserModel> users) {
-    if (users.isEmpty)
+    final visibleUsers =
+        users
+            .where((candidate) => !userController.isCurrentUser(candidate.id))
+            .toList();
+
+    if (visibleUsers.isEmpty)
       return _buildEmptyState(
         icon: Icons.person,
         title: "No users found",
@@ -169,8 +171,8 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
       );
     return ListView.builder(
       padding: EdgeInsets.all(Dimensions.width20),
-      itemCount: users.length,
-      itemBuilder: (context, index) => _buildAccountCard(users[index]),
+      itemCount: visibleUsers.length,
+      itemBuilder: (context, index) => _buildAccountCard(visibleUsers[index]),
     );
   }
 
@@ -221,7 +223,6 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
         message: "Try searching for highlights",
       );
 
-
     return GridView.builder(
       padding: EdgeInsets.all(Dimensions.width10),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -234,7 +235,8 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
       itemBuilder:
           (context, index) => InkWell(
             onTap: () {
-              List<PostModel> searchPosts = videos.map((e) => e as PostModel).toList();
+              List<PostModel> searchPosts =
+                  videos.map((e) => e as PostModel).toList();
               print('tapped');
               Get.to(
                 () => ProfileReelsPlayer(
@@ -464,22 +466,23 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                   return Transform.scale(scale: value, child: child);
                 },
                 child: _buildFilterChip(
-                  label: userController.selectedAgeRange.value.isEmpty
-                      ? 'Age'
-                      : userController.selectedAgeRange.value,
+                  label:
+                      userController.selectedAgeRange.value.isEmpty
+                          ? 'Age'
+                          : userController.selectedAgeRange.value,
                   icon: Icons.cake_outlined,
                   isSelected: userController.selectedAgeRange.value.isNotEmpty,
                   onTap: () => _showAgeBottomSheet(context),
                 ),
               ),
-
             ],
             SizedBox(width: Dimensions.width10),
 
             _buildFilterChip(
-              label: userController.selectedRegion.value.isEmpty
-                  ? 'Region'
-                  : userController.selectedRegion.value,
+              label:
+                  userController.selectedRegion.value.isEmpty
+                      ? 'Region'
+                      : userController.selectedRegion.value,
               icon: Icons.location_city,
               isSelected: userController.selectedRegion.value.isNotEmpty,
               onTap: () => _showRegionBottomSheet(context),
@@ -563,16 +566,18 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                       ),
                     ),
                     Obx(() {
-                      final hasRegion = userController.selectedRegion.value.isNotEmpty;                      return hasRegion
+                      final hasRegion =
+                          userController.selectedRegion.value.isNotEmpty;
+                      return hasRegion
                           ? TextButton.icon(
-                        onPressed: () {
-                          userController.selectedRegion.value = '';
-                          userController.applyFilters();
-                          Navigator.pop(context);
-                        },
-                        icon: const Icon(Icons.clear, size: 18),
-                        label: const Text('Clear'),
-                      )
+                            onPressed: () {
+                              userController.selectedRegion.value = '';
+                              userController.applyFilters();
+                              Navigator.pop(context);
+                            },
+                            icon: const Icon(Icons.clear, size: 18),
+                            label: const Text('Clear'),
+                          )
                           : const SizedBox.shrink();
                     }),
                   ],
@@ -586,34 +591,37 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                     itemBuilder: (context, index) {
                       final region = _nigerianStates[index];
                       return Obx(() {
-                        final selected = userController.selectedRegion.value == region;
+                        final selected =
+                            userController.selectedRegion.value == region;
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: CircleAvatar(
-                            backgroundColor: selected
-                                ? AppColors.primary.withOpacity(.15)
-                                : Colors.grey[100],
+                            backgroundColor:
+                                selected
+                                    ? AppColors.primary.withOpacity(.15)
+                                    : Colors.grey[100],
                             child: Icon(
                               Icons.location_city,
-                              color: selected
-                                  ? AppColors.primary
-                                  : Colors.grey[700],
+                              color:
+                                  selected
+                                      ? AppColors.primary
+                                      : Colors.grey[700],
                             ),
                           ),
                           title: Text(
                             region,
                             style: TextStyle(
-                              fontWeight: selected
-                                  ? FontWeight.w700
-                                  : FontWeight.w600,
+                              fontWeight:
+                                  selected ? FontWeight.w700 : FontWeight.w600,
                             ),
                           ),
-                          trailing: selected
-                              ? Icon(
-                            Icons.check_circle,
-                            color: AppColors.primary,
-                          )
-                              : const Icon(Icons.chevron_right),
+                          trailing:
+                              selected
+                                  ? Icon(
+                                    Icons.check_circle,
+                                    color: AppColors.primary,
+                                  )
+                                  : const Icon(Icons.chevron_right),
                           onTap: () {
                             userController.selectedRegion.value = region;
                             userController.applyFilters();
@@ -665,17 +673,18 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                   Obx(() {
-                    final has = userController.selectedAgeRange.value.isNotEmpty;
+                    final has =
+                        userController.selectedAgeRange.value.isNotEmpty;
                     return has
                         ? TextButton.icon(
-                      onPressed: () {
-                        userController.selectedAgeRange.value = '';
-                        userController.applyFilters();
-                        Navigator.pop(context);
-                      },
-                      icon: const Icon(Icons.clear, size: 18),
-                      label: const Text('Clear'),
-                    )
+                          onPressed: () {
+                            userController.selectedAgeRange.value = '';
+                            userController.applyFilters();
+                            Navigator.pop(context);
+                          },
+                          icon: const Icon(Icons.clear, size: 18),
+                          label: const Text('Clear'),
+                        )
                         : const SizedBox.shrink();
                   }),
                 ],
@@ -688,9 +697,10 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: CircleAvatar(
-                      backgroundColor: selected
-                          ? AppColors.primary.withOpacity(.15)
-                          : Colors.grey[100],
+                      backgroundColor:
+                          selected
+                              ? AppColors.primary.withOpacity(.15)
+                              : Colors.grey[100],
                       child: Icon(
                         Icons.cake_outlined,
                         color: selected ? AppColors.primary : Colors.grey[700],
@@ -699,12 +709,14 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                     title: Text(
                       r,
                       style: TextStyle(
-                        fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                        fontWeight:
+                            selected ? FontWeight.w700 : FontWeight.w600,
                       ),
                     ),
-                    trailing: selected
-                        ? Icon(Icons.check_circle, color: AppColors.primary)
-                        : const Icon(Icons.chevron_right),
+                    trailing:
+                        selected
+                            ? Icon(Icons.check_circle, color: AppColors.primary)
+                            : const Icon(Icons.chevron_right),
                     onTap: () {
                       userController.selectedAgeRange.value = r;
                       userController.applyFilters();
@@ -719,7 +731,6 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
       },
     );
   }
-
 
   Widget _buildFilterChip({
     required String label,
@@ -784,10 +795,11 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
           elevation: 2,
           shadowColor: Colors.black.withOpacity(0.08),
           child: InkWell(
-            onTap: () => Get.toNamed(
-              AppRoutes.othersProfileScreen,
-              arguments: {'targetId': currentUser.id},
-            ),
+            onTap:
+                () => Get.toNamed(
+                  AppRoutes.othersProfileScreen,
+                  arguments: {'targetId': currentUser.id},
+                ),
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: EdgeInsets.all(Dimensions.width15),
@@ -871,36 +883,42 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                             Expanded(
                               flex: 3,
                               child: _buildActionButton(
-                                label: isFollowBusy
-                                    ? 'Please wait'
-                                    : (isFollowed ? 'Following' : 'Follow'),
-                                icon: isFollowBusy
-                                    ? Icons.hourglass_top_rounded
-                                    : (isFollowed ? Icons.check : Icons.add),
+                                label:
+                                    isFollowBusy
+                                        ? 'Please wait'
+                                        : (isFollowed ? 'Following' : 'Follow'),
+                                icon:
+                                    isFollowBusy
+                                        ? Icons.hourglass_top_rounded
+                                        : (isFollowed
+                                            ? Icons.check
+                                            : Icons.add),
                                 isPrimary: !isFollowed,
                                 isBusy: isFollowBusy,
-                                onTap: isFollowBusy
-                                    ? null
-                                    : () {
-                                        if (isFollowed) {
-                                          userController.unfollowUser(
-                                            currentUser.id,
-                                          );
-                                        } else {
-                                          userController.followUser(
-                                            currentUser.id,
-                                          );
-                                        }
-                                      },
+                                onTap:
+                                    isFollowBusy
+                                        ? null
+                                        : () {
+                                          if (isFollowed) {
+                                            userController.unfollowUser(
+                                              currentUser.id,
+                                            );
+                                          } else {
+                                            userController.followUser(
+                                              currentUser.id,
+                                            );
+                                          }
+                                        },
                               ),
                             ),
                             SizedBox(width: Dimensions.width10),
                             _buildIconButton(
                               icon: Icons.more_horiz,
-                              onTap: () => _showOptionsBottomSheet(
-                                context,
-                                currentUser,
-                              ),
+                              onTap:
+                                  () => _showOptionsBottomSheet(
+                                    context,
+                                    currentUser,
+                                  ),
                             ),
                           ],
                         ),
@@ -951,9 +969,12 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
     bool isBusy = false,
   }) {
     return Material(
-      color: isPrimary
-          ? (isBusy ? AppColors.primary.withOpacity(0.75) : AppColors.primary)
-          : Colors.grey[100],
+      color:
+          isPrimary
+              ? (isBusy
+                  ? AppColors.primary.withOpacity(0.75)
+                  : AppColors.primary)
+              : Colors.grey[100],
       borderRadius: BorderRadius.circular(25),
       child: InkWell(
         onTap: isBusy ? null : onTap,

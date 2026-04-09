@@ -38,12 +38,14 @@ class PostController extends GetxController {
   var initializedIndexes = <int>{}.obs;
   bool isHandlingDeepLink = false;
   int _currentIndex = 0;
+  int get currentIndex => _currentIndex;
 
   final PageController reelsPageController = PageController();
   final Map<int, Future<void>> _controllerInitFutures = {};
   int _controllerGeneration = 0;
   int _playRequestId = 0;
   bool _isPlaybackActive = true;
+  bool get isPlaybackActive => _isPlaybackActive;
 
   @override
   void onClose() {
@@ -71,7 +73,6 @@ class PostController extends GetxController {
     await pauseAll();
   }
 
-
   Future<void> deleteUserPost(String postId, String type) async {
     loader.showLoader();
 
@@ -83,12 +84,10 @@ class PostController extends GetxController {
       Get.back(); // Close loading dialog
 
       if (response.statusCode == 200) {
-          update(); // Rebuild the grid
-          CustomSnackBar.success(message: "Post deleted successfully");
-          loader.hideLoader();
-
-        }
-       else {
+        update(); // Rebuild the grid
+        CustomSnackBar.success(message: "Post deleted successfully");
+        loader.hideLoader();
+      } else {
         ApiChecker.checkApi(response);
       }
     } catch (e) {
@@ -121,7 +120,6 @@ class PostController extends GetxController {
         }
 
         if (deepLinkPost != null && deepLinkPost.type == 'video') {
-
           // 2. Prepare the Feed
           // If we already have posts loaded, we can reuse them to save time
           List<PostModel> currentFeed = [];
@@ -130,7 +128,9 @@ class PostController extends GetxController {
           } else {
             // Fetch background feed if empty
             try {
-              final recResponse = await postRepo.getRecommendedPosts(contentType: "video");
+              final recResponse = await postRepo.getRecommendedPosts(
+                contentType: "video",
+              );
               if (recResponse.statusCode == 200) {
                 final List data = recResponse.body['data'];
                 currentFeed = data.map((e) => PostModel.fromJson(e)).toList();
@@ -178,7 +178,6 @@ class PostController extends GetxController {
 
           // 9. Preload next
           if (posts.length > 1) _preloadNext(1);
-
         } else {
           CustomSnackBar.failure(message: "Link content is not a video.");
           Get.offAllNamed(AppRoutes.homeScreen);
@@ -259,9 +258,10 @@ class PostController extends GetxController {
     _updatePostBookmarks(postId, shouldBeBookmarked);
 
     // 3. Call API
-    final apiCall = currentlyBookmarked
-        ? postRepo.unBookmarkPost(postId)
-        : postRepo.bookmarkPost(postId);
+    final apiCall =
+        currentlyBookmarked
+            ? postRepo.unBookmarkPost(postId)
+            : postRepo.bookmarkPost(postId);
 
     try {
       final response = await apiCall;
@@ -342,22 +342,23 @@ class PostController extends GetxController {
     String? thumbnailPath,
   }) async {
     try {
-      final response = isVideo
-          ? await postRepo.uploadVideoPost(
-        videoFile: file,
-        title: title,
-        description: description,
-        text: text,
-        isPublic: isPublic,
-        thumbnailPath: thumbnailPath,
-      )
-          : await postRepo.uploadImagePost(
-        imageFile: file,
-        title: title,
-        description: description,
-        text: text,
-        isPublic: isPublic,
-      );
+      final response =
+          isVideo
+              ? await postRepo.uploadVideoPost(
+                videoFile: file,
+                title: title,
+                description: description,
+                text: text,
+                isPublic: isPublic,
+                thumbnailPath: thumbnailPath,
+              )
+              : await postRepo.uploadImagePost(
+                imageFile: file,
+                title: title,
+                description: description,
+                text: text,
+                isPublic: isPublic,
+              );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Refresh the feed so the new post appears
@@ -369,7 +370,7 @@ class PostController extends GetxController {
       // UploadService already set failure state — pill shows the error strip
     }
   }
- /* Future<void> uploadMediaPost({
+  /* Future<void> uploadMediaPost({
     required XFile file,
     required bool isVideo,
     required String title,
@@ -664,12 +665,10 @@ class PostController extends GetxController {
   }
 
   Future<void> loadRecommendedPosts(String type) async {
-
     if (isHandlingDeepLink) {
       print("🚫 Skipping loadRecommendedPosts (Deep Link in progress)");
       return;
     }
-
 
     loader.showLoader();
     isLoading.value = true;
@@ -788,6 +787,7 @@ class PostController extends GetxController {
       }
 
       await controller.setLooping(true);
+      await _setControllerVolumeSafely(controller, 0);
       videoControllers[index] = controller;
 
       initializedIndexes.add(index);
@@ -842,10 +842,13 @@ class PostController extends GetxController {
 
   Future<void> _playAtIndex(int index) async {
     if (!_isPlaybackActive || !_isValidVideoIndex(index)) {
+      await stopVideoAtIndex(index);
       return;
     }
 
     final requestId = ++_playRequestId;
+
+    await _pauseAllExcept(index);
 
     if (!videoControllers.containsKey(index)) {
       await _initController(index);
@@ -854,6 +857,7 @@ class PostController extends GetxController {
     if (!_isPlaybackActive ||
         _currentIndex != index ||
         requestId != _playRequestId) {
+      await stopVideoAtIndex(index);
       return;
     }
 
@@ -863,21 +867,24 @@ class PostController extends GetxController {
     }
 
     await _pauseAllExcept(index);
+    await _setControllerVolumeSafely(controller, 1);
     await controller.play();
+
+    if (!_isPlaybackActive ||
+        _currentIndex != index ||
+        requestId != _playRequestId) {
+      await _pauseAndMuteController(controller);
+    }
   }
 
   void togglePlayPause(int index) {
-    final c = videoControllers[index];
-    if (c != null && c.value.isInitialized) {
-      c.value.isPlaying ? c.pause() : c.play();
-      update(['overlay_$index']); // Update play icon
-    }
+    unawaited(_togglePlayPause(index));
   }
 
   Future<void> pauseAll() async {
     final controllers = videoControllers.values.toList(growable: false);
     for (final controller in controllers) {
-      await _pauseControllerSafely(controller);
+      await _pauseAndMuteController(controller);
     }
   }
 
@@ -898,8 +905,12 @@ class PostController extends GetxController {
   Future<void> _pauseAllExcept(int activeIndex) async {
     for (final entry in videoControllers.entries) {
       if (entry.key == activeIndex) continue;
-      await _pauseControllerSafely(entry.value);
+      await _pauseAndMuteController(entry.value);
     }
+  }
+
+  Future<void> stopVideoAtIndex(int index) async {
+    await _pauseAndMuteController(videoControllers[index]);
   }
 
   Future<void> _disposeControllerAtIndex(int index) async {
@@ -917,6 +928,42 @@ class PostController extends GetxController {
     } catch (_) {}
   }
 
+  Future<void> _setControllerVolumeSafely(
+    VideoPlayerController? controller,
+    double volume,
+  ) async {
+    if (controller == null) return;
+    try {
+      await controller.setVolume(volume);
+    } catch (_) {}
+  }
+
+  Future<void> _pauseAndMuteController(
+    VideoPlayerController? controller,
+  ) async {
+    await _pauseControllerSafely(controller);
+    await _setControllerVolumeSafely(controller, 0);
+  }
+
+  Future<void> _togglePlayPause(int index) async {
+    final controller = videoControllers[index];
+    if (controller == null || !controller.value.isInitialized) {
+      return;
+    }
+
+    if (controller.value.isPlaying) {
+      await _pauseAndMuteController(controller);
+    } else {
+      _currentIndex = index;
+      _isPlaybackActive = true;
+      await _pauseAllExcept(index);
+      await _setControllerVolumeSafely(controller, 1);
+      await controller.play();
+    }
+
+    update(['overlay_$index']);
+  }
+
   Future<void> _disposeControllerSafely(
     VideoPlayerController? controller,
   ) async {
@@ -932,9 +979,7 @@ class PostController extends GetxController {
   }
 
   bool _isValidVideoIndex(int index) {
-    return index >= 0 &&
-        index < posts.length &&
-        posts[index].type == 'video';
+    return index >= 0 && index < posts.length && posts[index].type == 'video';
   }
 
   bool _matchesGeneration(int index, String postId, int generation) {

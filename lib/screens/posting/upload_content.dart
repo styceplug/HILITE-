@@ -1,21 +1,13 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/routes/routes.dart';
-import 'package:hilite/utils/dimensions.dart';
+import 'package:hilite/screens/posting/video_trim_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
-
-import 'dart:async';
-import 'dart:io';
-import 'package:camera/camera.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
-
 
 class UploadContent extends StatefulWidget {
   const UploadContent({super.key});
@@ -119,12 +111,16 @@ class _UploadContentState extends State<UploadContent> {
     }
   }
 
-  // 🛠️ FIXED: Added optional isVideo parameter to override camera state
   void _navigateToPostDetails(XFile file, {required bool isVideo}) {
-    Get.toNamed(AppRoutes.postDetailScreen, arguments: {
-      'file': file,
-      'isVideo': isVideo // Pass the explicit type
-    });
+    if (isVideo) {
+      Get.to(() => VideoTrimScreen(file: file), transition: Transition.fadeIn);
+      return;
+    }
+
+    Get.toNamed(
+      AppRoutes.postDetailScreen,
+      arguments: {'file': file, 'isVideo': isVideo},
+    );
   }
 
   // 🛠️ FIXED: Logic to detect file type from Gallery
@@ -136,7 +132,13 @@ class _UploadContentState extends State<UploadContent> {
       if (result != null) {
         // Simple logic to check extension
         final String extension = result.path.split('.').last.toLowerCase();
-        final bool isVideo = ['mp4', 'mov', 'avi', 'mkv', 'flv'].contains(extension);
+        final bool isVideo = [
+          'mp4',
+          'mov',
+          'avi',
+          'mkv',
+          'flv',
+        ].contains(extension);
 
         setState(() {
           _lastGalleryItem = result;
@@ -231,9 +233,7 @@ class _UploadContentState extends State<UploadContent> {
                       child: Center(
                         child: Icon(
                           _isVideoMode
-                              ? (_isRecording
-                              ? Icons.stop
-                              : Icons.videocam)
+                              ? (_isRecording ? Icons.stop : Icons.videocam)
                               : Icons.camera_alt,
                           color: _isRecording ? Colors.red : Colors.white,
                           size: 32,
@@ -280,18 +280,22 @@ class _UploadContentState extends State<UploadContent> {
           border: Border.all(color: Colors.white, width: 2),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: _lastGalleryItem == null
-            ? const Icon(Icons.photo, color: Colors.white)
-            : ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          // 🛠️ FIXED: If it's a video, show an Icon, otherwise show the image
-          child: _lastItemIsVideo
-              ? const Center(child: Icon(Icons.videocam, color: Colors.white))
-              : Image.file(
-            File(_lastGalleryItem!.path),
-            fit: BoxFit.cover,
-          ),
-        ),
+        child:
+            _lastGalleryItem == null
+                ? const Icon(Icons.photo, color: Colors.white)
+                : ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  // 🛠️ FIXED: If it's a video, show an Icon, otherwise show the image
+                  child:
+                      _lastItemIsVideo
+                          ? const Center(
+                            child: Icon(Icons.videocam, color: Colors.white),
+                          )
+                          : Image.file(
+                            File(_lastGalleryItem!.path),
+                            fit: BoxFit.cover,
+                          ),
+                ),
       ),
     );
   }

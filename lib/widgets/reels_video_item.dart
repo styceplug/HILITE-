@@ -100,144 +100,175 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
           widget.index,
         );
 
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          // Ensures taps are caught
-          onTap: () => widget.controller.togglePlayPause(widget.index),
-          onTapDown: (details) {
-            if (isReady && videoCtrl != null) _startSpeedUp(details, videoCtrl);
-          },
-          onTapUp: (_) {
-            if (isReady && videoCtrl != null) _endSpeedUp(videoCtrl);
-          },
-          onTapCancel: () {
-            if (isReady && videoCtrl != null) _endSpeedUp(videoCtrl);
-          },
-          onLongPressEnd: (_) {
-            if (isReady && videoCtrl != null) _endSpeedUp(videoCtrl);
-          },
+        return VisibilityDetector(
+          key: Key(
+            'reel-${widget.tag ?? 'main'}-${widget.post.id}-${widget.index}',
+          ),
+          onVisibilityChanged: (visibilityInfo) {
+            final visibleFraction = visibilityInfo.visibleFraction;
 
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // 1. THUMBNAIL
-              _buildThumbnail(),
+            if (visibleFraction < 0.4) {
+              if (videoCtrl != null) {
+                _endSpeedUp(videoCtrl);
+              }
+              unawaited(widget.controller.stopVideoAtIndex(widget.index));
+              return;
+            }
 
-              // 1. BACKGROUND
-              if (isReady && videoCtrl != null && videoCtrl.value.isInitialized)
-                Container(color: Colors.black) // black bg when video is playing
-              else if (widget.post.video?.thumbnailUrl != null)
-                Image.network(
-                  widget.post.video!.thumbnailUrl!,
-                  fit: BoxFit.cover,
-                ) // thumbnail while loading
-              else
-                const PulseLoader(),
+            if (visibleFraction > 0.9 &&
+                widget.controller.currentIndex == widget.index &&
+                widget.controller.isPlaybackActive) {
+              unawaited(widget.controller.playVideo(widget.index));
+            }
+          },
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            // Ensures taps are caught
+            onTap: () => widget.controller.togglePlayPause(widget.index),
+            onTapDown: (details) {
+              if (isReady && videoCtrl != null) {
+                _startSpeedUp(details, videoCtrl);
+              }
+            },
+            onTapUp: (_) {
+              if (isReady && videoCtrl != null) _endSpeedUp(videoCtrl);
+            },
+            onTapCancel: () {
+              if (isReady && videoCtrl != null) _endSpeedUp(videoCtrl);
+            },
+            onLongPressEnd: (_) {
+              if (isReady && videoCtrl != null) _endSpeedUp(videoCtrl);
+            },
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // 1. THUMBNAIL
+                _buildThumbnail(),
 
-              // 2. VIDEO PLAYER
-              if (isReady && videoCtrl != null && videoCtrl.value.isInitialized)
-                FittedBox(
-                  fit: BoxFit.fitWidth,
-                  child: SizedBox(
-                    width: videoCtrl.value.size.width,
-                    height: videoCtrl.value.size.height,
-                    child: VideoPlayer(videoCtrl),
-                  ),
-                ),
+                // 1. BACKGROUND
+                if (isReady &&
+                    videoCtrl != null &&
+                    videoCtrl.value.isInitialized)
+                  Container(
+                    color: Colors.black,
+                  ) // black bg when video is playing
+                else if (widget.post.video?.thumbnailUrl != null)
+                  Image.network(
+                    widget.post.video!.thumbnailUrl!,
+                    fit: BoxFit.cover,
+                  ) // thumbnail while loading
+                else
+                  const PulseLoader(),
 
-              // 3. "2X SPEED" OVERLAY
-              if (isReady)
-                Positioned(
-                  top: 50,
-                  right: 0,
-                  left: 0,
-                  child: FadeTransition(
-                    opacity: _speedOpacity,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(
-                                Icons.fast_forward_rounded,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                "2x Speed",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                // 2. VIDEO PLAYER
+                if (isReady &&
+                    videoCtrl != null &&
+                    videoCtrl.value.isInitialized)
+                  FittedBox(
+                    fit: BoxFit.fitWidth,
+                    child: SizedBox(
+                      width: videoCtrl.value.size.width,
+                      height: videoCtrl.value.size.height,
+                      child: VideoPlayer(videoCtrl),
                     ),
                   ),
-                ),
 
-              // 4. PLAY/PAUSE ICON (Animated)
-              if (isReady && videoCtrl != null)
-                Center(
-                  child: ValueListenableBuilder(
-                    valueListenable: videoCtrl,
-                    builder: (context, VideoPlayerValue value, child) {
-                      if (_isSpeedingUp || _isDragging)
-                        return const SizedBox.shrink();
-
-                      if (!value.isPlaying && !value.isBuffering) {
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.3),
-                            shape: BoxShape.circle,
+                // 3. "2X SPEED" OVERLAY
+                if (isReady)
+                  Positioned(
+                    top: 50,
+                    right: 0,
+                    left: 0,
+                    child: FadeTransition(
+                      opacity: _speedOpacity,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.fast_forward_rounded,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  "2x Speed",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          padding: const EdgeInsets.all(15),
-                          child: const Icon(
-                            Icons.play_arrow_rounded,
-                            size: 50,
-                            color: Colors.white,
-                          ),
-                        );
-                      }
-                      if (value.isBuffering) {
-                        return const PulseLoader();
-                      }
-                      return const SizedBox.shrink();
-                    },
+                        ],
+                      ),
+                    ),
                   ),
-                ),
 
-              // 5. INTERACTION OVERLAY
-              // (Buttons like "Like", "Comment" inside this widget will still work
-              // because they sit on top and consume their own touch events)
-              if (!_isDragging)
-                ReelsInteractionOverlay(
-                  post: widget.post,
-                  controller: widget.controller,
-                ),
+                // 4. PLAY/PAUSE ICON (Animated)
+                if (isReady && videoCtrl != null)
+                  Center(
+                    child: ValueListenableBuilder(
+                      valueListenable: videoCtrl,
+                      builder: (context, VideoPlayerValue value, child) {
+                        if (_isSpeedingUp || _isDragging) {
+                          return const SizedBox.shrink();
+                        }
 
-              // 6. PROGRESS BAR
-              if (isReady && videoCtrl != null)
-                Positioned(
-                  bottom:
-                      Dimensions.bottomNavIconHeight + Dimensions.height10 * 9,
-                  left: 0,
-                  right: 0,
-                  child: _buildProgressBar(videoCtrl),
-                ),
-            ],
+                        if (!value.isPlaying && !value.isBuffering) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.3),
+                              shape: BoxShape.circle,
+                            ),
+                            padding: const EdgeInsets.all(15),
+                            child: const Icon(
+                              Icons.play_arrow_rounded,
+                              size: 50,
+                              color: Colors.white,
+                            ),
+                          );
+                        }
+                        if (value.isBuffering) {
+                          return const PulseLoader();
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+
+                // 5. INTERACTION OVERLAY
+                // (Buttons like "Like", "Comment" inside this widget will still work
+                // because they sit on top and consume their own touch events)
+                if (!_isDragging)
+                  ReelsInteractionOverlay(
+                    post: widget.post,
+                    controller: widget.controller,
+                  ),
+
+                // 6. PROGRESS BAR
+                if (isReady && videoCtrl != null)
+                  Positioned(
+                    bottom:
+                        Dimensions.bottomNavIconHeight +
+                        Dimensions.height10 * 9,
+                    left: 0,
+                    right: 0,
+                    child: _buildProgressBar(videoCtrl),
+                  ),
+              ],
+            ),
           ),
         );
       },
