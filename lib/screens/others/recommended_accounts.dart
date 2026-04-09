@@ -769,149 +769,151 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
 
   // Enhanced Account Card
   Widget _buildAccountCard(UserModel user) {
-    final isFollowed = user.isFollowed;
-    final isFollowBusy = userController.isFollowActionInProgress(user.id);
+    return Obx(() {
+      final currentUser = _findCurrentUser(user.id) ?? user;
+      final isFollowed = currentUser.isFollowed;
+      final isFollowBusy = userController.followBusyUserIds.contains(user.id);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-      margin: EdgeInsets.only(bottom: Dimensions.height15),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.08),
-        child: InkWell(
-          onTap: () => Get.toNamed(
-            AppRoutes.othersProfileScreen,
-            arguments: {'targetId': user.id},
-          ),
-
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+        margin: EdgeInsets.only(bottom: Dimensions.height15),
+        child: Material(
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: EdgeInsets.all(Dimensions.width15),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Avatar section (unchanged)
-                Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(50),
-                      child: Image.network(
-                        user.profilePicture ??
-                            'https://placehold.net/avatar-2.png',
-                        height: 65,
-                        width: 65,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) {
-                          return Container(
-                            height: 65,
-                            width: 65,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.person,
-                              color: AppColors.primary,
-                              size: 32,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-
-                SizedBox(width: Dimensions.width15),
-
-                // Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          elevation: 2,
+          shadowColor: Colors.black.withOpacity(0.08),
+          child: InkWell(
+            onTap: () => Get.toNamed(
+              AppRoutes.othersProfileScreen,
+              arguments: {'targetId': currentUser.id},
+            ),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: EdgeInsets.all(Dimensions.width15),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
                     children: [
-                      // Name + Badge (unchanged)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-
-                              user.displayName,
-                              style: TextStyle(
-                                fontSize: Dimensions.font17,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.grey[900],
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(50),
+                        child: Image.network(
+                          currentUser.profilePicture.isNotEmpty
+                              ? currentUser.profilePicture
+                              : 'https://placehold.net/avatar-2.png',
+                          height: 65,
+                          width: 65,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) {
+                            return Container(
+                              height: 65,
+                              width: 65,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                shape: BoxShape.circle,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          SizedBox(width: Dimensions.width5),
-                          _buildVerifiedBadge(user.role),
-                        ],
-                      ),
-
-                      SizedBox(height: Dimensions.height5),
-
-                      // Bio (unchanged)
-                      if (user.bio != null && user.bio!.isNotEmpty)
-                        Padding(
-                          padding: EdgeInsets.only(bottom: Dimensions.height10),
-                          child: Text(
-                            user.bio!,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: Dimensions.font14,
-                              color: Colors.grey[600],
-                              height: 1.3,
-                            ),
-                          ),
+                              child: Icon(
+                                Icons.person,
+                                color: AppColors.primary,
+                                size: 32,
+                              ),
+                            );
+                          },
                         ),
-
-                      SizedBox(height: Dimensions.height10),
-
-                      Row(
-                        children: [
-                          // Follow Button
-                          Expanded(
-                            flex: 3,
-                            child: _buildActionButton(
-                              label: isFollowed ? 'Following' : 'Follow',
-                              icon: isFollowed ? Icons.check : Icons.add,
-                              isPrimary: !isFollowed,
-                              isLoading: isFollowBusy,
-                              onTap: isFollowBusy
-                                  ? null
-                                  : () {
-                                      if (isFollowed) {
-                                        userController.unfollowUser(user.id);
-                                      } else {
-                                        userController.followUser(user.id);
-                                      }
-                                    },
-                            ),
-                          ),
-
-                          SizedBox(width: Dimensions.width10),
-
-                          // More Options Button
-                          _buildIconButton(
-                            icon: Icons.more_horiz,
-                            onTap: () => _showOptionsBottomSheet(context, user),
-                          ),
-                        ],
                       ),
                     ],
                   ),
-                ),
-              ],
+                  SizedBox(width: Dimensions.width15),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                currentUser.displayName,
+                                style: TextStyle(
+                                  fontSize: Dimensions.font17,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.grey[900],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            SizedBox(width: Dimensions.width5),
+                            _buildVerifiedBadge(currentUser.role),
+                          ],
+                        ),
+                        SizedBox(height: Dimensions.height5),
+                        if (currentUser.bio != null &&
+                            currentUser.bio!.isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.only(
+                              bottom: Dimensions.height10,
+                            ),
+                            child: Text(
+                              currentUser.bio!,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: Dimensions.font14,
+                                color: Colors.grey[600],
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                        SizedBox(height: Dimensions.height10),
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: _buildActionButton(
+                                label: isFollowBusy
+                                    ? 'Please wait'
+                                    : (isFollowed ? 'Following' : 'Follow'),
+                                icon: isFollowBusy
+                                    ? Icons.hourglass_top_rounded
+                                    : (isFollowed ? Icons.check : Icons.add),
+                                isPrimary: !isFollowed,
+                                isBusy: isFollowBusy,
+                                onTap: isFollowBusy
+                                    ? null
+                                    : () {
+                                        if (isFollowed) {
+                                          userController.unfollowUser(
+                                            currentUser.id,
+                                          );
+                                        } else {
+                                          userController.followUser(
+                                            currentUser.id,
+                                          );
+                                        }
+                                      },
+                              ),
+                            ),
+                            SizedBox(width: Dimensions.width10),
+                            _buildIconButton(
+                              icon: Icons.more_horiz,
+                              onTap: () => _showOptionsBottomSheet(
+                                context,
+                                currentUser,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   // Verified Badge
@@ -946,47 +948,56 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
     required IconData icon,
     required bool isPrimary,
     required VoidCallback? onTap,
-    bool isLoading = false,
+    bool isBusy = false,
   }) {
     return Material(
-      color: isPrimary ? AppColors.primary : Colors.grey[100],
+      color: isPrimary
+          ? (isBusy ? AppColors.primary.withOpacity(0.75) : AppColors.primary)
+          : Colors.grey[100],
       borderRadius: BorderRadius.circular(25),
       child: InkWell(
-        onTap: isLoading ? null : onTap,
+        onTap: isBusy ? null : onTap,
         borderRadius: BorderRadius.circular(25),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
-          child: isLoading
-              ? SizedBox(
-                  height: 18,
-                  width: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: isPrimary ? Colors.white : Colors.grey[700],
-                  ),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      icon,
-                      size: 18,
-                      color: isPrimary ? Colors.white : Colors.grey[700],
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: isPrimary ? Colors.white : Colors.grey[800],
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: isPrimary ? Colors.white : Colors.grey[700],
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isPrimary ? Colors.white : Colors.grey[800],
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
                 ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  UserModel? _findCurrentUser(String userId) {
+    for (final collection in [
+      userController.filteredUsers,
+      userController.searchUsers,
+      userController.recommendedUsers,
+      userController.searchResults,
+    ]) {
+      final index = collection.indexWhere((user) => user.id == userId);
+      if (index != -1) {
+        return collection[index];
+      }
+    }
+
+    return null;
   }
 
   // Icon Button
