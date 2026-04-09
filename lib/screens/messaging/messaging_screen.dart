@@ -41,7 +41,6 @@ class _MessagingScreenState extends State<MessagingScreen>
     WidgetsBinding.instance.addObserver(this);
     ctrl = Get.find<ChatController>();
     ctrl.initChat(chat: widget.chat, myId: widget.myId);
-
     _scrollCtrl.addListener(_onScroll);
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
@@ -220,9 +219,9 @@ class _ChatHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rawName = peer?.name?.trim() ?? '';
+    final rawName = peer?.displayName?.trim() ?? '';
     final displayName = rawName.isNotEmpty ? rawName : 'User';
-
+print('Thi sis it ${displayName}');
     final avatarLetter =
         rawName.isNotEmpty ? rawName.characters.first.toUpperCase() : '?';
 

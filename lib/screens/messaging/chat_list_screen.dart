@@ -279,7 +279,7 @@ class _ChatTile extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        peer?.name ?? peer!.username,
+                        peer?.displayName ?? '',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: unread > 0 ? FontWeight.w700 : FontWeight

@@ -160,6 +160,12 @@ class ChatParticipant {
           : null,
     );
   }
+  String get displayName {
+    if(name == null || name!.trim().isEmpty) {
+      return username.isNotEmpty ? username : "User";
+    }
+    return name!;
+  }
 }
 
 class Chat {
