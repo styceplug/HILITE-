@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import 'package:hilite/controllers/chat_controller.dart';
 import 'package:hilite/controllers/post_controller.dart';
 import 'package:hilite/widgets/upload_progress_pill.dart';
 
@@ -82,6 +83,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         unawaited(postController.deactivatePlayback());
                       } else {
                         postController.activatePlayback();
+                      }
+                      if (index == 2 && Get.isRegistered<ChatListController>()) {
+                        unawaited(Get.find<ChatListController>().loadChats());
                       }
                     },
                   ),

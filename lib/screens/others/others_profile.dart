@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/screens/home/pages/profile_screen.dart';
 import 'package:hilite/screens/others/relationship_screen.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:hilite/widgets/snackbars.dart';
 import 'package:iconsax/iconsax.dart';
 
@@ -14,7 +15,6 @@ import '../../routes/routes.dart';
 import '../../utils/colors.dart';
 import '../../utils/dimensions.dart';
 import '../../utils/others.dart';
-import '../../widgets/custom_appbar.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/gift_bottom_modal.dart';
 import '../../widgets/post_grid_shimmer.dart';
@@ -35,13 +35,14 @@ class _OthersProfileState extends State<OthersProfileScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      userController.clearExternalCache();
+    final args = Get.arguments as Map<String, dynamic>?;
+    targetId = args?['targetId'] as String?;
 
-      targetId = Get.arguments?['targetId'];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (targetId != null) {
-        userController.getOthersProfile(targetId!);
-        userController.getExternalUserPosts(targetId!, 'video');
+        userController.prepareExternalProfile(targetId!);
+        userController.getOthersProfile(targetId!, resetBeforeFetch: true);
+        userController.getAllExternalUserPosts(targetId!);
       } else {
         CustomSnackBar.failure(message: 'User not found');
         Get.back();
@@ -52,8 +53,6 @@ class _OthersProfileState extends State<OthersProfileScreen> {
   @override
   void dispose() {
     super.dispose();
-    userController.clearExternalCache();
-
   }
 
   @override
@@ -61,12 +60,36 @@ class _OthersProfileState extends State<OthersProfileScreen> {
     return Scaffold(
       body: GetBuilder<UserController>(
         builder: (controller) {
-          var user = userController.othersProfile.value;
-
-          if (user == null) {
-            return const Center(child: CircularProgressIndicator());
+          if (targetId == null) {
+            return const SizedBox.shrink();
           }
-          final isFollowing = userController.othersProfile.value!.isFollowed;
+
+          final user = userController.othersProfile.value;
+          final isLoadingProfile =
+              controller.isOthersProfileLoading.value ||
+              user == null ||
+              user.id != targetId;
+
+          if (isLoadingProfile) {
+            if (!controller.isOthersProfileLoading.value &&
+                user?.id != targetId) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && targetId != null) {
+                  userController.prepareExternalProfile(targetId!);
+                  userController.getOthersProfile(
+                    targetId!,
+                    resetBeforeFetch: true,
+                  );
+                  userController.getAllExternalUserPosts(targetId!);
+                }
+              });
+            }
+
+            return const _OthersProfileShimmer();
+          }
+
+          final isFollowing = user.isFollowed;
+          final isFollowBusy = controller.isFollowActionInProgress(user.id);
 
           var player = user.playerDetails;
           var club = user.clubDetails;
@@ -302,16 +325,19 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                       Expanded(
                         child: CustomButton(
                           text: isFollowing ? 'Unfollow' : 'Follow',
+                          isLoading: isFollowBusy,
                           textStyle: TextStyle(
                             color: AppColors.white,
                             fontSize: Dimensions.font15,
                             fontWeight: FontWeight.w500,
                           ),
                           onPressed:
-                              () =>
-                                  !isFollowing
-                                      ? userController.followUser(user.id)
-                                      : userController.unfollowUser(user.id),
+                              isFollowBusy
+                                  ? null
+                                  : () =>
+                                      !isFollowing
+                                          ? userController.followUser(user.id)
+                                          : userController.unfollowUser(user.id),
                           backgroundColor: AppColors.primary,
                           borderRadius: BorderRadius.circular(
                             Dimensions.radius10,
@@ -885,6 +911,146 @@ class _OthersProfileState extends State<OthersProfileScreen> {
       ),
     ),
   );
+}
+
+class _OthersProfileShimmer extends StatelessWidget {
+  const _OthersProfileShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(vertical: Dimensions.height10 * 5),
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                Dimensions.width15,
+                Dimensions.height30,
+                Dimensions.width15,
+                0,
+              ),
+              child: Row(
+                children: [
+                  const BackButton(color: Colors.black),
+                  Expanded(
+                    child: Center(
+                      child: Shimmer.fromColors(
+                        baseColor: Colors.grey.shade300,
+                        highlightColor: Colors.grey.shade100,
+                        child: Container(
+                          width: 110,
+                          height: 110,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      _buildShimmerCircle(),
+                      SizedBox(width: Dimensions.width10),
+                      _buildShimmerCircle(),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: Dimensions.height20),
+            _buildShimmerLine(width: 150, height: 18),
+            SizedBox(height: Dimensions.height10),
+            _buildShimmerLine(width: 100, height: 12),
+            SizedBox(height: Dimensions.height20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildShimmerStat(),
+                SizedBox(width: Dimensions.width30),
+                _buildShimmerStat(),
+              ],
+            ),
+            SizedBox(height: Dimensions.height20),
+            _buildShimmerLine(width: 240, height: 12),
+            const SizedBox(height: 8),
+            _buildShimmerLine(width: 200, height: 12),
+            SizedBox(height: Dimensions.height20),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: Dimensions.width40),
+              child: Row(
+                children: [
+                  Expanded(child: _buildShimmerButton()),
+                  SizedBox(width: Dimensions.width20),
+                  Expanded(child: _buildShimmerButton(light: true)),
+                ],
+              ),
+            ),
+            SizedBox(height: Dimensions.height30),
+            const PostGridShimmer(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _buildShimmerCircle() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+
+  static Widget _buildShimmerLine({
+    required double width,
+    required double height,
+  }) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(height / 2),
+        ),
+      ),
+    );
+  }
+
+  static Widget _buildShimmerStat() {
+    return Column(
+      children: [
+        _buildShimmerLine(width: 36, height: 16),
+        const SizedBox(height: 8),
+        _buildShimmerLine(width: 70, height: 12),
+      ],
+    );
+  }
+
+  static Widget _buildShimmerButton({bool light = false}) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        height: 44,
+        decoration: BoxDecoration(
+          color: light ? Colors.grey.shade200 : Colors.white,
+          borderRadius: BorderRadius.circular(Dimensions.radius10),
+        ),
+      ),
+    );
+  }
 }
 
 class FullScreenImageViewer extends StatelessWidget {

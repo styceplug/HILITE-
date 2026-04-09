@@ -83,6 +83,14 @@ class ChatListController extends GetxController {
     chats[idx] = chats[idx].copyWith(unreadCount: 0);
   }
 
+  void upsertChat(Chat chat) {
+    final idx = chats.indexWhere((existing) => existing.id == chat.id);
+    if (idx != -1) {
+      chats.removeAt(idx);
+    }
+    chats.insert(0, chat);
+  }
+
   void _subscribeSocket() {
     socketHelper.onNewMessage((data) {
       final chatId = data['chatId']?.toString();
@@ -140,6 +148,7 @@ class ChatController extends GetxController {
   int _totalPages = 1;
   Timer? _typingTimer;
   bool _isTyping = false;
+  bool _socketEventsBound = false;
 
   bool get hasMore => _page < _totalPages;
 
@@ -228,6 +237,7 @@ class ChatController extends GetxController {
       messages.add(message);
       messageController.clear();
       stopTyping();
+      _syncChatPreview(message);
     } else {
       Get.snackbar(
         'Error',
@@ -249,7 +259,9 @@ class ChatController extends GetxController {
     );
 
     if (response.statusCode == 201 && response.body['code'] == '00') {
-      messages.add(ChatMessage.fromJson(response.body['data']));
+      final message = ChatMessage.fromJson(response.body['data']);
+      messages.add(message);
+      _syncChatPreview(message);
     } else {
       Get.snackbar(
         'Error',
@@ -271,7 +283,9 @@ class ChatController extends GetxController {
     );
 
     if (response.statusCode == 201 && response.body['code'] == '00') {
-      messages.add(ChatMessage.fromJson(response.body['data']));
+      final message = ChatMessage.fromJson(response.body['data']);
+      messages.add(message);
+      _syncChatPreview(message);
     } else {
       Get.snackbar(
         'Error',
@@ -330,6 +344,9 @@ class ChatController extends GetxController {
 
 
   void _bindSocketEvents() {
+    if (_socketEventsBound) return;
+    _socketEventsBound = true;
+
     socketHelper.onNewMessage((data) {
       if (data['chatId'] != currentChatId) return;
       final msg = ChatMessage.fromJson(data['message']);
@@ -374,6 +391,9 @@ class ChatController extends GetxController {
       socketHelper.leaveChat(currentChatId!);
     }
     peerIsTyping.value = false;
+    if (Get.isRegistered<ChatListController>()) {
+      unawaited(Get.find<ChatListController>().loadChats());
+    }
   }
 
   @override
@@ -381,5 +401,19 @@ class ChatController extends GetxController {
     closeChat();
     messageController.dispose();
     super.onClose();
+  }
+
+  void _syncChatPreview(ChatMessage message) {
+    if (selectedChat == null) return;
+
+    final updatedChat = selectedChat!.copyWith(
+      lastMessage: message,
+      unreadCount: 0,
+    );
+    selectedChat = updatedChat;
+
+    if (Get.isRegistered<ChatListController>()) {
+      Get.find<ChatListController>().upsertChat(updatedChat);
+    }
   }
 }

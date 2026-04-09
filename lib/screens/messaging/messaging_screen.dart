@@ -943,6 +943,7 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
   StreamSubscription<PlayerState>? _playerStateSub;
   bool _loading = false;
   bool _ready = false;
+  bool _isCompletingPlayback = false;
 
   @override
   void initState() {
@@ -950,6 +951,9 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
     _player = AudioPlayer();
 
     _playerStateSub = _player.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        unawaited(_handlePlaybackCompleted());
+      }
       if (mounted) setState(() {});
     });
   }
@@ -980,6 +984,23 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
     }
   }
 
+  Future<void> _handlePlaybackCompleted() async {
+    if (_isCompletingPlayback) return;
+    _isCompletingPlayback = true;
+
+    try {
+      await _player.pause();
+      await _player.seek(Duration.zero);
+      await _AudioMessagePlaybackCoordinator.release(_player);
+    } catch (_) {
+    } finally {
+      _isCompletingPlayback = false;
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
   @override
   void dispose() {
     _playerStateSub?.cancel();
@@ -992,6 +1013,9 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
   Widget build(BuildContext context) {
     final iconColor = widget.mine ? Colors.white : const Color(0xFF2563EB);
     final textColor = widget.mine ? Colors.white : const Color(0xFF0F0F0F);
+    final isPlayingActive =
+        _player.playing &&
+        _player.playerState.processingState != ProcessingState.completed;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1008,7 +1032,7 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
             ),
           )
               : Icon(
-            _player.playing
+            isPlayingActive
                 ? Icons.pause_circle_filled
                 : Icons.play_circle_fill,
             color: iconColor,
@@ -1017,7 +1041,7 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
         ),
         const SizedBox(width: 6),
         Text(
-          _player.playing ? 'Playing...' : 'Voice message',
+          isPlayingActive ? 'Playing...' : 'Voice message',
           style: TextStyle(
             color: textColor,
             fontSize: 14,

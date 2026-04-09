@@ -83,22 +83,18 @@ class SocketHelper extends GetxService {
 
 
   void onNewMessage(Function(dynamic data) callback) {
-    _socket?.off('new_message');
     _socket?.on('new_message', callback);
   }
 
   void onMessagesRead(Function(dynamic data) callback) {
-    _socket?.off('messages_read');
     _socket?.on('messages_read', callback);
   }
 
   void onTyping(Function(dynamic data) callback) {
-    _socket?.off('typing');
     _socket?.on('typing', callback);
   }
 
   void onUserStatus(Function(dynamic data) callback) {
-    _socket?.off('user_status');
     _socket?.on('user_status', callback);
   }
 }

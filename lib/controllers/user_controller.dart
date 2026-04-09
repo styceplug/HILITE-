@@ -27,11 +27,13 @@ class UserController extends GetxController {
   RxBool isSearching = false.obs;
   RxString searchQuery = ''.obs;
   Rxn<UserModel> othersProfile = Rxn<UserModel>();
+  RxBool isOthersProfileLoading = false.obs;
   RxList<UserModel> filteredUsers = <UserModel>[].obs;
   final RxString selectedAgeRange = ''.obs;
   RxList<UserModel> searchUsers = <UserModel>[].obs;
   RxList<PostModel> searchImages = <PostModel>[].obs;
   RxList<PostModel> searchVideos = <PostModel>[].obs;
+  final RxSet<String> followBusyUserIds = <String>{}.obs;
 
   bool isPostsLoading = false;
 
@@ -64,6 +66,8 @@ class UserController extends GetxController {
   RxString selectedClub = ''.obs;
 
   bool _hasInitialized = false;
+  String? _activeOthersProfileId;
+  int _othersProfileRequestToken = 0;
 
   @override
   void onInit() {
@@ -92,6 +96,7 @@ class UserController extends GetxController {
 
 
   Future<void> getAllExternalUserPosts(String targetId) async {
+    _activeOthersProfileId = targetId;
     isExternalPostsLoading = true;
     update();
 
@@ -288,10 +293,29 @@ class UserController extends GetxController {
   void clearExternalCache() {
     externalPostCache = {'text': [], 'image': [], 'video': []};
     currentExternalPostType = 'text';
+    isExternalPostsLoading = false;
     update();
   }
 
+  void prepareExternalProfile(String targetId) {
+    _activeOthersProfileId = targetId;
+    _othersProfileRequestToken++;
+    othersProfile.value = null;
+    isOthersProfileLoading.value = true;
+    clearExternalCache();
+    isExternalPostsLoading = true;
+    update();
+  }
+
+  bool isFollowActionInProgress(String targetId) {
+    return followBusyUserIds.contains(targetId);
+  }
+
   Future<void> getExternalUserPosts(String targetId, String type) async {
+    if (_activeOthersProfileId != null && _activeOthersProfileId != targetId) {
+      return;
+    }
+
     currentExternalPostType = type;
 
     // Check if we already fetched this type for this session
@@ -304,6 +328,10 @@ class UserController extends GetxController {
     }
 
     Response response = await userRepo.getExternalUserPosts(targetId, type);
+
+    if (_activeOthersProfileId != targetId) {
+      return;
+    }
 
     if (response.statusCode == 200) {
       List<dynamic> data = response.body['data'];
@@ -628,12 +656,17 @@ class UserController extends GetxController {
   }
 
   Future<void> followUser(String targetId) async {
+    if (isFollowActionInProgress(targetId)) return;
+
+    final wasFollowed = _isUserFollowedLocally(targetId);
+    if (wasFollowed) return;
+
+    _setFollowState(targetId, true);
+    followBusyUserIds.add(targetId);
+
     try {
       print("➡️ followUser() called for targetId: $targetId");
-      loader.showLoader();
-
       Response response = await userRepo.followUser(targetId);
-      loader.hideLoader();
 
       print(
         "📩 Response from followUser: ${response.statusCode}, ${response.body}",
@@ -641,43 +674,34 @@ class UserController extends GetxController {
 
       if (response.statusCode == 200 && response.body['code'] == '00') {
         CustomSnackBar.success(message: 'User followed successfully');
-        final index = recommendedUsers.indexWhere((u) => u.id == targetId);
-        print('target index is $index');
-        if (index != -1) {
-          print(recommendedUsers[index].followers);
-          int followersCount = recommendedUsers[index].followers;
-          print(followersCount);
-          recommendedUsers[index] = recommendedUsers[index].copyWith(
-            isFollowed: true,
-            followers: followersCount + 1,
-          );
-          print(recommendedUsers[index].followers);
-          recommendedUsers.refresh();
-          if (othersProfile.value?.id == recommendedUsers[index].id) {
-            othersProfile.value = recommendedUsers[index];
-          }
-          getOthersProfile(targetId);
-          getRecommendedUsers();
-          update();
-        }
       } else {
+        _setFollowState(targetId, wasFollowed);
         CustomSnackBar.failure(
           message: response.body['message'] ?? 'Failed to follow user',
         );
       }
     } catch (e, s) {
       print("🔥 followUser error: $e\n$s");
+      _setFollowState(targetId, wasFollowed);
       CustomSnackBar.failure(message: 'Error following user: $e');
+    } finally {
+      followBusyUserIds.remove(targetId);
+      update();
     }
   }
 
   Future<void> unfollowUser(String targetId) async {
+    if (isFollowActionInProgress(targetId)) return;
+
+    final wasFollowed = _isUserFollowedLocally(targetId);
+    if (!wasFollowed) return;
+
+    _setFollowState(targetId, false);
+    followBusyUserIds.add(targetId);
+
     try {
       print("➡️ unfollowUser() called for targetId: $targetId");
-      loader.showLoader();
-
       Response response = await userRepo.unfollowUser(targetId);
-      loader.hideLoader();
 
       print(
         "📩 Response from followUser: ${response.statusCode}, ${response.body}",
@@ -685,31 +709,19 @@ class UserController extends GetxController {
 
       if (response.statusCode == 200 && response.body['code'] == '00') {
         CustomSnackBar.success(message: 'User unfollowed successfully');
-        final index = recommendedUsers.indexWhere((u) => u.id == targetId);
-        print('target index is $index');
-        if (index != -1) {
-          print(recommendedUsers[index].followers);
-          int followersCount = recommendedUsers[index].followers;
-          print(followersCount);
-          recommendedUsers[index] = recommendedUsers[index].copyWith(
-            isFollowed: false,
-            followers: followersCount - 1,
-          );
-          print(recommendedUsers[index].followers);
-          recommendedUsers.refresh();
-          if (othersProfile.value?.id == recommendedUsers[index].id) {
-            othersProfile.value = recommendedUsers[index];
-          }
-          update();
-        }
       } else {
+        _setFollowState(targetId, wasFollowed);
         CustomSnackBar.failure(
           message: response.body['message'] ?? 'Failed to unfollow user',
         );
       }
     } catch (e, s) {
       print("🔥 unfollowUser error: $e\n$s");
+      _setFollowState(targetId, wasFollowed);
       CustomSnackBar.failure(message: 'Error unfollowing user: $e');
+    } finally {
+      followBusyUserIds.remove(targetId);
+      update();
     }
   }
 
@@ -742,18 +754,37 @@ class UserController extends GetxController {
     }
   }
 
-  Future<void> getOthersProfile(String targetId) async {
+  Future<void> getOthersProfile(
+    String targetId, {
+    bool resetBeforeFetch = false,
+  }) async {
+    final requestToken = ++_othersProfileRequestToken;
+    _activeOthersProfileId = targetId;
+
+    if (resetBeforeFetch || othersProfile.value?.id != targetId) {
+      othersProfile.value = null;
+    }
+
+    isOthersProfileLoading.value = true;
+    update();
+
     try {
-      loader.showLoader();
       print("👀 Fetching external profile for $targetId");
 
       Response response = await userRepo.getOthersProfile(targetId);
 
-      loader.hideLoader();
       print("📩 Response: ${response.statusCode} ${response.body}");
 
+      if (_activeOthersProfileId != targetId ||
+          requestToken != _othersProfileRequestToken) {
+        return;
+      }
+
       if (response.statusCode == 200 && response.body['code'] == '00') {
-        othersProfile.value = UserModel.fromJson(response.body['data']);
+        final fetchedUser = _normalizeExternalUserState(
+          UserModel.fromJson(response.body['data']),
+        );
+        othersProfile.value = fetchedUser;
       } else {
         CustomSnackBar.failure(
           message: response.body['message'] ?? 'Failed to load profile',
@@ -763,7 +794,11 @@ class UserController extends GetxController {
       print("🔥 Error loading external profile: $e\n$s");
       CustomSnackBar.failure(message: 'Error loading profile');
     } finally {
-      loader.hideLoader();
+      if (_activeOthersProfileId == targetId &&
+          requestToken == _othersProfileRequestToken) {
+        isOthersProfileLoading.value = false;
+      }
+      update();
     }
   }
 
@@ -796,5 +831,121 @@ class UserController extends GetxController {
     } else {
       print(response.body);
     }
+  }
+
+  bool _isUserFollowedLocally(String targetId) {
+    final candidates = <UserModel?>[
+      othersProfile.value?.id == targetId ? othersProfile.value : null,
+      user.value?.id == targetId ? user.value : null,
+      recommendedUsers.firstWhereOrNull((u) => u.id == targetId),
+      filteredUsers.firstWhereOrNull((u) => u.id == targetId),
+      searchUsers.firstWhereOrNull((u) => u.id == targetId),
+      searchResults.firstWhereOrNull((u) => u.id == targetId),
+      _relationshipList.firstWhereOrNull((u) => u.id == targetId),
+      _filteredRelationshipList.firstWhereOrNull((u) => u.id == targetId),
+    ];
+
+    for (final candidate in candidates) {
+      if (candidate != null) {
+        return candidate.isFollowed;
+      }
+    }
+
+    return false;
+  }
+
+  UserModel _normalizeExternalUserState(UserModel incoming) {
+    final existingCandidates = <UserModel?>[
+      recommendedUsers.firstWhereOrNull((u) => u.id == incoming.id),
+      filteredUsers.firstWhereOrNull((u) => u.id == incoming.id),
+      searchUsers.firstWhereOrNull((u) => u.id == incoming.id),
+      searchResults.firstWhereOrNull((u) => u.id == incoming.id),
+      _relationshipList.firstWhereOrNull((u) => u.id == incoming.id),
+      _filteredRelationshipList.firstWhereOrNull((u) => u.id == incoming.id),
+      othersProfile.value?.id == incoming.id ? othersProfile.value : null,
+    ];
+
+    UserModel? existing;
+    for (final candidate in existingCandidates) {
+      if (candidate != null) {
+        existing = candidate;
+        break;
+      }
+    }
+
+    if (existing == null) {
+      return incoming;
+    }
+
+    return incoming.copyWith(
+      isFollowed: existing.isFollowed,
+      followers: existing.followers,
+      isBlocked: existing.isBlocked,
+    );
+  }
+
+  void _setFollowState(String targetId, bool isFollowed) {
+    final previousState = _isUserFollowedLocally(targetId);
+    if (previousState == isFollowed) {
+      return;
+    }
+
+    final followingDelta = isFollowed ? 1 : -1;
+
+    _updateFollowStateInRxList(recommendedUsers, targetId, isFollowed);
+    _updateFollowStateInRxList(filteredUsers, targetId, isFollowed);
+    _updateFollowStateInRxList(searchUsers, targetId, isFollowed);
+    _updateFollowStateInRxList(searchResults, targetId, isFollowed);
+    _updateFollowStateInList(_relationshipList, targetId, isFollowed);
+    _updateFollowStateInList(_filteredRelationshipList, targetId, isFollowed);
+
+    if (othersProfile.value?.id == targetId) {
+      othersProfile.value = _applyFollowState(
+        othersProfile.value!,
+        isFollowed,
+      );
+    }
+
+    if (user.value != null) {
+      final nextFollowing = user.value!.following + followingDelta;
+      user.value = user.value!.copyWith(
+        following: nextFollowing < 0 ? 0 : nextFollowing,
+      );
+    }
+
+    update();
+  }
+
+  void _updateFollowStateInRxList(
+    RxList<UserModel> users,
+    String targetId,
+    bool isFollowed,
+  ) {
+    final index = users.indexWhere((user) => user.id == targetId);
+    if (index == -1) return;
+
+    users[index] = _applyFollowState(users[index], isFollowed);
+  }
+
+  void _updateFollowStateInList(
+    List<UserModel> users,
+    String targetId,
+    bool isFollowed,
+  ) {
+    final index = users.indexWhere((user) => user.id == targetId);
+    if (index == -1) return;
+
+    users[index] = _applyFollowState(users[index], isFollowed);
+  }
+
+  UserModel _applyFollowState(UserModel userModel, bool isFollowed) {
+    final followerDelta =
+        userModel.isFollowed == isFollowed ? 0 : (isFollowed ? 1 : -1);
+    final nextFollowers = userModel.followers + followerDelta;
+
+    return userModel.copyWith(
+      isFollowed: isFollowed,
+      followers: nextFollowers < 0 ? 0 : nextFollowers,
+    );
   }
 }

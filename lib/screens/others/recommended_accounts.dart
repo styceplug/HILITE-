@@ -25,7 +25,6 @@ class RecommendedAccountsScreen extends StatefulWidget {
 class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
   final UserController userController = Get.find<UserController>();
   final TextEditingController searchController = TextEditingController();
-  final Map<String, bool> _followOverrides = {};
 
   static const List<String> _nigerianStates = [
     'Abia',
@@ -173,14 +172,6 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
       itemCount: users.length,
       itemBuilder: (context, index) => _buildAccountCard(users[index]),
     );
-  }
-
-
-
-  bool _isUserFollowed(UserModel user) {
-    final override = _followOverrides[user.id];
-    if (override != null) return override;
-    return user.isFollowed;
   }
 
   Widget _buildImageGrid(List<dynamic> images) {
@@ -778,7 +769,8 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
 
   // Enhanced Account Card
   Widget _buildAccountCard(UserModel user) {
-    final isFollowed = _isUserFollowed(user);
+    final isFollowed = user.isFollowed;
+    final isFollowBusy = userController.isFollowActionInProgress(user.id);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -889,17 +881,16 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
                               label: isFollowed ? 'Following' : 'Follow',
                               icon: isFollowed ? Icons.check : Icons.add,
                               isPrimary: !isFollowed,
-                              onTap: () {
-                                setState(() {
-                                  _followOverrides[user.id] = !isFollowed;
-                                });
-
-                                if (isFollowed) {
-                                  userController.unfollowUser(user.id);
-                                } else {
-                                  userController.followUser(user.id);
-                                }
-                              },
+                              isLoading: isFollowBusy,
+                              onTap: isFollowBusy
+                                  ? null
+                                  : () {
+                                      if (isFollowed) {
+                                        userController.unfollowUser(user.id);
+                                      } else {
+                                        userController.followUser(user.id);
+                                      }
+                                    },
                             ),
                           ),
 
@@ -954,35 +945,45 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
     required String label,
     required IconData icon,
     required bool isPrimary,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
+    bool isLoading = false,
   }) {
     return Material(
       color: isPrimary ? AppColors.primary : Colors.grey[100],
       borderRadius: BorderRadius.circular(25),
       child: InkWell(
-        onTap: onTap,
+        onTap: isLoading ? null : onTap,
         borderRadius: BorderRadius.circular(25),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: isPrimary ? Colors.white : Colors.grey[700],
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isPrimary ? Colors.white : Colors.grey[800],
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+          child: isLoading
+              ? SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: isPrimary ? Colors.white : Colors.grey[700],
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 18,
+                      color: isPrimary ? Colors.white : Colors.grey[700],
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: isPrimary ? Colors.white : Colors.grey[800],
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );
