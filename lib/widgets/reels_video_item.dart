@@ -9,7 +9,6 @@ import 'package:video_player/video_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../controllers/post_controller.dart';
-import '../controllers/user_controller.dart';
 import '../models/post_model.dart';
 import '../models/user_model.dart';
 
@@ -164,14 +163,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
                 if (isReady &&
                     videoCtrl != null &&
                     videoCtrl.value.isInitialized)
-                  FittedBox(
-                    fit: BoxFit.fitWidth,
-                    child: SizedBox(
-                      width: videoCtrl.value.size.width,
-                      height: videoCtrl.value.size.height,
-                      child: VideoPlayer(videoCtrl),
-                    ),
-                  ),
+                  _buildVideoPlayer(videoCtrl),
 
                 // 3. "2X SPEED" OVERLAY
                 if (isReady)
@@ -190,7 +182,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.6),
+                              color: Colors.black.withValues(alpha: 0.6),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Row(
@@ -226,10 +218,14 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
                           return const SizedBox.shrink();
                         }
 
-                        if (!value.isPlaying && !value.isBuffering) {
+                        if (value.isBuffering) {
+                          return _buildBufferingIndicator();
+                        }
+
+                        if (!value.isPlaying) {
                           return Container(
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.3),
+                              color: Colors.black.withValues(alpha: 0.3),
                               shape: BoxShape.circle,
                             ),
                             padding: const EdgeInsets.all(15),
@@ -239,9 +235,6 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
                               color: Colors.white,
                             ),
                           );
-                        }
-                        if (value.isBuffering) {
-                          return const PulseLoader();
                         }
                         return const SizedBox.shrink();
                       },
@@ -298,6 +291,56 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
     );
   }
 
+  Widget _buildVideoPlayer(VideoPlayerController controller) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final videoSize = controller.value.size;
+
+        if (videoSize.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final videoAspectRatio = videoSize.width / videoSize.height;
+        final viewportAspectRatio =
+            constraints.maxWidth / constraints.maxHeight;
+
+        late final double width;
+        late final double height;
+
+        if (videoAspectRatio > viewportAspectRatio) {
+          height = constraints.maxHeight;
+          width = height * videoAspectRatio;
+        } else {
+          width = constraints.maxWidth;
+          height = width / videoAspectRatio;
+        }
+
+        return Center(
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: VideoPlayer(controller),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBufferingIndicator() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.38),
+        shape: BoxShape.circle,
+      ),
+      child: const SizedBox(
+        width: 22,
+        height: 22,
+        child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+      ),
+    );
+  }
+
   Widget _buildProgressBar(VideoPlayerController controller) {
     return ValueListenableBuilder(
       valueListenable: controller,
@@ -317,9 +360,9 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 10.0),
             activeTrackColor: Colors.white,
-            inactiveTrackColor: Colors.white.withOpacity(0.2),
+            inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
             thumbColor: Colors.white,
-            overlayColor: Colors.white.withOpacity(0.4),
+            overlayColor: Colors.white.withValues(alpha: 0.4),
           ),
           child: FadeTransition(
             opacity:
@@ -330,7 +373,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
               data: SliderTheme.of(context).copyWith(
                 trackHeight: 2.0,
                 activeTrackColor: Colors.white,
-                inactiveTrackColor: Colors.white.withOpacity(0.2),
+                inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
                 thumbColor: Colors.white,
               ),
               child: Slider(
@@ -456,7 +499,7 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer>
             left: 20,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 shape: BoxShape.circle,
               ),
               child: IconButton(
@@ -469,53 +512,6 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer>
           ),
         ],
       ),
-    );
-  }
-
-  // ✅ LOGIC FIX: Determine Author dynamically
-  PostModel _convertToPostModel(PersonalPostModel personal) {
-    String authorId = '';
-    String authorName = 'Unknown';
-    String authorPic = '';
-
-    // A. If we passed a specific author (Others Profile), use that
-    if (widget.authorProfile != null) {
-      authorId = widget.authorProfile!.id;
-      authorName = widget.authorProfile!.username;
-      authorPic = widget.authorProfile!.profilePicture ?? '';
-    }
-    // B. Otherwise, fallback to Current User (My Profile)
-    else {
-      final me = Get.find<UserController>().user.value;
-      authorId = me?.id ?? '';
-      authorName = me?.username ?? 'Unknown';
-      authorPic = me?.profilePicture ?? '';
-    }
-
-    final author = Author(
-      id: authorId,
-      username: authorName,
-      profilePicture: authorPic,
-    );
-
-    final videoContent = ContentDetails(
-      url: personal.mediaUrl,
-      title: personal.text,
-      description: personal.text,
-      thumbnailUrl: personal.thumbnail,
-      duration: personal.duration,
-    );
-
-    return PostModel(
-      id: personal.id ?? '',
-      type: personal.type ?? 'video',
-      text: personal.text,
-      author: author,
-      video: videoContent,
-      likes: [],
-      comments: [],
-      isLiked: false,
-      image: null,
     );
   }
 

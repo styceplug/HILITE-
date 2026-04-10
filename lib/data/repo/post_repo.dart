@@ -1,11 +1,7 @@
-import 'dart:io';
 import 'package:get/get.dart';
 import 'package:http_parser/http_parser.dart'; // REQUIRED for MediaType
-import 'package:mime/mime.dart'; // Optional, but good for auto-detection
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:get/get_connect/http/src/response/response.dart';
-import 'package:http/http.dart' as http;
 import '../../utils/app_constants.dart';
 import '../api/api_client.dart';
 import '../services/upload_services.dart';
@@ -31,8 +27,18 @@ class PostRepo {
     required String postId,
     required String content,
     String type = 'comment',
+    String? mentionedUser,
+    String? parentComment,
   }) async {
-    final body = {'content': content, 'type': type};
+    final body = <String, dynamic>{'content': content, 'type': type};
+
+    if (mentionedUser != null && mentionedUser.isNotEmpty) {
+      body['mentionedUser'] = mentionedUser;
+    }
+
+    if (parentComment != null && parentComment.isNotEmpty) {
+      body['parentComment'] = parentComment;
+    }
 
     return await apiClient.postData(
       AppConstants.POST_NEW_COMMENTS(postId),
@@ -78,7 +84,7 @@ class PostRepo {
     return request;
   }*/
 
-/*  // 4. UPLOAD IMAGE POST
+  /*  // 4. UPLOAD IMAGE POST
   Future<Response> uploadImagePost({
     required XFile imageFile,
     required String text,
@@ -148,17 +154,14 @@ class PostRepo {
     required String title,
     required String description,
     required bool isPublic,
-  }) =>
-      {
-        'text': text,
-        'title': title,
-        'description': description,
-        'imageTitle': title,         // mirrors _buildBaseRequest
-        'imageDescription': description, // mirrors _buildBaseRequest
-        'isPublic': isPublic.toString(),
-      };
-
-
+  }) => {
+    'text': text,
+    'title': title,
+    'description': description,
+    'imageTitle': title, // mirrors _buildBaseRequest
+    'imageDescription': description, // mirrors _buildBaseRequest
+    'isPublic': isPublic.toString(),
+  };
 
   Future<Response> uploadVideoPost({
     required XFile videoFile,
@@ -181,7 +184,8 @@ class PostRepo {
       final body = await uploadService.uploadWithProgress(
         uri: '${apiClient.appBaseUrl}${AppConstants.UPLOAD_VIDEO_POST}',
         filePath: videoFile.path,
-        fileName: videoFile.name,   // ← mirrors filename: file.name from fromBytes
+        fileName:
+            videoFile.name, // ← mirrors filename: file.name from fromBytes
         fileFieldName: 'video',
         mediaType: contentType,
         fields: _baseFields(
@@ -219,7 +223,8 @@ class PostRepo {
       final body = await uploadService.uploadWithProgress(
         uri: '${apiClient.appBaseUrl}${AppConstants.UPLOAD_IMAGE_POST}',
         filePath: imageFile.path,
-        fileName: imageFile.name,   // ← mirrors filename: file.name from fromBytes
+        fileName:
+            imageFile.name, // ← mirrors filename: file.name from fromBytes
         fileFieldName: 'image',
         mediaType: contentType,
         fields: _baseFields(
@@ -237,8 +242,6 @@ class PostRepo {
       return Response(statusCode: 1, statusText: e.toString());
     }
   }
-
-
 
   Future<Response> getPostComments(String postId) async {
     return await apiClient.getData(AppConstants.GET_POST_COMMENTS(postId));
@@ -274,6 +277,4 @@ class PostRepo {
 
     return await apiClient.getData(url);
   }
-
-
 }

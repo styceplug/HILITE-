@@ -14,37 +14,46 @@ class UserRepo {
   AuthRepo authRepo;
   final SharedPreferences sharedPreferences;
 
-  UserRepo({required this.apiClient, required this.sharedPreferences,required this.authRepo});
-
+  UserRepo({
+    required this.apiClient,
+    required this.sharedPreferences,
+    required this.authRepo,
+  });
 
   static const String USER_KEY = "user_data";
 
-  Future<Response> getExternalRelationshipAccounts(String targetId, {
+  Future<Response> getExternalRelationshipAccounts(
+    String targetId, {
     bool followers = false,
     bool following = false,
   }) async {
     String query = '';
-    if (followers) query = '?followers=true'; //
-    else if (following) query = '?following=true'; //
-
+    if (followers)
+      query = '?followers=true'; //
+    else if (following)
+      query = '?following=true'; //
 
     String url = '/v1/user/external/$targetId/accounts$query';
 
     return await apiClient.getData(url);
   }
 
-
   Future<Response> getRelationshipAccounts({
     bool followers = false,
     bool following = false,
-    bool blocked = false
+    bool blocked = false,
   }) async {
     String query = '';
-    if (followers) query = '?followers=true';
-    else if (following) query = '?following=true';
-    else if (blocked) query = '?blocked=true';
+    if (followers)
+      query = '?followers=true';
+    else if (following)
+      query = '?following=true';
+    else if (blocked)
+      query = '?blocked=true';
 
-    return await apiClient.getData(AppConstants.GET_PERSONAL_RELATIONSHIPS + query);
+    return await apiClient.getData(
+      AppConstants.GET_PERSONAL_RELATIONSHIPS + query,
+    );
   }
 
   Future<Response> updateDeviceToken(String token, String platform) async {
@@ -84,7 +93,10 @@ class UserRepo {
       return await apiClient.getData(AppConstants.GET_PROFILE);
     } catch (e) {
       print('🔥 API Error: $e');
-      return Response(statusCode: 500, body: {'code': '99', 'message': 'Network error'});
+      return Response(
+        statusCode: 500,
+        body: {'code': '99', 'message': 'Network error'},
+      );
     }
   }
 
@@ -110,9 +122,8 @@ class UserRepo {
       Uri.parse('${AppConstants.BASE_URL}${AppConstants.UPDATE_PROFILE_IMAGE}'),
     );
 
-
-    String? token = authRepo.apiClient.token;
-    if (token != null) {
+    final token = authRepo.apiClient.token;
+    if (token.isNotEmpty) {
       request.headers['Authorization'] = 'Bearer $token';
     }
 
@@ -136,7 +147,9 @@ class UserRepo {
   }
 
   Future<Response> getRecommendedUsers({int limit = 20}) async {
-    return await apiClient.getData('${AppConstants.GET_RECOMMENDED_ACCOUNTS}?limit=$limit');
+    return await apiClient.getData(
+      '${AppConstants.GET_RECOMMENDED_ACCOUNTS}?limit=$limit',
+    );
   }
 
   Future<Response> searchUsers({required String query, int limit = 10}) async {
@@ -145,15 +158,27 @@ class UserRepo {
     );
   }
 
+  Future<Response> searchUsersForMentions({
+    required String query,
+    int limit = 5,
+  }) async {
+    final encodedQuery = Uri.encodeQueryComponent(query.trim());
+    final uri =
+        '${AppConstants.SEARCH_ACCOUNTS}?searchTerm=$encodedQuery&limit=$limit';
 
-
+    try {
+      return await apiClient.get(uri, headers: apiClient.mainHeaders);
+    } catch (e) {
+      return Response(statusCode: 1, statusText: e.toString());
+    }
+  }
 
   Future<Response> followUser(String targetId) async {
-    return await apiClient.putData(AppConstants.FOLLOW_ACCOUNT(targetId),{});
+    return await apiClient.putData(AppConstants.FOLLOW_ACCOUNT(targetId), {});
   }
 
   Future<Response> unfollowUser(String targetId) async {
-    return await apiClient.putData(AppConstants.UNFOLLOW_ACCOUNT(targetId),{});
+    return await apiClient.putData(AppConstants.UNFOLLOW_ACCOUNT(targetId), {});
   }
 
   Future<Response> blockUser(String targetId) async {

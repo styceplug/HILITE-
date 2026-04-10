@@ -49,7 +49,8 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
   // 1. Handle App Lifecycle (Phone calls, Minimizing)
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       unawaited(controller.deactivatePlayback());
     } else if (state == AppLifecycleState.resumed && _isScreenVisible) {
       _resumeVideo();
@@ -58,9 +59,10 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
 
   void _resumeVideo() {
     // Logic to play the current page index when returning
-    int currentIndex = controller.reelsPageController.hasClients
-        ? controller.reelsPageController.page?.round() ?? 0
-        : 0;
+    int currentIndex =
+        controller.reelsPageController.hasClients
+            ? controller.reelsPageController.page?.round() ?? 0
+            : 0;
     controller.activatePlayback();
     controller.playVideo(currentIndex);
   }
@@ -87,7 +89,9 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
           },
           child: Obx(() {
             if (controller.posts.isEmpty && controller.isLoading.value) {
-              return const Center(child: CircularProgressIndicator(color: Colors.white));
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              );
             }
 
             return Stack(
@@ -133,24 +137,36 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
                   Get.toNamed(AppRoutes.recommendedAccountsScreen);
                 },
                 child: Container(
-                  padding:  EdgeInsets.symmetric(horizontal: 20, vertical: Dimensions.height5),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: Dimensions.height5,
+                  ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(CupertinoIcons.search, color: Colors.white, size: 24),
+                      const Icon(
+                        CupertinoIcons.search,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                       const SizedBox(width: 15),
-                      const Text('Search...', style: TextStyle(color: Colors.white)),
+                      const Text(
+                        'Search...',
+                        style: TextStyle(color: Colors.white),
+                      ),
                       const Spacer(),
                       IconButton(
                         icon: const Icon(Iconsax.people, color: Colors.white),
                         onPressed: () {},
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
-                      )
+                      ),
                     ],
                   ),
                 ),

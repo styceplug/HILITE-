@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/app_controller.dart';
@@ -13,7 +12,6 @@ import 'package:camera/camera.dart' hide ImageFormat;
 import 'package:video_thumbnail/video_thumbnail.dart';
 import '../data/api/api_checker.dart';
 import '../data/repo/post_repo.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../data/services/upload_services.dart';
 import '../models/comment_model.dart';
 import '../routes/routes.dart';
@@ -429,7 +427,11 @@ class PostController extends GetxController {
     }
   }*/
 
-  Future<void> submitComment(String postId, String content) async {
+  Future<void> submitComment(
+    String postId,
+    String content, {
+    String? mentionedUserId,
+  }) async {
     if (content.trim().isEmpty) return;
 
     final currentUser = userController.user.value;
@@ -460,9 +462,14 @@ class PostController extends GetxController {
       final response = await postRepo.postNewComment(
         postId: postId,
         content: content.trim(),
+        type:
+            (mentionedUserId != null && mentionedUserId.isNotEmpty)
+                ? 'mention'
+                : 'comment',
+        mentionedUser: mentionedUserId,
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         // 3. Server Success: Replace the temporary comment with the final server-provided data
         final serverCommentData = response.body['data'];
 
@@ -536,7 +543,7 @@ class PostController extends GetxController {
       CommentsBottomSheet(postId: postId),
       isScrollControlled: true, // Allows the sheet to take up more screen space
       backgroundColor: Colors.transparent, // Required for rounded corners
-      barrierColor: Colors.black.withOpacity(0.7),
+      barrierColor: Colors.black.withValues(alpha: 0.7),
     );
   }
 
@@ -690,32 +697,10 @@ class PostController extends GetxController {
     }
 
     if (posts.isNotEmpty && type == "video") {
-      // 1. Start caching the first video immediately
-      await _cacheVideoFile(0);
-      // 2. Play it
+      // Start playback immediately from the network source.
       onPageChanged(0);
-      // 3. Pre-load the next ones in background
+      // Warm up the next controllers in the background.
       _preloadNext(1);
-    }
-  }
-
-  Future<File?> _cacheVideoFile(int index) async {
-    if (index >= posts.length || posts[index].type != 'video') return null;
-
-    final rawUrl = posts[index].video?.url;
-    final url = MediaUrlHelper.resolve(rawUrl);
-
-    if (url.isEmpty) return null;
-
-    try {
-      // debugPrint('🎥 Cache video [$index]');
-      // debugPrint('   rawUrl: $rawUrl');
-      // debugPrint('   resolvedUrl: $url');
-
-      return await DefaultCacheManager().getSingleFile(url);
-    } catch (e) {
-      debugPrint("Cache error $index: $e");
-      return null;
     }
   }
 
@@ -767,17 +752,7 @@ class PostController extends GetxController {
       return;
     }
 
-    final file = await _cacheVideoFile(index);
-
-    late VideoPlayerController controller;
-
-    if (file != null) {
-      // debugPrint('📁 Using cached file for index $index: ${file.path}');
-      controller = VideoPlayerController.file(file);
-    } else {
-      // debugPrint('🌐 Using network URL for index $index: $resolvedUrl');
-      controller = VideoPlayerController.networkUrl(Uri.parse(resolvedUrl));
-    }
+    final controller = VideoPlayerController.networkUrl(Uri.parse(resolvedUrl));
 
     try {
       await controller.initialize();
@@ -819,11 +794,11 @@ class PostController extends GetxController {
     if (index + 1 < posts.length) {
       _preloadNext(index + 1);
       await _initController(index + 1);
-      await _pauseControllerSafely(videoControllers[index + 1]);
+      await _pauseAndMuteController(videoControllers[index + 1]);
     }
 
     if (index - 1 >= 0) {
-      await _pauseControllerSafely(videoControllers[index - 1]);
+      await _pauseAndMuteController(videoControllers[index - 1]);
     }
 
     for (final key in videoControllers.keys.toList()) {
@@ -834,9 +809,10 @@ class PostController extends GetxController {
   }
 
   void _preloadNext(int startIndex) {
-    // Just trigger download, don't wait
     for (int i = startIndex; i < startIndex + 2; i++) {
-      _cacheVideoFile(i);
+      if (_isValidVideoIndex(i)) {
+        unawaited(_initController(i));
+      }
     }
   }
 

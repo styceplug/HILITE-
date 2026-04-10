@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/user_controller.dart';
+import 'package:hilite/models/user_model.dart';
 import 'package:hilite/utils/dimensions.dart';
 import 'package:hilite/widgets/custom_textfield.dart';
 
@@ -113,7 +116,6 @@ class CommentsBottomSheet extends StatelessWidget {
                             ],
                           ),
                         ),
-
                       ],
                     ),
                   );
@@ -132,53 +134,318 @@ class CommentsBottomSheet extends StatelessWidget {
 }
 
 // Separate Widget for the Input Field
-class _CommentInputField extends StatelessWidget {
+class _CommentInputField extends StatefulWidget {
   final String postId;
 
-  // We'll set up the controller later
-  final TextEditingController textController = TextEditingController();
-  PostController postController = Get.find<PostController>();
+  const _CommentInputField({required this.postId});
 
-  _CommentInputField({required this.postId});
+  @override
+  State<_CommentInputField> createState() => _CommentInputFieldState();
+}
+
+class _CommentInputFieldState extends State<_CommentInputField> {
+  final TextEditingController _textController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  final PostController _postController = Get.find<PostController>();
+  final UserController _userController = Get.find<UserController>();
+
+  Timer? _mentionDebounce;
+  List<UserModel> _mentionSuggestions = <UserModel>[];
+  UserModel? _selectedMentionUser;
+  bool _isSearchingMentions = false;
+  int _mentionSearchRequestId = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _textController.addListener(_handleComposerChanged);
+  }
+
+  @override
+  void dispose() {
+    _mentionDebounce?.cancel();
+    _textController.removeListener(_handleComposerChanged);
+    _textController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleComposerChanged() {
+    _syncSelectedMentionWithText();
+
+    final query = _extractMentionQuery();
+    _mentionDebounce?.cancel();
+
+    if (query == null || query.isEmpty) {
+      if (_mentionSuggestions.isNotEmpty || _isSearchingMentions) {
+        setState(() {
+          _mentionSuggestions = <UserModel>[];
+          _isSearchingMentions = false;
+        });
+      }
+      return;
+    }
+
+    _mentionDebounce = Timer(
+      const Duration(milliseconds: 250),
+      () => _searchMentionCandidates(query),
+    );
+  }
+
+  String? _extractMentionQuery() {
+    final fullText = _textController.text;
+    final selection = _textController.selection;
+    final cursorIndex =
+        selection.baseOffset >= 0 ? selection.baseOffset : fullText.length;
+    final safeCursorIndex = cursorIndex.clamp(0, fullText.length);
+    final textBeforeCursor = fullText.substring(0, safeCursorIndex);
+
+    final match = RegExp(
+      r'(^|\s)@([A-Za-z0-9._]{1,30})$',
+    ).firstMatch(textBeforeCursor);
+    return match?.group(2);
+  }
+
+  void _syncSelectedMentionWithText() {
+    final selectedMentionUser = _selectedMentionUser;
+    if (selectedMentionUser == null) return;
+
+    if (!_textController.text.contains('@${selectedMentionUser.username}')) {
+      setState(() {
+        _selectedMentionUser = null;
+      });
+    }
+  }
+
+  Future<void> _searchMentionCandidates(String query) async {
+    final requestId = ++_mentionSearchRequestId;
+
+    if (mounted) {
+      setState(() {
+        _isSearchingMentions = true;
+      });
+    }
+
+    try {
+      final response = await _userController.userRepo.searchUsersForMentions(
+        query: query,
+        limit: 5,
+      );
+
+      if (!mounted || requestId != _mentionSearchRequestId) return;
+
+      final List<UserModel> users;
+      if (response.statusCode == 200 && response.body?['code'] == '00') {
+        final data = response.body?['data'];
+        final rawUsers =
+            data is Map<String, dynamic> ? (data['users'] as List? ?? []) : [];
+        users =
+            rawUsers
+                .map(
+                  (json) => UserModel.fromJson(Map<String, dynamic>.from(json)),
+                )
+                .where((user) => !_userController.isCurrentUser(user.id))
+                .toList();
+      } else {
+        users = <UserModel>[];
+      }
+
+      setState(() {
+        _mentionSuggestions = users;
+        _isSearchingMentions = false;
+      });
+    } catch (_) {
+      if (!mounted || requestId != _mentionSearchRequestId) return;
+
+      setState(() {
+        _mentionSuggestions = <UserModel>[];
+        _isSearchingMentions = false;
+      });
+    }
+  }
+
+  void _selectMention(UserModel user) {
+    final fullText = _textController.text;
+    final selection = _textController.selection;
+    final cursorIndex =
+        selection.baseOffset >= 0 ? selection.baseOffset : fullText.length;
+    final safeCursorIndex = cursorIndex.clamp(0, fullText.length);
+    final textBeforeCursor = fullText.substring(0, safeCursorIndex);
+    final mentionStart = textBeforeCursor.lastIndexOf('@');
+
+    if (mentionStart == -1) return;
+
+    if (mentionStart > 0 &&
+        !RegExp(r'\s').hasMatch(fullText[mentionStart - 1])) {
+      return;
+    }
+
+    final replacement = '@${user.username} ';
+    final updatedText = fullText.replaceRange(
+      mentionStart,
+      safeCursorIndex,
+      replacement,
+    );
+    final nextCursorIndex = mentionStart + replacement.length;
+
+    _textController.value = TextEditingValue(
+      text: updatedText,
+      selection: TextSelection.collapsed(offset: nextCursorIndex),
+    );
+
+    setState(() {
+      _selectedMentionUser = user;
+      _mentionSuggestions = <UserModel>[];
+      _isSearchingMentions = false;
+    });
+
+    _focusNode.requestFocus();
+  }
+
+  String? _activeMentionedUserId() {
+    final selectedMentionUser = _selectedMentionUser;
+    if (selectedMentionUser == null) return null;
+
+    if (!_textController.text.contains('@${selectedMentionUser.username}')) {
+      return null;
+    }
+
+    return selectedMentionUser.id;
+  }
+
+  Future<void> _submitComment() async {
+    final content = _textController.text.trim();
+    if (content.isEmpty) return;
+
+    await _postController.submitComment(
+      widget.postId,
+      content,
+      mentionedUserId: _activeMentionedUserId(),
+    );
+
+    if (!mounted) return;
+
+    _textController.clear();
+    setState(() {
+      _selectedMentionUser = null;
+      _mentionSuggestions = <UserModel>[];
+      _isSearchingMentions = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.only(bottom: 10, top: 10, left: 15, right: 5),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.white10, width: 0.5)),
-        color: Colors.black,
-      ),
-      child: Row(
-        children: [
-          // User Avatar (Placeholder)
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.white,
-            backgroundImage: NetworkImage(
-              Get.find<UserController>().user.value?.profilePicture ??
-                  'https://placehold.net/avatar-2.png',
+    final mentionSuggestionsVisible =
+        _isSearchingMentions || _mentionSuggestions.isNotEmpty;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (mentionSuggestionsVisible)
+          Container(
+            constraints: const BoxConstraints(maxHeight: 180),
+            margin: const EdgeInsets.fromLTRB(15, 10, 15, 0),
+            decoration: BoxDecoration(
+              color: const Color(0xFF121212),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white12),
             ),
+            child:
+                _isSearchingMentions
+                    ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Searching users...',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      ),
+                    )
+                    : ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: _mentionSuggestions.length,
+                      separatorBuilder:
+                          (_, __) =>
+                              const Divider(height: 1, color: Colors.white10),
+                      itemBuilder: (context, index) {
+                        final user = _mentionSuggestions[index];
+
+                        return ListTile(
+                          dense: true,
+                          onTap: () => _selectMention(user),
+                          leading: CircleAvatar(
+                            radius: 18,
+                            backgroundImage: NetworkImage(user.profilePicture),
+                          ),
+                          title: Text(
+                            user.displayName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '@${user.username}',
+                            style: const TextStyle(color: Colors.white60),
+                          ),
+                        );
+                      },
+                    ),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: CustomTextField(
-              hintText: 'Add a comment...',
-              controller: textController,
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-              textColor: Colors.white,
-            ),
+        Container(
+          padding: const EdgeInsets.only(
+            bottom: 10,
+            top: 10,
+            left: 15,
+            right: 5,
           ),
-          // Send Button (Optional)
-          IconButton(
-            icon: const Icon(Icons.send, color: Colors.blue),
-            onPressed: () {
-              postController.submitComment(postId, textController.text.trim());
-              textController.clear();
-            },
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: Colors.white10, width: 0.5)),
+            color: Colors.black,
           ),
-        ],
-      ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.white,
+                backgroundImage: NetworkImage(
+                  _userController.user.value?.profilePicture ??
+                      'https://placehold.net/avatar-2.png',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: CustomTextField(
+                  hintText: 'Add a comment...',
+                  controller: _textController,
+                  focusNode: _focusNode,
+                  hintStyle: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                  ),
+                  textColor: Colors.white,
+                  onChanged: (_) {},
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send, color: Colors.blue),
+                onPressed: _submitComment,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
