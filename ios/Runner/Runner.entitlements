@@ -6,7 +6,7 @@
 	<string>development</string>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>applinks:hiliteapp.net</string>
+		<string>applinks:api.hiliteapp.net</string>
 	</array>
 </dict>
 </plist>

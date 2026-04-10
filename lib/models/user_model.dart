@@ -149,11 +149,15 @@ class UserModel {
   }
 
   String get displayName {
+    print(
+      'Na this one name: $name, username: $username'
+    );
     if(name == null || name!.trim().isEmpty) {
       return username.isNotEmpty ? username : "User";
     }
     return name!;
   }
+
 
   UserModel copyWith({
     String? id,
