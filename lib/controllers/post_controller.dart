@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_thumbnail_video/index.dart' show ImageFormat;
+import 'package:get_thumbnail_video/video_thumbnail.dart' show VideoThumbnail;
 import 'package:hilite/controllers/app_controller.dart';
 import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/helpers/global_loader_controller.dart';
@@ -9,7 +11,6 @@ import 'package:hilite/widgets/snackbars.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:camera/camera.dart' hide ImageFormat;
-import 'package:video_thumbnail/video_thumbnail.dart';
 import '../data/api/api_checker.dart';
 import '../data/repo/post_repo.dart';
 import '../data/services/upload_services.dart';
@@ -298,12 +299,13 @@ class PostController extends GetxController {
     String? thumbnailPath;
     if (isVideo) {
       try {
-        thumbnailPath = await VideoThumbnail.thumbnailFile(
+        final thumbnailFile = await VideoThumbnail.thumbnailFile(
           video: file.path,
           imageFormat: ImageFormat.JPEG,
           maxWidth: 120,
           quality: 60,
         );
+        thumbnailPath = thumbnailFile.path;
       } catch (e) {
         debugPrint('Thumbnail generation failed (non-fatal): $e');
         // Continue without thumbnail — pill will show a camera icon instead
@@ -879,7 +881,8 @@ class PostController extends GetxController {
   }
 
   Future<void> _pauseAllExcept(int activeIndex) async {
-    for (final entry in videoControllers.entries) {
+    final entries = videoControllers.entries.toList(growable: false);
+    for (final entry in entries) {
       if (entry.key == activeIndex) continue;
       await _pauseAndMuteController(entry.value);
     }

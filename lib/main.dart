@@ -18,7 +18,6 @@ import 'helpers/dependencies.dart' as dep;
 import 'helpers/global_loader_controller.dart';
 import 'helpers/version_service.dart';
 
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -34,9 +33,7 @@ Future<void> main() async {
   );
 
   await VersionService.init();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await NotificationService().initialize();
   await dep.init();
@@ -53,7 +50,7 @@ Future<void> main() async {
   }
 
   appLinks.uriLinkStream.listen(
-        (Uri? uri) {
+    (Uri? uri) {
       if (uri != null) {
         _handleDeepLink(uri);
       }
@@ -63,7 +60,6 @@ Future<void> main() async {
     },
   );
 
-  HardwareKeyboard.instance.clearState();
   runApp(const MyApp());
 }
 
@@ -72,45 +68,48 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<GlobalLoaderController>(builder: (_) {
-      return GetBuilder<AppController>(builder: (_) {
-        return LayoutBuilder(builder: (context, constraint) {
-          Dimensions.init(context);
+    return GetBuilder<GlobalLoaderController>(
+      builder: (_) {
+        return GetBuilder<AppController>(
+          builder: (_) {
+            return LayoutBuilder(
+              builder: (context, constraint) {
+                Dimensions.init(context);
 
-          return GetMaterialApp(
-            debugShowCheckedModeBanner: false,
-            title: AppConstants.APP_NAME,
-            theme: ThemeData(
-                fontFamily: 'Poppins',
-                scaffoldBackgroundColor: AppColors.bgColor,
-            ),
-            getPages: AppRoutes.routes,
-            initialRoute: AppRoutes.splash,
-            builder: (context, child) {
-              final loaderController = Get.find<GlobalLoaderController>();
-              return Obx(() {
-                return Stack(
-                  children: [
-                    child!,
-                    if (loaderController.isLoading.value)
-                      const Positioned.fill(
-                        child: AppLoadingOverlay(),
-                      ),
-                  ],
+                return GetMaterialApp(
+                  debugShowCheckedModeBanner: false,
+                  title: AppConstants.APP_NAME,
+                  theme: ThemeData(
+                    fontFamily: 'Poppins',
+                    scaffoldBackgroundColor: AppColors.bgColor,
+                  ),
+                  getPages: AppRoutes.routes,
+                  initialRoute: AppRoutes.splash,
+                  builder: (context, child) {
+                    final loaderController = Get.find<GlobalLoaderController>();
+                    return Obx(() {
+                      return Stack(
+                        children: [
+                          child!,
+                          if (loaderController.isLoading.value)
+                            const Positioned.fill(child: AppLoadingOverlay()),
+                        ],
+                      );
+                    });
+                  },
                 );
-              });
-            },
-          );
-        });
-      });
-    });
+              },
+            );
+          },
+        );
+      },
+    );
   }
 }
 
 void _handleDeepLink(Uri uri) {
   // Check if link is https://hiliteapp.net/post/6926...
   if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'post') {
-
     String videoId = uri.pathSegments[1];
     print("🔗 Deep Link to Post ID: $videoId");
 
@@ -121,4 +120,3 @@ void _handleDeepLink(Uri uri) {
     });
   }
 }
-

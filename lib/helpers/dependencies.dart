@@ -1,4 +1,3 @@
-import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/chat_controller.dart';
 import 'package:hilite/controllers/competition_controller.dart';
@@ -26,7 +25,6 @@ import '../data/repo/auth_repo.dart';
 import '../data/repo/notification_repo.dart';
 import '../data/repo/version_repo.dart';
 import '../data/services/upload_services.dart';
-import '../models/message_model.dart';
 import '../utils/app_constants.dart';
 import 'global_loader_controller.dart';
 
@@ -34,19 +32,14 @@ bool _depsInitialized = false;
 
 Future<void> init() async {
   if (_depsInitialized) {
-    print('⚠️ dep.init() skipped - already initialized');
     return;
   }
 
   _depsInitialized = true;
 
-  print('🚨 dep.init() called');
-  print(StackTrace.current);
-
   final sharedPreferences = await SharedPreferences.getInstance();
   Get.put(sharedPreferences);
   Get.put(UploadService(), permanent: true);
-
 
   Get.lazyPut(
     () => ApiClient(
@@ -76,7 +69,7 @@ Future<void> init() async {
   Get.lazyPut(() => CompetitionRepo(apiClient: Get.find()));
   Get.lazyPut(() => WalletRepo(apiClient: Get.find()), fenix: true);
 
-  Get.put(SocketHelper(),permanent: true);
+  Get.put(SocketHelper(), permanent: true);
   Get.lazyPut<ChatRepo>(() => ChatRepo(apiClient: Get.find()), fenix: true);
 
   Get.lazyPut(() => AppController(appRepo: Get.find()));

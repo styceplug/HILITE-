@@ -152,9 +152,13 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
                     color: Colors.black,
                   ) // black bg when video is playing
                 else if (widget.post.video?.thumbnailUrl != null)
-                  Image.network(
-                    widget.post.video!.thumbnailUrl!,
-                    fit: BoxFit.cover,
+                  Container(
+                    color: Colors.black,
+                    alignment: Alignment.center,
+                    child: Image.network(
+                      widget.post.video!.thumbnailUrl!,
+                      fit: BoxFit.contain,
+                    ),
                   ) // thumbnail while loading
                 else
                   const PulseLoader(),
@@ -292,37 +296,17 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
   }
 
   Widget _buildVideoPlayer(VideoPlayerController controller) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final videoSize = controller.value.size;
-
-        if (videoSize.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        final videoAspectRatio = videoSize.width / videoSize.height;
-        final viewportAspectRatio =
-            constraints.maxWidth / constraints.maxHeight;
-
-        late final double width;
-        late final double height;
-
-        if (videoAspectRatio > viewportAspectRatio) {
-          height = constraints.maxHeight;
-          width = height * videoAspectRatio;
-        } else {
-          width = constraints.maxWidth;
-          height = width / videoAspectRatio;
-        }
-
-        return Center(
-          child: SizedBox(
-            width: width,
-            height: height,
-            child: VideoPlayer(controller),
-          ),
-        );
-      },
+    return Container(
+      color: Colors.black,
+      alignment: Alignment.center,
+      child: FittedBox(
+        fit: BoxFit.contain,
+        child: SizedBox(
+          width: controller.value.size.width,
+          height: controller.value.size.height,
+          child: VideoPlayer(controller),
+        ),
+      ),
     );
   }
 
@@ -447,9 +431,9 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer>
   void dispose() {
     // 3. Clean up hardware and observers
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(_profileController.deactivatePlayback());
-    unawaited(_profileController.disposeAllControllers());
-    Get.delete<PostController>(tag: _controllerTag);
+    if (Get.isRegistered<PostController>(tag: _controllerTag)) {
+      Get.delete<PostController>(tag: _controllerTag);
+    }
     super.dispose();
   }
 
