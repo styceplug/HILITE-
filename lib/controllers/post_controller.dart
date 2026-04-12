@@ -429,16 +429,18 @@ class PostController extends GetxController {
     }
   }*/
 
-  Future<void> submitComment(
+  Future<bool> submitComment(
     String postId,
     String content, {
     String? mentionedUserId,
   }) async {
-    if (content.trim().isEmpty) return;
+    final trimmedContent = content.trim();
+    if (trimmedContent.isEmpty) return false;
 
     final currentUser = userController.user.value;
     if (currentUser == null || currentUser.id.isEmpty) {
-      return;
+      CustomSnackBar.failure(message: 'Please sign in again to comment');
+      return false;
     }
 
     final commentUser = CommentUserModel(
@@ -451,7 +453,7 @@ class PostController extends GetxController {
     final tempComment = CommentModel(
       id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
       postId: postId,
-      content: content.trim(),
+      content: trimmedContent,
       createdAt: DateTime.now(),
       likes: [],
       replies: [],
@@ -463,7 +465,7 @@ class PostController extends GetxController {
     try {
       final response = await postRepo.postNewComment(
         postId: postId,
-        content: content.trim(),
+        content: trimmedContent,
         type:
             (mentionedUserId != null && mentionedUserId.isNotEmpty)
                 ? 'mention'
@@ -471,9 +473,19 @@ class PostController extends GetxController {
         mentionedUser: mentionedUserId,
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      final responseBody =
+          response.body is Map
+              ? Map<String, dynamic>.from(response.body as Map)
+              : <String, dynamic>{};
+
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          responseBody['code'] == '00') {
         // 3. Server Success: Replace the temporary comment with the final server-provided data
-        final serverCommentData = response.body['data'];
+        final rawServerCommentData = responseBody['data'];
+        final serverCommentData =
+            rawServerCommentData is Map
+                ? Map<String, dynamic>.from(rawServerCommentData)
+                : <String, dynamic>{};
 
         // 💡 NEW LOGIC: Use the server's ID and timestamp, but keep the local user object
 
@@ -502,15 +514,23 @@ class PostController extends GetxController {
         }
 
         _incrementPostCommentCount(postId);
+        return true;
       } else {
-        print("Comment post failed. Status: ${response.statusCode}");
-
+        final message =
+            responseBody['message']?.toString() ?? 'Failed to add comment';
+        print(
+          "Comment post failed. Status: ${response.statusCode}, Message: $message",
+        );
         comments.removeWhere((c) => c.id == tempComment.id);
+        CustomSnackBar.failure(message: message);
       }
     } catch (e) {
       print('🔥 Exception during comment submission: $e');
       comments.removeWhere((c) => c.id == tempComment.id);
+      CustomSnackBar.failure(message: 'Unable to add comment right now');
     }
+
+    return false;
   }
 
   void _incrementPostCommentCount(String postId) {

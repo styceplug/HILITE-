@@ -1,5 +1,3 @@
-
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -7,14 +5,19 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
 // Upload State
 // ---------------------------------------------------------------------------
 
 enum UploadStatus { idle, uploading, success, failure }
+
+class UploadCancelledException implements Exception {
+  const UploadCancelledException();
+
+  @override
+  String toString() => 'Upload cancelled';
+}
 
 class UploadState {
   final UploadStatus status;
@@ -34,13 +37,12 @@ class UploadState {
     double? progress,
     String? thumbnailPath,
     String? errorMessage,
-  }) =>
-      UploadState(
-        status: status ?? this.status,
-        progress: progress ?? this.progress,
-        thumbnailPath: thumbnailPath ?? this.thumbnailPath,
-        errorMessage: errorMessage ?? this.errorMessage,
-      );
+  }) => UploadState(
+    status: status ?? this.status,
+    progress: progress ?? this.progress,
+    thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+    errorMessage: errorMessage ?? this.errorMessage,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -55,6 +57,8 @@ class UploadService extends GetxService {
 
   // Internal cancel token
   bool _cancelled = false;
+  http.Client? _activeClient;
+  http.StreamedRequest? _activeRequest;
 
   // ── Convenience getters ──────────────────────────────────────────────────
 
@@ -79,7 +83,7 @@ class UploadService extends GetxService {
   Future<Map<String, dynamic>> uploadWithProgress({
     required String uri,
     required String filePath,
-    required String fileName,       // ← added
+    required String fileName, // ← added
     required String fileFieldName,
     required MediaType mediaType,
     required Map<String, String> fields,
@@ -87,6 +91,8 @@ class UploadService extends GetxService {
     String? thumbnailPath,
   }) async {
     _cancelled = false;
+    _activeClient?.close();
+    _activeClient = http.Client();
 
     // Reset → uploading
     state.value = UploadState(
@@ -101,6 +107,7 @@ class UploadService extends GetxService {
 
       // Build a StreamedRequest so we can pipe bytes manually
       final request = http.StreamedRequest('POST', Uri.parse(uri));
+      _activeRequest = request;
 
       // -- Headers (no Content-Type here; multipart boundary is set below) --
       headers.forEach((k, v) {
@@ -110,7 +117,7 @@ class UploadService extends GetxService {
       // Build multipart body manually so we track byte progress
       final boundary = _generateBoundary();
       request.headers['Content-Type'] =
-      'multipart/form-data; boundary=$boundary';
+          'multipart/form-data; boundary=$boundary';
 
       // Gather the full byte payload into a list of chunks
       final bodyBytes = await _buildMultipartBody(
@@ -121,6 +128,10 @@ class UploadService extends GetxService {
         mediaType: mediaType,
         fileName: fileName,
       );
+
+      if (_cancelled) {
+        throw const UploadCancelledException();
+      }
 
       final totalBytes = bodyBytes.length;
       request.headers['Content-Length'] = '$totalBytes';
@@ -153,10 +164,10 @@ class UploadService extends GetxService {
 
       // Kick off streaming + wait for response concurrently
       final streamFuture = streamBody();
-      final responseFuture = http.Client().send(request);
+      final responseFuture = _activeClient!.send(request);
 
       await streamFuture;
-      if (_cancelled) throw Exception('Upload cancelled');
+      if (_cancelled) throw const UploadCancelledException();
 
       final streamedResponse = await responseFuture;
       final response = await http.Response.fromStream(streamedResponse);
@@ -176,13 +187,15 @@ class UploadService extends GetxService {
         return body;
       } else {
         final body = _safeDecodeJson(response.body);
-        final msg = body['message'] as String? ?? 'Upload failed (${response.statusCode})';
+        final msg =
+            body['message'] as String? ??
+            'Upload failed (${response.statusCode})';
         throw Exception(msg);
       }
     } catch (e) {
-      if (_cancelled) {
+      if (_cancelled || e is UploadCancelledException) {
         _resetToIdle();
-        throw Exception('Upload cancelled');
+        throw const UploadCancelledException();
       }
       state.value = state.value.copyWith(
         status: UploadStatus.failure,
@@ -190,11 +203,24 @@ class UploadService extends GetxService {
       );
       Future.delayed(const Duration(seconds: 4), _resetToIdle);
       rethrow;
+    } finally {
+      _activeRequest = null;
+      _activeClient?.close();
+      _activeClient = null;
     }
   }
 
   void cancel() {
+    if (!isUploading) {
+      _resetToIdle();
+      return;
+    }
+
     _cancelled = true;
+    try {
+      _activeRequest?.sink.close();
+    } catch (_) {}
+    _activeClient?.close();
   }
 
   void dismissPill() => _resetToIdle();
@@ -253,6 +279,9 @@ class UploadService extends GetxService {
     // ── File bytes — streamed from disk, never fully in memory ──────────────
     final fileStream = File(filePath).openRead();
     await for (final chunk in fileStream) {
+      if (_cancelled) {
+        throw const UploadCancelledException();
+      }
       output.addAll(chunk);
     }
     writeln(''); // CRLF after file data

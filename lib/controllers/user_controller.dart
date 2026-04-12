@@ -34,6 +34,7 @@ class UserController extends GetxController {
   RxList<PostModel> searchImages = <PostModel>[].obs;
   RxList<PostModel> searchVideos = <PostModel>[].obs;
   final RxSet<String> followBusyUserIds = <String>{}.obs;
+  final Map<String, bool> _followStateOverrides = <String, bool>{};
 
   bool isPostsLoading = false;
 
@@ -75,6 +76,52 @@ class UserController extends GetxController {
         targetId != null &&
         targetId.isNotEmpty &&
         currentUserId == targetId;
+  }
+
+  UserModel? _findKnownUser(String targetId) {
+    final activeOthersProfile = othersProfile.value;
+    if (activeOthersProfile?.id == targetId) {
+      return activeOthersProfile;
+    }
+
+    final currentUser = user.value;
+    if (currentUser?.id == targetId) {
+      return currentUser;
+    }
+
+    final collections = <Iterable<UserModel>>[
+      recommendedUsers,
+      filteredUsers,
+      searchUsers,
+      searchResults,
+      _relationshipList,
+      _filteredRelationshipList,
+    ];
+
+    for (final collection in collections) {
+      for (final candidate in collection) {
+        if (candidate.id == targetId) {
+          return candidate;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  UserModel _mergeKnownUserState(UserModel incoming) {
+    final overrideState = _followStateOverrides[incoming.id];
+    if (overrideState == null) {
+      return incoming;
+    }
+
+    final existing = _findKnownUser(incoming.id);
+
+    return incoming.copyWith(
+      isFollowed: overrideState,
+      followers: existing?.followers ?? incoming.followers,
+      isBlocked: existing?.isBlocked ?? incoming.isBlocked,
+    );
   }
 
   List<UserModel> _excludeCurrentUser(Iterable<UserModel> users) {
@@ -173,7 +220,9 @@ class UserController extends GetxController {
         // 1. Parse Users (You already did this correctly)
         searchUsers.assignAll(
           _excludeCurrentUser(
-            (data['users'] as List).map((e) => UserModel.fromJson(e)),
+            (data['users'] as List).map(
+              (e) => _mergeKnownUserState(UserModel.fromJson(e)),
+            ),
           ),
         );
 
@@ -237,7 +286,7 @@ class UserController extends GetxController {
     if (response.statusCode == 200) {
       List<dynamic> rawList = response.body['data'];
       _relationshipList = _excludeCurrentUser(
-        rawList.map((e) => UserModel.fromJson(e)),
+        rawList.map((e) => _mergeKnownUserState(UserModel.fromJson(e))),
       );
       _filteredRelationshipList = List.from(
         _relationshipList,
@@ -429,10 +478,10 @@ class UserController extends GetxController {
 
       if (response.statusCode == 200 && response.body['code'] == '00') {
         final newImageUrl = response.body['data'];
-        if (user != null) {
+        if (user.value != null) {
           user.value = user.value!.copyWith(profilePicture: newImageUrl);
 
-          await userRepo.cacheUserData(user.toJson());
+          await userRepo.cacheUserData(user.value!.toJson());
           update();
         }
 
@@ -468,7 +517,7 @@ class UserController extends GetxController {
 
         if (data is List) {
           recommendedUsers.value = _excludeCurrentUser(
-            data.map((e) => UserModel.fromJson(e)),
+            data.map((e) => _mergeKnownUserState(UserModel.fromJson(e))),
           );
 
           // Since API returns only unfollowed users, initialize followedUserIds as empty
@@ -712,6 +761,7 @@ class UserController extends GetxController {
       );
 
       if (response.statusCode == 200 && response.body['code'] == '00') {
+        _refreshFollowRelatedData(targetId);
         CustomSnackBar.success(message: 'User followed successfully');
       } else {
         _setFollowState(targetId, wasFollowed);
@@ -749,6 +799,7 @@ class UserController extends GetxController {
       );
 
       if (response.statusCode == 200 && response.body['code'] == '00') {
+        _refreshFollowRelatedData(targetId);
         CustomSnackBar.success(message: 'User unfollowed successfully');
       } else {
         _setFollowState(targetId, wasFollowed);
@@ -875,6 +926,11 @@ class UserController extends GetxController {
   }
 
   bool _isUserFollowedLocally(String targetId) {
+    final overrideState = _followStateOverrides[targetId];
+    if (overrideState != null) {
+      return overrideState;
+    }
+
     final candidates = <UserModel?>[
       othersProfile.value?.id == targetId ? othersProfile.value : null,
       user.value?.id == targetId ? user.value : null,
@@ -896,33 +952,19 @@ class UserController extends GetxController {
   }
 
   UserModel _normalizeExternalUserState(UserModel incoming) {
-    final existingCandidates = <UserModel?>[
-      recommendedUsers.firstWhereOrNull((u) => u.id == incoming.id),
-      filteredUsers.firstWhereOrNull((u) => u.id == incoming.id),
-      searchUsers.firstWhereOrNull((u) => u.id == incoming.id),
-      searchResults.firstWhereOrNull((u) => u.id == incoming.id),
-      _relationshipList.firstWhereOrNull((u) => u.id == incoming.id),
-      _filteredRelationshipList.firstWhereOrNull((u) => u.id == incoming.id),
-      othersProfile.value?.id == incoming.id ? othersProfile.value : null,
-    ];
+    return _mergeKnownUserState(incoming);
+  }
 
-    UserModel? existing;
-    for (final candidate in existingCandidates) {
-      if (candidate != null) {
-        existing = candidate;
-        break;
-      }
+  void _refreshFollowRelatedData(String targetId) {
+    unawaited(getUserProfile());
+
+    final isActiveExternalProfile =
+        _activeOthersProfileId == targetId ||
+        othersProfile.value?.id == targetId;
+
+    if (isActiveExternalProfile) {
+      unawaited(getOthersProfile(targetId));
     }
-
-    if (existing == null) {
-      return incoming;
-    }
-
-    return incoming.copyWith(
-      isFollowed: existing.isFollowed,
-      followers: existing.followers,
-      isBlocked: existing.isBlocked,
-    );
   }
 
   void _setFollowState(String targetId, bool isFollowed) {
@@ -931,6 +973,8 @@ class UserController extends GetxController {
     }
 
     final previousState = _isUserFollowedLocally(targetId);
+    _followStateOverrides[targetId] = isFollowed;
+
     if (previousState == isFollowed) {
       return;
     }
@@ -953,6 +997,7 @@ class UserController extends GetxController {
       user.value = user.value!.copyWith(
         following: nextFollowing < 0 ? 0 : nextFollowing,
       );
+      unawaited(userRepo.cacheUserData(user.value!.toJson()));
     }
 
     update();

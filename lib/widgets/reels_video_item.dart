@@ -17,6 +17,7 @@ class ReelsVideoItem extends StatefulWidget {
   final PostModel post;
   final PostController controller;
   final String? tag;
+  final bool showThumbnailBeforeReady;
 
   const ReelsVideoItem({
     Key? key,
@@ -24,6 +25,7 @@ class ReelsVideoItem extends StatefulWidget {
     required this.post,
     required this.controller,
     this.tag,
+    this.showThumbnailBeforeReady = true,
   }) : super(key: key);
 
   @override
@@ -150,19 +152,7 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
                     videoCtrl.value.isInitialized)
                   Container(
                     color: Colors.black,
-                  ) // black bg when video is playing
-                else if (widget.post.video?.thumbnailUrl != null)
-                  Container(
-                    color: Colors.black,
-                    alignment: Alignment.center,
-                    child: Image.network(
-                      widget.post.video!.thumbnailUrl!,
-                      fit: BoxFit.contain,
-                    ),
-                  ) // thumbnail while loading
-                else
-                  const PulseLoader(),
-
+                  ), // black bg when video is playing
                 // 2. VIDEO PLAYER
                 if (isReady &&
                     videoCtrl != null &&
@@ -273,25 +263,35 @@ class _ReelsVideoItemState extends State<ReelsVideoItem>
   }
 
   Widget _buildThumbnail() {
+    if (!widget.showThumbnailBeforeReady) {
+      return const ColoredBox(
+        color: Colors.black,
+        child: Center(child: PulseLoader()),
+      );
+    }
+
     final thumb = MediaUrlHelper.resolve(widget.post.video?.thumbnailUrl);
 
     if (thumb.isEmpty) {
-      return Container(color: Colors.black);
+      return const ColoredBox(
+        color: Colors.black,
+        child: Center(child: PulseLoader()),
+      );
     }
 
-    return Stack(
-      children: [
-        Image.network(
-          thumb,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(color: Colors.black),
-          loadingBuilder: (context, child, progress) {
-            if (progress == null) return child;
-            return Container(color: Colors.black);
-          },
-        ),
-        PulseLoader(),
-      ],
+    return Container(
+      color: Colors.black,
+      alignment: Alignment.center,
+      child: Image.network(
+        thumb,
+        fit: BoxFit.contain,
+        alignment: Alignment.center,
+        errorBuilder: (_, __, ___) => Container(color: Colors.black),
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return const Center(child: PulseLoader());
+        },
+      ),
     );
   }
 
@@ -474,6 +474,7 @@ class _ProfileReelsPlayerState extends State<ProfileReelsPlayer>
                   post: _profileController.posts[index],
                   controller: _profileController,
                   tag: _controllerTag,
+                  showThumbnailBeforeReady: false,
                 );
               },
             ),

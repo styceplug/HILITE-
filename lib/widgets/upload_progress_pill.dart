@@ -1,5 +1,3 @@
-
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -58,9 +56,10 @@ class _PillCardState extends State<_PillCard>
       vsync: this,
       duration: const Duration(milliseconds: 350),
     );
-    _slideY = Tween<double>(begin: 40, end: 0).animate(
-      CurvedAnimation(parent: _anim, curve: Curves.easeOutCubic),
-    );
+    _slideY = Tween<double>(
+      begin: 40,
+      end: 0,
+    ).animate(CurvedAnimation(parent: _anim, curve: Curves.easeOutCubic));
     _fade = CurvedAnimation(parent: _anim, curve: Curves.easeOut);
     _anim.forward();
   }
@@ -75,10 +74,11 @@ class _PillCardState extends State<_PillCard>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, child) => Transform.translate(
-        offset: Offset(0, _slideY.value),
-        child: FadeTransition(opacity: _fade, child: child),
-      ),
+      builder:
+          (_, child) => Transform.translate(
+            offset: Offset(0, _slideY.value),
+            child: FadeTransition(opacity: _fade, child: child),
+          ),
       child: _buildCard(),
     );
   }
@@ -96,7 +96,7 @@ class _PillCardState extends State<_PillCard>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.35),
+            color: Colors.black.withValues(alpha: 0.35),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -111,7 +111,11 @@ class _PillCardState extends State<_PillCard>
               padding: const EdgeInsets.fromLTRB(10, 10, 8, 8),
               child: Row(
                 children: [
-                  _Thumbnail(path: state.thumbnailPath, isDone: isDone, isFailure: isFailure),
+                  _Thumbnail(
+                    path: state.thumbnailPath,
+                    isDone: isDone,
+                    isFailure: isFailure,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(child: _Labels(state: state)),
                   _ActionButton(state: state, service: widget.service),
@@ -120,12 +124,10 @@ class _PillCardState extends State<_PillCard>
             ),
 
             // Progress bar (hidden when done)
-            if (!isDone)
-              _ProgressBar(progress: state.progress),
+            if (!isDone) _ProgressBar(progress: state.progress),
 
             // Success / failure strip
-            if (isDone)
-              _StatusStrip(isSuccess: isSuccess),
+            if (isDone) _StatusStrip(isSuccess: isSuccess),
           ],
         ),
       ),
@@ -176,7 +178,10 @@ class _Thumbnail extends StatelessWidget {
                   isFailure
                       ? Icons.error_outline_rounded
                       : Icons.check_circle_rounded,
-                  color: isFailure ? const Color(0xFFFF453A) : const Color(0xFF30D158),
+                  color:
+                      isFailure
+                          ? const Color(0xFFFF453A)
+                          : const Color(0xFF30D158),
                   size: 22,
                 ),
               ),
@@ -196,7 +201,6 @@ class _Labels extends StatelessWidget {
   Widget build(BuildContext context) {
     final isSuccess = state.status == UploadStatus.success;
     final isFailure = state.status == UploadStatus.failure;
-    final isUploading = state.status == UploadStatus.uploading;
 
     String title;
     String subtitle;
@@ -210,7 +214,7 @@ class _Labels extends StatelessWidget {
     } else {
       final pct = (state.progress * 100).toStringAsFixed(0);
       title = 'Uploading…';
-      subtitle = '$pct%';
+      subtitle = '$pct% · Tap to cancel';
     }
 
     return Column(
@@ -232,9 +236,10 @@ class _Labels extends StatelessWidget {
         Text(
           subtitle,
           style: TextStyle(
-            color: isFailure
-                ? const Color(0xFFFF453A)
-                : Colors.white.withOpacity(0.55),
+            color:
+                isFailure
+                    ? const Color(0xFFFF453A)
+                    : Colors.white.withValues(alpha: 0.55),
             fontSize: 11,
             fontWeight: FontWeight.w400,
           ),
@@ -266,13 +271,13 @@ class _ActionButton extends StatelessWidget {
         width: 26,
         height: 26,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.10),
+          color: Colors.white.withValues(alpha: 0.10),
           shape: BoxShape.circle,
         ),
         child: Icon(
-          Icons.close_rounded,
+          isUploading ? Icons.stop_rounded : Icons.close_rounded,
           size: 14,
-          color: Colors.white.withOpacity(0.7),
+          color: Colors.white.withValues(alpha: 0.7),
         ),
       ),
     );
@@ -293,9 +298,7 @@ class _ProgressBar extends StatelessWidget {
       builder: (_, value, __) {
         return Container(
           height: 3,
-          decoration: const BoxDecoration(
-            color: Colors.white10,
-          ),
+          decoration: const BoxDecoration(color: Colors.white10),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
             widthFactor: value.clamp(0.0, 1.0),

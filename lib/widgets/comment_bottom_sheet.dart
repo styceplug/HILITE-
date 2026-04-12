@@ -6,6 +6,7 @@ import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/models/user_model.dart';
 import 'package:hilite/utils/dimensions.dart';
 import 'package:hilite/widgets/custom_textfield.dart';
+import 'package:hilite/widgets/snackbars.dart';
 
 import '../controllers/post_controller.dart';
 
@@ -88,8 +89,10 @@ class CommentsBottomSheet extends StatelessWidget {
                         CircleAvatar(
                           radius: 18,
                           backgroundImage: NetworkImage(
-                            comment.user.profilePicture ??
-                                'https://placehold.net/avatar-2.png',
+                            (comment.user.profilePicture?.trim().isNotEmpty ??
+                                    false)
+                                ? comment.user.profilePicture!
+                                : _CommentInputFieldState._fallbackAvatarUrl,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -144,6 +147,7 @@ class _CommentInputField extends StatefulWidget {
 }
 
 class _CommentInputFieldState extends State<_CommentInputField> {
+  static const String _fallbackAvatarUrl = 'https://placehold.net/avatar-2.png';
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final PostController _postController = Get.find<PostController>();
@@ -153,6 +157,7 @@ class _CommentInputFieldState extends State<_CommentInputField> {
   List<UserModel> _mentionSuggestions = <UserModel>[];
   UserModel? _selectedMentionUser;
   bool _isSearchingMentions = false;
+  bool _isSubmittingComment = false;
   int _mentionSearchRequestId = 0;
 
   @override
@@ -235,16 +240,31 @@ class _CommentInputFieldState extends State<_CommentInputField> {
       if (!mounted || requestId != _mentionSearchRequestId) return;
 
       final List<UserModel> users;
-      if (response.statusCode == 200 && response.body?['code'] == '00') {
-        final data = response.body?['data'];
+      final responseBody =
+          response.body is Map
+              ? Map<String, dynamic>.from(response.body as Map)
+              : <String, dynamic>{};
+
+      if (response.statusCode == 200 && responseBody['code'] == '00') {
+        final data = responseBody['data'];
         final rawUsers =
-            data is Map<String, dynamic> ? (data['users'] as List? ?? []) : [];
+            data is Map<String, dynamic>
+                ? ((data['users'] as List?) ??
+                    (data['accounts'] as List?) ??
+                    (data['results'] as List?) ??
+                    const [])
+                : (data is List ? data : const []);
         users =
             rawUsers
                 .map(
                   (json) => UserModel.fromJson(Map<String, dynamic>.from(json)),
                 )
-                .where((user) => !_userController.isCurrentUser(user.id))
+                .where(
+                  (user) =>
+                      user.id.isNotEmpty &&
+                      user.username.trim().isNotEmpty &&
+                      !_userController.isCurrentUser(user.id),
+                )
                 .toList();
       } else {
         users = <UserModel>[];
@@ -305,8 +325,14 @@ class _CommentInputFieldState extends State<_CommentInputField> {
   String? _activeMentionedUserId() {
     final selectedMentionUser = _selectedMentionUser;
     if (selectedMentionUser == null) return null;
+    final escapedUsername = RegExp.escape(selectedMentionUser.username);
 
-    if (!_textController.text.contains('@${selectedMentionUser.username}')) {
+    final mentionPattern = RegExp(
+      '(^|\\s)@$escapedUsername(?=\\s|[.,!?]|' + r'$' + ')',
+      caseSensitive: false,
+    );
+
+    if (!mentionPattern.hasMatch(_textController.text)) {
       return null;
     }
 
@@ -315,21 +341,42 @@ class _CommentInputFieldState extends State<_CommentInputField> {
 
   Future<void> _submitComment() async {
     final content = _textController.text.trim();
-    if (content.isEmpty) return;
+    if (content.isEmpty || _isSubmittingComment) return;
 
-    await _postController.submitComment(
+    final mentionedUserId = _activeMentionedUserId();
+    if (_selectedMentionUser != null &&
+        (mentionedUserId == null || mentionedUserId.isEmpty)) {
+      CustomSnackBar.failure(
+        message: 'Please reselect the tagged user before sending.',
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmittingComment = true;
+    });
+
+    final submitted = await _postController.submitComment(
       widget.postId,
       content,
-      mentionedUserId: _activeMentionedUserId(),
+      mentionedUserId: mentionedUserId,
     );
 
     if (!mounted) return;
 
-    _textController.clear();
+    if (submitted) {
+      _textController.clear();
+      setState(() {
+        _selectedMentionUser = null;
+        _mentionSuggestions = <UserModel>[];
+        _isSearchingMentions = false;
+        _isSubmittingComment = false;
+      });
+      return;
+    }
+
     setState(() {
-      _selectedMentionUser = null;
-      _mentionSuggestions = <UserModel>[];
-      _isSearchingMentions = false;
+      _isSubmittingComment = false;
     });
   }
 
@@ -387,7 +434,11 @@ class _CommentInputFieldState extends State<_CommentInputField> {
                           onTap: () => _selectMention(user),
                           leading: CircleAvatar(
                             radius: 18,
-                            backgroundImage: NetworkImage(user.profilePicture),
+                            backgroundImage: NetworkImage(
+                              user.profilePicture.trim().isNotEmpty
+                                  ? user.profilePicture
+                                  : _fallbackAvatarUrl,
+                            ),
                           ),
                           title: Text(
                             user.displayName,
@@ -421,8 +472,12 @@ class _CommentInputFieldState extends State<_CommentInputField> {
                 radius: 18,
                 backgroundColor: Colors.white,
                 backgroundImage: NetworkImage(
-                  _userController.user.value?.profilePicture ??
-                      'https://placehold.net/avatar-2.png',
+                  (_userController.user.value?.profilePicture
+                              .trim()
+                              .isNotEmpty ??
+                          false)
+                      ? _userController.user.value!.profilePicture
+                      : _fallbackAvatarUrl,
                 ),
               ),
               const SizedBox(width: 10),
@@ -439,8 +494,15 @@ class _CommentInputFieldState extends State<_CommentInputField> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.send, color: Colors.blue),
-                onPressed: _submitComment,
+                icon:
+                    _isSubmittingComment
+                        ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Icon(Icons.send, color: Colors.blue),
+                onPressed: _isSubmittingComment ? null : _submitComment,
               ),
             ],
           ),

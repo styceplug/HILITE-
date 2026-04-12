@@ -62,15 +62,23 @@ class UserModel {
     final blockedJson = json['blocked'];
     final bookmarksJson = json['bookmarks'];
 
-    final currentUserId = Get.find<UserController>().user.value?.id;
+    final currentUserId =
+        Get.isRegistered<UserController>()
+            ? Get.find<UserController>().user.value?.id
+            : null;
 
     bool followed = false;
 
-    if (followersJson is List) {
+    if (currentUserId != null && followersJson is List) {
       followed = followersJson.any((item) {
         if (item is Map<String, dynamic>) {
           return item['_id'] == currentUserId || item['id'] == currentUserId;
         }
+
+        if (item is String) {
+          return item == currentUserId;
+        }
+
         return false;
       });
     }
@@ -84,39 +92,39 @@ class UserModel {
       number: json['number'] ?? '',
       country: json['country'] ?? '',
       state: json['state'] ?? '',
-      tokenBalance: (json['tokenBalance'] != null)
-          ? json['tokenBalance'].toString()
-          : '0',
+      tokenBalance:
+          (json['tokenBalance'] != null)
+              ? json['tokenBalance'].toString()
+              : '0',
       bio: json['bio'],
       profilePicture: MediaUrlHelper.resolveAvatar(json['profilePicture']),
-      playerDetails: json['playerDetails'] != null
-          ? PlayerDetails.fromJson(json['playerDetails'])
-          : null,
-      agentDetails: json['agentDetails'] != null
-          ? AgentDetails.fromJson(json['agentDetails'])
-          : null,
-      clubDetails: json['clubDetails'] != null
-          ? ClubDetails.fromJson(json['clubDetails'])
-          : null,
-      score: (json['score'] is int)
-          ? (json['score'] as int).toDouble()
-          : (json['score'] ?? 0.0),
-      followers: followersJson is List
-          ? followersJson.length
-          : (followersJson ?? 0),
-      following: followingJson is List
-          ? followingJson.length
-          : (followingJson ?? 0),
-      blocked: blockedJson is List
-          ? blockedJson.length
-          : (blockedJson ?? 0),
-      bookmarks: bookmarksJson is List
-          ? bookmarksJson.length
-          : (bookmarksJson ?? 0),
+      playerDetails:
+          json['playerDetails'] != null
+              ? PlayerDetails.fromJson(json['playerDetails'])
+              : null,
+      agentDetails:
+          json['agentDetails'] != null
+              ? AgentDetails.fromJson(json['agentDetails'])
+              : null,
+      clubDetails:
+          json['clubDetails'] != null
+              ? ClubDetails.fromJson(json['clubDetails'])
+              : null,
+      score:
+          (json['score'] is int)
+              ? (json['score'] as int).toDouble()
+              : (json['score'] ?? 0.0),
+      followers:
+          followersJson is List ? followersJson.length : (followersJson ?? 0),
+      following:
+          followingJson is List ? followingJson.length : (followingJson ?? 0),
+      blocked: blockedJson is List ? blockedJson.length : (blockedJson ?? 0),
+      bookmarks:
+          bookmarksJson is List ? bookmarksJson.length : (bookmarksJson ?? 0),
       posts: json['posts'] ?? 0,
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updatedAt'] ?? '') ?? DateTime.now(),
-      isFollowed: json['isFollowing'] ?? json['isFollowed'] ?? false,
+      isFollowed: json['isFollowing'] ?? json['isFollowed'] ?? followed,
       isBlocked: json['isBlocked'] ?? false,
     );
   }
@@ -131,7 +139,7 @@ class UserModel {
       'number': number,
       'country': country,
       'state': state,
-      'bio' : bio,
+      'bio': bio,
       'profilePicture': profilePicture,
       'playerDetails': playerDetails?.toJson(),
       'agentDetails': agentDetails?.toJson(),
@@ -149,15 +157,11 @@ class UserModel {
   }
 
   String get displayName {
-    print(
-      'Na this one name: $name, username: $username'
-    );
-    if(name == null || name!.trim().isEmpty) {
-      return username.isNotEmpty ? username : "User";
+    if (name.trim().isEmpty) {
+      return username.isNotEmpty ? username : 'User';
     }
-    return name!;
+    return name;
   }
-
 
   UserModel copyWith({
     String? id,
@@ -221,7 +225,6 @@ class PlayerDetails {
   final String preferredFoot;
   final int height;
   final int weight;
-
 
   PlayerDetails({
     required this.dob,
