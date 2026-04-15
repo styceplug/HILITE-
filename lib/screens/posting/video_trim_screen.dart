@@ -28,10 +28,11 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
   bool _isSavingVideo = false;
   bool _isPlaying = false;
   String? _loadError;
-
+  bool _trimmerReady = false;
   double _startValue = 0;
   double _endValue = 0;
   double _videoDurationSeconds = 0;
+  static const double _maxDurationSeconds = 60.0;
 
   double get _effectiveEndValue {
     if (_endValue > _startValue) {
@@ -79,19 +80,25 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
     try {
       await _trimmer.loadVideo(videoFile: videoFile);
 
+      await Future.delayed(const Duration(milliseconds: 200));
+
       final duration =
           _trimmer.videoPlayerController?.value.duration ?? Duration.zero;
       final durationSeconds = duration.inMilliseconds / 1000;
 
       if (!mounted) return;
 
+      final clampedEnd = durationSeconds.clamp(0, _maxDurationSeconds).toDouble();
+
       setState(() {
         _videoDurationSeconds = durationSeconds;
         _startValue = 0;
-        _endValue = durationSeconds;
+        _endValue = clampedEnd;
+        _trimmerReady = true;
         _isLoadingVideo = false;
         _loadError = null;
       });
+
     } catch (e) {
       debugPrint('Video trim load error: $e');
 
@@ -102,6 +109,25 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
         _loadError = 'Could not open this video for editing.';
       });
     }
+  }
+
+  void _onTrimStartChanged(double value) {
+    setState(() {
+      _startValue = value;
+      if (_endValue - _startValue > _maxDurationSeconds) {
+        _endValue = _startValue + _maxDurationSeconds;
+      }
+    });
+  }
+
+  void _onTrimEndChanged(double value) {
+    setState(() {
+      if (value - _startValue > _maxDurationSeconds) {
+        _endValue = _startValue + _maxDurationSeconds;
+      } else {
+        _endValue = value;
+      }
+    });
   }
 
   Future<void> _togglePlayback() async {
@@ -133,6 +159,13 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
     if (_selectedDurationSeconds < 0.1) {
       CustomSnackBar.failure(
         message: 'Select a longer part of the video to continue.',
+      );
+      return;
+    }
+
+    if (_selectedDurationSeconds > _maxDurationSeconds) {
+      CustomSnackBar.failure(
+        message: 'Please trim your video to 1 minute or less.',
       );
       return;
     }
@@ -284,7 +317,7 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
     );
   }
 
-  Widget _buildContent(BuildContext context) {
+  /*Widget _buildContent(BuildContext context) {
     if (_isLoadingVideo) {
       return const Center(
         child: CircularProgressIndicator(color: Colors.white),
@@ -413,6 +446,233 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
           ),
         ),
       ],
+    );
+  }*/
+
+  Widget _buildContent(BuildContext context) {
+    if (_isLoadingVideo) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    }
+
+    if (_loadError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.video_file_outlined,
+                color: Colors.white70,
+                size: 56,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _loadError!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'You can continue with the original file if you do not need to trim it.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final aspectRatio =
+        _trimmer.videoPlayerController?.value.aspectRatio ?? (9 / 16);
+    final viewerWidth = MediaQuery.of(context).size.width - 32;
+
+    return SingleChildScrollView(  // ← wraps everything, no more overflow
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Adjust the handles to choose the part of the video you want to upload.',
+            style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: ConstrainedBox(  // ← prevents huge aspect ratios from overflowing
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.35,
+              ),
+              child: AspectRatio(
+                aspectRatio: aspectRatio > 0 ? aspectRatio : (9 / 16),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: VideoViewer(trimmer: _trimmer),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          /*Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Column(
+              children: [
+                TrimViewer(
+                  trimmer: _trimmer,
+                  viewerHeight: 56,
+                  viewerWidth: viewerWidth,
+                  maxVideoLength: const Duration(seconds: 60),  // ← enforces 1-min cap visually
+                  onChangeStart: _onTrimStartChanged,            // ← use new clamping handler
+                  onChangeEnd: _onTrimEndChanged,                // ← use new clamping handler
+                  onChangePlaybackState:
+                      (value) => setState(() => _isPlaying = value),
+                ),
+                const SizedBox(height: 16),
+                if (_selectedDurationSeconds > _maxDurationSeconds)...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Max 1 minute allowed. Adjust your selection.',
+                      style: TextStyle(color: Colors.orangeAccent, fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                ],
+
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: _InfoCard(
+                        label: 'Start',
+                        value: _formatDuration(_startValue),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _InfoCard(
+                        label: 'Selected',
+                        value: _formatDuration(_selectedDurationSeconds),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _InfoCard(
+                        label: 'End',
+                        value: _formatDuration(_effectiveEndValue),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),  // ← play button moved here, inside the controls card
+                IconButton(
+                  onPressed: _togglePlayback,
+                  iconSize: 56,
+                  color: Colors.white,
+                  icon: Icon(
+                    _isPlaying
+                        ? Icons.pause_circle_filled
+                        : Icons.play_circle_fill,
+                  ),
+                ),
+              ],
+            ),
+          ),*/
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Column(
+              children: [
+                if (_trimmerReady)
+                  SizedBox(
+                    height: 60,
+                    child: TrimViewer(
+                      trimmer: _trimmer,
+                      viewerHeight: 60,
+                      viewerWidth: MediaQuery.of(context).size.width - 60, // Accounting for padding
+                      maxVideoLength: const Duration(seconds: 60),
+                      onChangeStart: _onTrimStartChanged,
+                      onChangeEnd: _onTrimEndChanged,
+                      onChangePlaybackState: (value) => setState(() => _isPlaying = value),
+                    ),
+                  )
+                else
+                  const SizedBox(
+                    height: 60,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white54,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _InfoCard(
+                        label: 'Start',
+                        value: _formatDuration(_startValue),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _InfoCard(
+                        label: 'Selected',
+                        value: _formatDuration(_selectedDurationSeconds),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _InfoCard(
+                        label: 'End',
+                        value: _formatDuration(_effectiveEndValue),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                IconButton(
+                  onPressed: _togglePlayback,
+                  iconSize: 56,
+                  color: Colors.white,
+                  icon: Icon(
+                    _isPlaying
+                        ? Icons.pause_circle_filled
+                        : Icons.play_circle_fill,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 }
