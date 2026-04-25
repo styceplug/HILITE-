@@ -15,6 +15,8 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../utils/app_constants.dart';
 
+enum _VoiceComposerMode { idle, recording, preview }
+
 class MessagingScreen extends StatefulWidget {
   const MessagingScreen({super.key, required this.myId, required this.chat});
 
@@ -27,13 +29,37 @@ class MessagingScreen extends StatefulWidget {
 
 class _MessagingScreenState extends State<MessagingScreen>
     with WidgetsBindingObserver {
+  static const Duration _minimumVoiceNoteDuration = Duration(milliseconds: 700);
+
   final _textCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   final _picker = ImagePicker();
 
   late final ChatController ctrl;
   final AudioRecorder _audioRecorder = AudioRecorder();
-  bool _isRecording = false;
+  late final AudioPlayer _draftPlayer;
+  StreamSubscription<PlayerState>? _draftPlayerStateSub;
+  StreamSubscription<Duration>? _draftPositionSub;
+  StreamSubscription<Duration?>? _draftDurationSub;
+  Timer? _recordingTimer;
+
+  _VoiceComposerMode _voiceMode = _VoiceComposerMode.idle;
+  String? _draftRecordingPath;
+  Duration _recordingDuration = Duration.zero;
+  Duration _draftPosition = Duration.zero;
+  Duration _draftDuration = Duration.zero;
+  bool _draftLoading = false;
+  bool _isHandlingDraftCompletion = false;
+  final Set<String> _retainedVoiceDraftPaths = <String>{};
+
+  bool get _isRecording => _voiceMode == _VoiceComposerMode.recording;
+  bool get _hasVoiceDraft =>
+      _voiceMode == _VoiceComposerMode.preview &&
+      _draftRecordingPath != null &&
+      _draftRecordingPath!.trim().isNotEmpty;
+  bool get _isDraftPlaying =>
+      _draftPlayer.playing &&
+      _draftPlayer.playerState.processingState != ProcessingState.completed;
 
   @override
   void initState() {
@@ -42,6 +68,23 @@ class _MessagingScreenState extends State<MessagingScreen>
     ctrl = Get.find<ChatController>();
     ctrl.initChat(chat: widget.chat, myId: widget.myId);
     _scrollCtrl.addListener(_onScroll);
+    _draftPlayer = AudioPlayer();
+    _draftPlayerStateSub = _draftPlayer.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        unawaited(_handleDraftPlaybackCompleted());
+      }
+      if (mounted) {
+        setState(() {});
+      }
+    });
+    _draftPositionSub = _draftPlayer.positionStream.listen((position) {
+      if (!mounted || !_hasVoiceDraft) return;
+      setState(() => _draftPosition = position);
+    });
+    _draftDurationSub = _draftPlayer.durationStream.listen((duration) {
+      if (!mounted || duration == null || !_hasVoiceDraft) return;
+      setState(() => _draftDuration = duration);
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
   }
@@ -52,9 +95,21 @@ class _MessagingScreenState extends State<MessagingScreen>
     ctrl.closeChat();
     _textCtrl.dispose();
     _scrollCtrl.dispose();
+    _recordingTimer?.cancel();
     unawaited(_AudioMessagePlaybackCoordinator.stopActive());
+    _draftPlayerStateSub?.cancel();
+    _draftPositionSub?.cancel();
+    _draftDurationSub?.cancel();
+    final draftPath = _draftRecordingPath;
+    unawaited(_draftPlayer.dispose());
     unawaited(_audioRecorder.stop());
     unawaited(_audioRecorder.dispose());
+    if (draftPath != null) {
+      unawaited(_deleteVoiceFile(draftPath));
+    }
+    for (final path in _retainedVoiceDraftPaths) {
+      unawaited(_deleteVoiceFile(path));
+    }
     super.dispose();
   }
 
@@ -64,12 +119,9 @@ class _MessagingScreenState extends State<MessagingScreen>
         state == AppLifecycleState.inactive) {
       unawaited(_AudioMessagePlaybackCoordinator.stopActive());
       if (_isRecording) {
-        unawaited(_audioRecorder.stop());
-        if (mounted) {
-          setState(() {
-            _isRecording = false;
-          });
-        }
+        unawaited(_finalizeRecording(openPreview: true, showErrors: false));
+      } else if (_isDraftPlaying) {
+        unawaited(_draftPlayer.pause());
       }
     }
   }
@@ -110,55 +162,60 @@ class _MessagingScreenState extends State<MessagingScreen>
 
     if (result == null || result.files.single.path == null) return;
 
-    await ctrl.sendAudio(File(result.files.single.path!));
-    _scrollToBottom();
+    final sent = await ctrl.sendAudio(File(result.files.single.path!));
+    if (sent) {
+      _scrollToBottom();
+    }
   }
 
   Future<void> _startRecording() async {
+    if (_isRecording || _hasVoiceDraft || ctrl.isSending.value) return;
+
     try {
-      if (await _audioRecorder.hasPermission()) {
-        final dir = await getTemporaryDirectory();
-        final path =
-            '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-        await _audioRecorder.start(
-          const RecordConfig(
-            encoder: AudioEncoder.aacLc,
-            bitRate: 128000,
-            sampleRate: 44100,
-          ),
-          path: path,
-        );
-
-        setState(() {
-          _isRecording = true;
-        });
-      } else {
+      if (!await _audioRecorder.hasPermission()) {
         Get.snackbar('Permission denied', 'Microphone permission is required');
+        return;
       }
+
+      await _AudioMessagePlaybackCoordinator.stopActive();
+
+      final dir = await getTemporaryDirectory();
+      final path =
+          '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 128000,
+          sampleRate: 44100,
+        ),
+        path: path,
+      );
+
+      _recordingTimer?.cancel();
+      if (mounted) {
+        setState(() {
+          _voiceMode = _VoiceComposerMode.recording;
+          _recordingDuration = Duration.zero;
+        });
+      }
+      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted || !_isRecording) return;
+        setState(() {
+          _recordingDuration += const Duration(seconds: 1);
+        });
+      });
     } catch (e) {
       Get.snackbar('Error', 'Failed to start recording: $e');
     }
   }
 
   Future<void> _stopRecording() async {
-    try {
-      final path = await _audioRecorder.stop();
+    await _finalizeRecording(openPreview: true);
+  }
 
-      setState(() {
-        _isRecording = false;
-      });
-
-      if (path != null) {
-        await ctrl.sendAudio(File(path));
-        _scrollToBottom();
-      }
-    } catch (e) {
-      setState(() {
-        _isRecording = false;
-      });
-      Get.snackbar('Error', 'Failed to send voice note: $e');
-    }
+  Future<void> _cancelRecording() async {
+    await _finalizeRecording(openPreview: false);
   }
 
   Future<void> _sendText() async {
@@ -166,6 +223,230 @@ class _MessagingScreenState extends State<MessagingScreen>
     _textCtrl.clear();
     await ctrl.sendText(text);
     _scrollToBottom();
+  }
+
+  Future<void> _finalizeRecording({
+    required bool openPreview,
+    bool showErrors = true,
+  }) async {
+    if (!_isRecording) return;
+
+    final recordedDuration = _recordingDuration;
+    _recordingTimer?.cancel();
+
+    try {
+      final path = await _audioRecorder.stop();
+      if (mounted) {
+        setState(() {
+          _voiceMode = _VoiceComposerMode.idle;
+          _recordingDuration = Duration.zero;
+        });
+      }
+
+      if (path == null || path.trim().isEmpty) {
+        return;
+      }
+
+      final recordedFile = File(path);
+      if (!await recordedFile.exists() || await recordedFile.length() == 0) {
+        await _deleteVoiceFile(path);
+        if (showErrors) {
+          Get.snackbar('Error', 'The recorded voice note was empty.');
+        }
+        return;
+      }
+
+      if (recordedDuration < _minimumVoiceNoteDuration) {
+        await _deleteVoiceFile(path);
+        if (showErrors) {
+          Get.snackbar('Too short', 'Record a slightly longer voice note.');
+        }
+        return;
+      }
+
+      if (!openPreview) {
+        await _deleteVoiceFile(path);
+        return;
+      }
+
+      await _prepareVoiceDraft(path);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _voiceMode = _VoiceComposerMode.idle;
+          _recordingDuration = Duration.zero;
+        });
+      }
+      if (showErrors) {
+        Get.snackbar('Error', 'Failed to stop recording: $e');
+      }
+    }
+  }
+
+  Future<void> _prepareVoiceDraft(String path) async {
+    await _resetDraftPlayer();
+
+    final previousDraft = _draftRecordingPath;
+    if (mounted) {
+      setState(() {
+        _voiceMode = _VoiceComposerMode.preview;
+        _draftRecordingPath = path;
+        _draftPosition = Duration.zero;
+        _draftDuration = Duration.zero;
+        _draftLoading = true;
+      });
+    }
+
+    if (previousDraft != null && previousDraft != path) {
+      await _deleteVoiceFile(previousDraft);
+    }
+
+    try {
+      final duration = await _draftPlayer.setFilePath(path);
+      if (!mounted) return;
+
+      setState(() {
+        _draftDuration = duration ?? Duration.zero;
+        _draftPosition = Duration.zero;
+        _draftLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _voiceMode = _VoiceComposerMode.idle;
+          _draftRecordingPath = null;
+          _draftPosition = Duration.zero;
+          _draftDuration = Duration.zero;
+          _draftLoading = false;
+        });
+      }
+      await _deleteVoiceFile(path);
+      Get.snackbar('Error', 'Could not load the recorded voice note');
+    }
+  }
+
+  Future<void> _toggleDraftPlayback() async {
+    if (!_hasVoiceDraft || _draftLoading) return;
+
+    try {
+      if (_draftPlayer.playing) {
+        await _draftPlayer.pause();
+        if (mounted) setState(() {});
+        return;
+      }
+
+      final draftPath = _draftRecordingPath;
+      final processingState = _draftPlayer.playerState.processingState;
+      if ((processingState == ProcessingState.idle ||
+              processingState == ProcessingState.completed) &&
+          draftPath != null) {
+        if (processingState == ProcessingState.idle) {
+          if (mounted) {
+            setState(() => _draftLoading = true);
+          }
+          final duration = await _draftPlayer.setFilePath(draftPath);
+          if (mounted) {
+            setState(() {
+              _draftDuration = duration ?? _draftDuration;
+              _draftLoading = false;
+            });
+          }
+        } else {
+          await _draftPlayer.seek(Duration.zero);
+        }
+      }
+
+      await _AudioMessagePlaybackCoordinator.activate(_draftPlayer);
+      await _draftPlayer.play();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _draftLoading = false);
+      }
+      Get.snackbar('Error', 'Could not play the recorded voice note');
+    }
+  }
+
+  Future<void> _handleDraftPlaybackCompleted() async {
+    if (_isHandlingDraftCompletion) return;
+    _isHandlingDraftCompletion = true;
+
+    try {
+      await _draftPlayer.pause();
+      await _draftPlayer.seek(Duration.zero);
+      await _AudioMessagePlaybackCoordinator.release(_draftPlayer);
+    } catch (_) {
+    } finally {
+      _isHandlingDraftCompletion = false;
+      if (mounted) {
+        setState(() => _draftPosition = Duration.zero);
+      }
+    }
+  }
+
+  Future<void> _discardVoiceDraft() async {
+    if (_isRecording) {
+      await _cancelRecording();
+      return;
+    }
+
+    final draftPath = _draftRecordingPath;
+    await _resetDraftPlayer();
+
+    if (mounted) {
+      setState(() {
+        _voiceMode = _VoiceComposerMode.idle;
+        _draftRecordingPath = null;
+        _draftPosition = Duration.zero;
+        _draftDuration = Duration.zero;
+        _draftLoading = false;
+      });
+    }
+
+    if (draftPath != null) {
+      await _deleteVoiceFile(draftPath);
+    }
+  }
+
+  Future<void> _sendVoiceDraft() async {
+    final draftPath = _draftRecordingPath;
+    if (draftPath == null || ctrl.isSending.value || _draftLoading) return;
+
+    final sent = await ctrl.sendAudio(File(draftPath));
+    if (!sent) return;
+
+    _retainedVoiceDraftPaths.add(draftPath);
+    await _resetDraftPlayer();
+    if (mounted) {
+      setState(() {
+        _voiceMode = _VoiceComposerMode.idle;
+        _draftRecordingPath = null;
+        _draftPosition = Duration.zero;
+        _draftDuration = Duration.zero;
+        _draftLoading = false;
+      });
+    }
+    await _deleteVoiceFile(draftPath);
+    _scrollToBottom();
+  }
+
+  Future<void> _resetDraftPlayer() async {
+    try {
+      if (_draftPlayer.playing) {
+        await _draftPlayer.pause();
+      }
+    } catch (_) {}
+
+    try {
+      await _draftPlayer.seek(Duration.zero);
+    } catch (_) {}
+  }
+
+  Future<void> _deleteVoiceFile(String path) async {
+    final file = File(path);
+    if (await file.exists()) {
+      await file.delete();
+    }
+    _retainedVoiceDraftPaths.remove(path);
   }
 
   @override
@@ -195,7 +476,16 @@ class _MessagingScreenState extends State<MessagingScreen>
               onTyping: ctrl.notifyTyping,
               onStartRecording: _startRecording,
               onStopRecording: _stopRecording,
-              isRecording: _isRecording,
+              onCancelRecording: _cancelRecording,
+              onPlayVoiceDraft: _toggleDraftPlayback,
+              onDiscardVoiceDraft: _discardVoiceDraft,
+              onSendVoiceDraft: _sendVoiceDraft,
+              voiceMode: _voiceMode,
+              recordingDuration: _recordingDuration,
+              draftPosition: _draftPosition,
+              draftDuration: _draftDuration,
+              isDraftPlaying: _isDraftPlaying,
+              isDraftLoading: _draftLoading,
             ),
           ],
         ),
@@ -219,13 +509,12 @@ class _ChatHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rawName = peer?.displayName?.trim() ?? '';
+    final rawName = peer?.displayName.trim() ?? '';
     final displayName = rawName.isNotEmpty ? rawName : 'User';
-print('Thi sis it ${displayName}');
     final avatarLetter =
         rawName.isNotEmpty ? rawName.characters.first.toUpperCase() : '?';
 
-    final hasImage = (peer?.profilePicture?.trim().isNotEmpty ?? false);
+    final hasImage = (peer?.profilePicture.trim().isNotEmpty ?? false);
     final isOnline = presence?.isOnline ?? false;
     final lastSeen = presence?.lastSeen ?? peer?.lastSeen;
 
@@ -246,7 +535,7 @@ print('Thi sis it ${displayName}');
               CircleAvatar(
                 radius: 20,
                 backgroundImage:
-                    hasImage ? NetworkImage(peer!.profilePicture!) : null,
+                    hasImage ? NetworkImage(peer!.profilePicture) : null,
                 child:
                     !hasImage
                         ? Text(
@@ -578,7 +867,8 @@ class _MessageBubble extends StatelessWidget {
         );
 
       case 'audio':
-        if (audioUrl == null) {
+        final localAudioPath = msg.localAudioPath;
+        if (audioUrl == null && localAudioPath == null) {
           return Text(
             'Audio unavailable',
             style: TextStyle(
@@ -588,7 +878,12 @@ class _MessageBubble extends StatelessWidget {
           );
         }
 
-        return _AudioMessagePlayer(url: audioUrl, mine: mine);
+        return _AudioMessagePlayer(
+          url: audioUrl,
+          localFilePath: localAudioPath,
+          durationHint: msg.audio?.length,
+          mine: mine,
+        );
 
       default:
         return Text(
@@ -699,7 +994,16 @@ class _InputBar extends StatelessWidget {
     required this.onTyping,
     required this.onStartRecording,
     required this.onStopRecording,
-    required this.isRecording,
+    required this.onCancelRecording,
+    required this.onPlayVoiceDraft,
+    required this.onDiscardVoiceDraft,
+    required this.onSendVoiceDraft,
+    required this.voiceMode,
+    required this.recordingDuration,
+    required this.draftPosition,
+    required this.draftDuration,
+    required this.isDraftPlaying,
+    required this.isDraftLoading,
   });
 
   final TextEditingController textCtrl;
@@ -710,10 +1014,27 @@ class _InputBar extends StatelessWidget {
   final VoidCallback onTyping;
   final VoidCallback onStartRecording;
   final VoidCallback onStopRecording;
-  final bool isRecording;
+  final VoidCallback onCancelRecording;
+  final VoidCallback onPlayVoiceDraft;
+  final VoidCallback onDiscardVoiceDraft;
+  final VoidCallback onSendVoiceDraft;
+  final _VoiceComposerMode voiceMode;
+  final Duration recordingDuration;
+  final Duration draftPosition;
+  final Duration draftDuration;
+  final bool isDraftPlaying;
+  final bool isDraftLoading;
 
   @override
   Widget build(BuildContext context) {
+    if (voiceMode == _VoiceComposerMode.recording) {
+      return _buildRecordingComposer();
+    }
+
+    if (voiceMode == _VoiceComposerMode.preview) {
+      return _buildPreviewComposer();
+    }
+
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
       decoration: const BoxDecoration(
@@ -793,19 +1114,15 @@ class _InputBar extends StatelessWidget {
           const SizedBox(width: 6),
 
           GestureDetector(
-            onLongPressStart: (_) => onStartRecording(),
-            onLongPressEnd: (_) => onStopRecording(),
+            onTap: onStartRecording,
             child: Container(
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: isRecording ? Colors.red : const Color(0xFFF3F4F6),
+                color: const Color(0xFFF3F4F6),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.mic,
-                color: isRecording ? Colors.white : const Color(0xFF6B7280),
-              ),
+              child: const Icon(Icons.mic, color: Color(0xFF6B7280)),
             ),
           ),
           const SizedBox(width: 6),
@@ -843,6 +1160,236 @@ class _InputBar extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildRecordingComposer() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
+      ),
+      child: Row(
+        children: [
+          _buildCircleButton(
+            icon: Icons.close_rounded,
+            backgroundColor: const Color(0xFFFEE2E2),
+            iconColor: const Color(0xFFDC2626),
+            onTap: onCancelRecording,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFDC2626),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Recording voice note',
+                          style: TextStyle(
+                            color: Color(0xFF991B1B),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Tap stop when you are done',
+                          style: TextStyle(
+                            color: Color(0xFFB91C1C),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    _formatDuration(recordingDuration),
+                    style: const TextStyle(
+                      color: Color(0xFF991B1B),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          _buildCircleButton(
+            icon: Icons.stop_rounded,
+            backgroundColor: const Color(0xFFDC2626),
+            iconColor: Colors.white,
+            onTap: onStopRecording,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewComposer() {
+    final total = draftDuration > Duration.zero ? draftDuration : draftPosition;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
+      ),
+      child: Row(
+        children: [
+          _buildCircleButton(
+            icon: Icons.delete_outline_rounded,
+            backgroundColor: const Color(0xFFF3F4F6),
+            iconColor: const Color(0xFF6B7280),
+            onTap: onDiscardVoiceDraft,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: onPlayVoiceDraft,
+                    child:
+                        isDraftLoading
+                            ? const SizedBox(
+                              width: 34,
+                              height: 34,
+                              child: Padding(
+                                padding: EdgeInsets.all(6),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF2563EB),
+                                ),
+                              ),
+                            )
+                            : Container(
+                              width: 34,
+                              height: 34,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFDBEAFE),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isDraftPlaying
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                                color: const Color(0xFF2563EB),
+                              ),
+                            ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Voice note preview',
+                          style: TextStyle(
+                            color: Color(0xFF111827),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${_formatDuration(draftPosition)} / ${_formatDuration(total)}',
+                          style: const TextStyle(
+                            color: Color(0xFF6B7280),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Obx(
+            () => _buildCircleButton(
+              icon: Icons.send_rounded,
+              backgroundColor: const Color(0xFF2563EB),
+              iconColor: Colors.white,
+              onTap: ctrl.isSending.value ? null : onSendVoiceDraft,
+              child:
+                  ctrl.isSending.value
+                      ? const Padding(
+                        padding: EdgeInsets.all(11),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                      : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCircleButton({
+    required IconData icon,
+    required Color backgroundColor,
+    required Color iconColor,
+    required VoidCallback? onTap,
+    Widget? child,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle),
+        child:
+            child ??
+            Icon(
+              icon,
+              color: iconColor,
+            ),
+      ),
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    final totalSeconds = duration.inSeconds;
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
+
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 }
 
@@ -934,9 +1481,16 @@ class _AudioMessagePlaybackCoordinator {
 }
 
 class _AudioMessagePlayer extends StatefulWidget {
-  const _AudioMessagePlayer({required this.url, required this.mine});
+  const _AudioMessagePlayer({
+    required this.url,
+    required this.mine,
+    this.localFilePath,
+    this.durationHint,
+  });
 
-  final String url;
+  final String? url;
+  final String? localFilePath;
+  final int? durationHint;
   final bool mine;
 
   @override
@@ -946,9 +1500,13 @@ class _AudioMessagePlayer extends StatefulWidget {
 class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
   late final AudioPlayer _player;
   StreamSubscription<PlayerState>? _playerStateSub;
+  StreamSubscription<Duration>? _positionSub;
+  StreamSubscription<Duration?>? _durationSub;
   bool _loading = false;
   bool _ready = false;
   bool _isCompletingPlayback = false;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
 
   @override
   void initState() {
@@ -960,6 +1518,14 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
         unawaited(_handlePlaybackCompleted());
       }
       if (mounted) setState(() {});
+    });
+    _positionSub = _player.positionStream.listen((position) {
+      if (!mounted) return;
+      setState(() => _position = position);
+    });
+    _durationSub = _player.durationStream.listen((duration) {
+      if (!mounted || duration == null) return;
+      setState(() => _duration = duration);
     });
   }
 
@@ -976,9 +1542,10 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
 
       if (!_ready || processingState == ProcessingState.idle) {
         setState(() => _loading = true);
-        await _player.setUrl(widget.url);
-        _ready = true;
-        setState(() => _loading = false);
+        await _loadAudioSource();
+        if (mounted) {
+          setState(() => _loading = false);
+        }
       } else if (processingState == ProcessingState.completed) {
         await _player.seek(Duration.zero);
       }
@@ -986,7 +1553,10 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
       await _AudioMessagePlaybackCoordinator.activate(_player);
       await _player.play();
     } catch (e) {
-      debugPrint('Audio message playback error (${widget.url}): $e');
+      debugPrint(
+        'Audio message playback error '
+        '(remote: ${widget.url}, local: ${widget.localFilePath}): $e',
+      );
       _ready = false;
       if (mounted) {
         setState(() => _loading = false);
@@ -1007,14 +1577,66 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
     } finally {
       _isCompletingPlayback = false;
       if (mounted) {
-        setState(() {});
+        setState(() => _position = Duration.zero);
       }
     }
+  }
+
+  Future<void> _loadAudioSource() async {
+    final localFilePath = widget.localFilePath;
+    if (localFilePath != null && localFilePath.trim().isNotEmpty) {
+      final localFile = File(localFilePath);
+      if (await localFile.exists()) {
+        try {
+          final duration = await _player.setFilePath(localFile.path);
+          _duration = duration ?? _duration;
+          _ready = true;
+          return;
+        } catch (e) {
+          debugPrint('Local audio fallback failed ($localFilePath): $e');
+        }
+      }
+    }
+
+    final remoteUrl = widget.url;
+    if (remoteUrl == null || remoteUrl.trim().isEmpty) {
+      throw Exception('No audio source available');
+    }
+
+    final duration = await _player.setUrl(remoteUrl);
+    _duration = duration ?? _duration;
+    _ready = true;
+  }
+
+  Duration get _displayDuration {
+    if (_duration > Duration.zero) {
+      return _duration;
+    }
+
+    final hint = widget.durationHint;
+    if (hint == null || hint <= 0) {
+      return Duration.zero;
+    }
+
+    if (hint > 3600) {
+      return Duration(milliseconds: hint);
+    }
+
+    return Duration(seconds: hint);
+  }
+
+  String _formatDuration(Duration duration) {
+    final totalSeconds = duration.inSeconds;
+    final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
+    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 
   @override
   void dispose() {
     _playerStateSub?.cancel();
+    _positionSub?.cancel();
+    _durationSub?.cancel();
     unawaited(_AudioMessagePlaybackCoordinator.release(_player));
     unawaited(_player.dispose());
     super.dispose();
@@ -1027,9 +1649,17 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
     final isPlayingActive =
         _player.playing &&
         _player.playerState.processingState != ProcessingState.completed;
+    final secondaryTextColor =
+        widget.mine ? Colors.white70 : const Color(0xFF6B7280);
+    final displayDuration = _displayDuration;
+    final displayPosition =
+        _position > displayDuration && displayDuration > Duration.zero
+            ? displayDuration
+            : _position;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         GestureDetector(
           onTap: _togglePlay,
@@ -1052,9 +1682,20 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
                   ),
         ),
         const SizedBox(width: 6),
-        Text(
-          isPlayingActive ? 'Playing...' : 'Voice message',
-          style: TextStyle(color: textColor, fontSize: 14),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isPlayingActive ? 'Playing voice note' : 'Voice message',
+              style: TextStyle(color: textColor, fontSize: 14),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${_formatDuration(displayPosition)} / ${_formatDuration(displayDuration)}',
+              style: TextStyle(color: secondaryTextColor, fontSize: 12),
+            ),
+          ],
         ),
       ],
     );

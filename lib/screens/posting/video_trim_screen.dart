@@ -31,30 +31,30 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
 
   double _startValue = 0;
   double _endValue = 0;
-  double _videoDurationSeconds = 0;
+  double _videoDurationMs = 0;
 
   double get _effectiveEndValue {
     if (_endValue > _startValue) {
       return _endValue;
     }
 
-    if (_videoDurationSeconds > _startValue) {
-      return _videoDurationSeconds;
+    if (_videoDurationMs > _startValue) {
+      return _videoDurationMs;
     }
 
     return _startValue;
   }
 
   bool get _shouldUseOriginal {
-    if (_videoDurationSeconds <= 0) {
+    if (_videoDurationMs <= 0) {
       return true;
     }
 
-    final endDelta = (_videoDurationSeconds - _effectiveEndValue).abs();
-    return _startValue <= 0.05 && endDelta <= 0.05;
+    final endDelta = (_videoDurationMs - _effectiveEndValue).abs();
+    return _startValue <= 50 && endDelta <= 50;
   }
 
-  double get _selectedDurationSeconds {
+  double get _selectedDurationMs {
     final selectedDuration = _effectiveEndValue - _startValue;
     return selectedDuration > 0 ? selectedDuration : 0;
   }
@@ -81,14 +81,14 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
 
       final duration =
           _trimmer.videoPlayerController?.value.duration ?? Duration.zero;
-      final durationSeconds = duration.inMilliseconds / 1000;
+      final durationMs = duration.inMilliseconds.toDouble();
 
       if (!mounted) return;
 
       setState(() {
-        _videoDurationSeconds = durationSeconds;
+        _videoDurationMs = durationMs;
         _startValue = 0;
-        _endValue = durationSeconds;
+        _endValue = durationMs;
         _isLoadingVideo = false;
         _loadError = null;
       });
@@ -130,7 +130,7 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
       return;
     }
 
-    if (_selectedDurationSeconds < 0.1) {
+    if (_selectedDurationMs < 500) {
       CustomSnackBar.failure(
         message: 'Select a longer part of the video to continue.',
       );
@@ -171,6 +171,15 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
         return;
       }
 
+      final trimmedFile = File(outputPath);
+      if (!trimmedFile.existsSync() || trimmedFile.lengthSync() == 0) {
+        setState(() => _isSavingVideo = false);
+        CustomSnackBar.failure(
+          message: 'The trimmed video export failed. Try again.',
+        );
+        return;
+      }
+
       _openPostDetails(XFile(outputPath));
     } catch (e) {
       debugPrint('Video trim save error: $e');
@@ -189,9 +198,9 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
     );
   }
 
-  String _formatDuration(double seconds) {
-    final totalSeconds = seconds.isFinite ? seconds.round() : 0;
-    final duration = Duration(seconds: totalSeconds);
+  String _formatDuration(double milliseconds) {
+    final totalMilliseconds = milliseconds.isFinite ? milliseconds.round() : 0;
+    final duration = Duration(milliseconds: totalMilliseconds);
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     final remainingSeconds = duration.inSeconds
         .remainder(60)
@@ -386,7 +395,7 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
                   Expanded(
                     child: _InfoCard(
                       label: 'Selected',
-                      value: _formatDuration(_selectedDurationSeconds),
+                      value: _formatDuration(_selectedDurationMs),
                     ),
                   ),
                   const SizedBox(width: 10),

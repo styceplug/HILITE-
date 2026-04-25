@@ -44,6 +44,7 @@ class ChatMessage {
   final String? text;
   final AudioAttachment? audio;
   final ImageAttachment? image;
+  final String? localAudioPath;
   final List<String> readBy;
   final DateTime createdAt;
 
@@ -55,6 +56,7 @@ class ChatMessage {
     this.text,
     this.audio,
     this.image,
+    this.localAudioPath,
     required this.readBy,
     required this.createdAt,
   });
@@ -71,11 +73,12 @@ class ChatMessage {
     image: j['image'] != null
         ? ImageAttachment.fromJson(Map<String, dynamic>.from(j['image']))
         : null,
+    localAudioPath: null,
     readBy: List<String>.from((j['readBy'] ?? []).map((e) => e.toString())),
     createdAt: DateTime.tryParse(j['createdAt']?.toString() ?? '') ?? DateTime.now(),
   );
 
-  ChatMessage copyWith({List<String>? readBy}) => ChatMessage(
+  ChatMessage copyWith({List<String>? readBy, String? localAudioPath}) => ChatMessage(
     id: id,
     chatId: chatId,
     sender: sender,
@@ -83,6 +86,7 @@ class ChatMessage {
     text: text,
     audio: audio,
     image: image,
+    localAudioPath: localAudioPath ?? this.localAudioPath,
     readBy: readBy ?? this.readBy,
     createdAt: createdAt,
   );
@@ -161,10 +165,10 @@ class ChatParticipant {
     );
   }
   String get displayName {
-    if(name == null || name!.trim().isEmpty) {
+    if (name.trim().isEmpty) {
       return username.isNotEmpty ? username : "User";
     }
-    return name!;
+    return name;
   }
 }
 
@@ -253,15 +257,4 @@ class UserPresence {
     isOnline: j['isOnline'] ?? false,
     lastSeen: j['lastSeen'] != null ? DateTime.tryParse(j['lastSeen']) : null,
   );
-}
-
-// ignore: avoid_classes_with_only_static_members
-extension _ListExt<T> on List<T> {
-  T? get firstOrNull => isEmpty ? null : first;
-  T? firstWhereOrNull(bool Function(T) test) {
-    for (final e in this) {
-      if (test(e)) return e;
-    }
-    return null;
-  }
 }

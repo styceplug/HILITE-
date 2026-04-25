@@ -1,13 +1,10 @@
 import 'dart:async';
-import 'package:get/get.dart';
-import 'dart:io';
-import '../data/repo/chat_repo.dart';
-import '../helpers/socket_helper.dart';
-import '../models/message_model.dart';
-import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
+import '../data/repo/chat_repo.dart';
+import '../helpers/socket_helper.dart';
 import '../models/message_model.dart';
 
 
@@ -272,8 +269,8 @@ class ChatController extends GetxController {
     isSending.value = false;
   }
 
-  Future<void> sendAudio(File file) async {
-    if (currentChatId == null) return;
+  Future<bool> sendAudio(File file) async {
+    if (currentChatId == null) return false;
 
     isSending.value = true;
 
@@ -283,9 +280,13 @@ class ChatController extends GetxController {
     );
 
     if (response.statusCode == 201 && response.body['code'] == '00') {
-      final message = ChatMessage.fromJson(response.body['data']);
+      final message = ChatMessage.fromJson(
+        response.body['data'],
+      ).copyWith(localAudioPath: file.path);
       messages.add(message);
       _syncChatPreview(message);
+      isSending.value = false;
+      return true;
     } else {
       Get.snackbar(
         'Error',
@@ -294,6 +295,7 @@ class ChatController extends GetxController {
     }
 
     isSending.value = false;
+    return false;
   }
 
   Future<void> markChatAsRead() async {
