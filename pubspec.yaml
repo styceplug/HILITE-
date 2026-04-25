@@ -4,7 +4,7 @@ description: "A new Flutter project."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 
-version: 1.0.0+18
+version: 1.0.0+19
 
 environment:
   sdk: ^3.7.2
@@ -53,7 +53,10 @@ dependencies:
   record: ^6.2.0
   path_provider: ^2.1.5
   just_audio: ^0.10.5
-  video_trimmer: ^5.0.0
+  video_compress: ^3.1.2
+#  ffmpeg_kit_flutter_min: 0.2.1
+#  video_editor: ^3.0.0
+#  video_trimmer: ^5.0.0
 #  sqflite: 2.3.3+1
 
 dev_dependencies:

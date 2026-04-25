@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get_thumbnail_video/index.dart' show ImageFormat;
-import 'package:get_thumbnail_video/video_thumbnail.dart' show VideoThumbnail;
+// import 'package:get_thumbnail_video/index.dart' show ImageFormat;
+// import 'package:get_thumbnail_video/video_thumbnail.dart' show VideoThumbnail;
 import 'package:hilite/controllers/app_controller.dart';
 import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/helpers/global_loader_controller.dart';
@@ -10,7 +10,8 @@ import 'package:hilite/models/post_model.dart';
 import 'package:hilite/widgets/snackbars.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:camera/camera.dart' hide ImageFormat;
+// import 'package:camera/camera.dart' hide ImageFormat;
+import 'package:video_compress/video_compress.dart';
 import '../data/api/api_checker.dart';
 import '../data/repo/post_repo.dart';
 import '../data/services/upload_services.dart';
@@ -299,12 +300,12 @@ class PostController extends GetxController {
     String? thumbnailPath;
     if (isVideo) {
       try {
-        final thumbnailFile = await VideoThumbnail.thumbnailFile(
-          video: file.path,
-          imageFormat: ImageFormat.JPEG,
-          maxWidth: 120,
-          quality: 60,
+        final thumbnailFile = await VideoCompress.getFileThumbnail(
+          file.path,
+          quality: 100,
+          position: -1,
         );
+        thumbnailPath = thumbnailFile.path;
         thumbnailPath = thumbnailFile.path;
       } catch (e) {
         debugPrint('Thumbnail generation failed (non-fatal): $e');

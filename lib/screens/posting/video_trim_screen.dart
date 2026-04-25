@@ -1,7 +1,6 @@
-import 'dart:async';
 import 'dart:io';
-
 import 'package:camera/camera.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/routes/routes.dart';
@@ -10,7 +9,8 @@ import 'package:hilite/widgets/app_loading_overlay.dart';
 import 'package:hilite/widgets/custom_appbar.dart';
 import 'package:hilite/widgets/custom_button.dart';
 import 'package:hilite/widgets/snackbars.dart';
-import 'package:video_trimmer/video_trimmer.dart';
+// import 'package:video_compress/video_compress.dart';
+import 'package:video_player/video_player.dart';
 
 class VideoTrimScreen extends StatefulWidget {
   final XFile file;
@@ -22,42 +22,21 @@ class VideoTrimScreen extends StatefulWidget {
 }
 
 class _VideoTrimScreenState extends State<VideoTrimScreen> {
-  final Trimmer _trimmer = Trimmer();
-
+  VideoPlayerController? _videoController;
   bool _isLoadingVideo = true;
   bool _isSavingVideo = false;
-  bool _isPlaying = false;
   String? _loadError;
+  static const Duration _maxDuration = Duration(minutes: 1);
+  static const _channel = MethodChannel('video_trimmer_native');
+  Duration _videoDuration = Duration.zero;
+  double _startFraction = 0.0;
+  double _endFraction = 1.0;
 
-  double _startValue = 0;
-  double _endValue = 0;
-  double _videoDurationMs = 0;
+  Duration get _startTrim => _videoDuration * _startFraction;
 
-  double get _effectiveEndValue {
-    if (_endValue > _startValue) {
-      return _endValue;
-    }
+  Duration get _endTrim => _videoDuration * _endFraction;
 
-    if (_videoDurationMs > _startValue) {
-      return _videoDurationMs;
-    }
-
-    return _startValue;
-  }
-
-  bool get _shouldUseOriginal {
-    if (_videoDurationMs <= 0) {
-      return true;
-    }
-
-    final endDelta = (_videoDurationMs - _effectiveEndValue).abs();
-    return _startValue <= 50 && endDelta <= 50;
-  }
-
-  double get _selectedDurationMs {
-    final selectedDuration = _effectiveEndValue - _startValue;
-    return selectedDuration > 0 ? selectedDuration : 0;
-  }
+  Duration get _selectedDuration => _endTrim - _startTrim;
 
   @override
   void initState() {
@@ -66,37 +45,24 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
   }
 
   Future<void> _loadVideo() async {
-    final videoFile = File(widget.file.path);
-
-    if (!videoFile.existsSync()) {
-      setState(() {
-        _isLoadingVideo = false;
-        _loadError = 'The selected video could not be found.';
-      });
-      return;
-    }
-
     try {
-      await _trimmer.loadVideo(videoFile: videoFile);
-
-      final duration =
-          _trimmer.videoPlayerController?.value.duration ?? Duration.zero;
-      final durationMs = duration.inMilliseconds.toDouble();
+      final controller = VideoPlayerController.file(File(widget.file.path));
+      await controller.initialize();
+      await controller.setLooping(true);
 
       if (!mounted) return;
-
       setState(() {
-        _videoDurationMs = durationMs;
-        _startValue = 0;
-        _endValue = durationMs;
+        _videoController = controller;
+        _videoDuration = controller.value.duration;
         _isLoadingVideo = false;
-        _loadError = null;
+        if (_videoDuration > _maxDuration) {
+          _endFraction =
+              _maxDuration.inMilliseconds / _videoDuration.inMilliseconds;
+        }
       });
     } catch (e) {
-      debugPrint('Video trim load error: $e');
-
+      debugPrint('Video load error: $e');
       if (!mounted) return;
-
       setState(() {
         _isLoadingVideo = false;
         _loadError = 'Could not open this video for editing.';
@@ -104,88 +70,43 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
     }
   }
 
-  Future<void> _togglePlayback() async {
-    if (_isLoadingVideo || _isSavingVideo || _loadError != null) {
-      return;
-    }
-
-    try {
-      final isPlaying = await _trimmer.videoPlaybackControl(
-        startValue: _startValue,
-        endValue: _effectiveEndValue,
-      );
-
-      if (!mounted) return;
-      setState(() => _isPlaying = isPlaying);
-    } catch (e) {
-      debugPrint('Video trim playback error: $e');
-    }
-  }
-
   Future<void> _continueToPostDetails({bool useOriginal = false}) async {
     if (_isSavingVideo) return;
 
-    if (useOriginal || _loadError != null || _shouldUseOriginal) {
+    if (useOriginal || _loadError != null || _videoController == null) {
       _openPostDetails(widget.file);
       return;
     }
 
-    if (_selectedDurationMs < 500) {
-      CustomSnackBar.failure(
-        message: 'Select a longer part of the video to continue.',
-      );
+    // No meaningful trim — use original
+    if (_startFraction <= 0.01 && _endFraction >= 0.99) {
+      _openPostDetails(widget.file);
       return;
     }
 
     try {
       setState(() => _isSavingVideo = true);
+      await _videoController?.pause();
 
-      if (_isPlaying) {
-        await _togglePlayback();
-      }
-
-      final completer = Completer<String?>();
-
-      await _trimmer.saveTrimmedVideo(
-        startValue: _startValue,
-        endValue: _effectiveEndValue,
-        onSave: (outputPath) {
-          if (!completer.isCompleted) {
-            completer.complete(outputPath);
-          }
-        },
-      );
-
-      final outputPath = await completer.future.timeout(
-        const Duration(minutes: 2),
-        onTimeout: () => null,
-      );
+      final outputPath = await _channel.invokeMethod<String>('trimVideo', {
+        'inputPath': widget.file.path,
+        'startMs': _startTrim.inMilliseconds,
+        'durationMs': _selectedDuration.inMilliseconds,
+      });
 
       if (!mounted) return;
 
       if (outputPath == null || outputPath.isEmpty) {
         setState(() => _isSavingVideo = false);
-        CustomSnackBar.failure(
-          message: 'Could not trim this video. Try again.',
-        );
-        return;
-      }
-
-      final trimmedFile = File(outputPath);
-      if (!trimmedFile.existsSync() || trimmedFile.lengthSync() == 0) {
-        setState(() => _isSavingVideo = false);
-        CustomSnackBar.failure(
-          message: 'The trimmed video export failed. Try again.',
-        );
+        CustomSnackBar.failure(message: 'Could not trim this video. Try again.');
         return;
       }
 
       _openPostDetails(XFile(outputPath));
+
     } catch (e) {
-      debugPrint('Video trim save error: $e');
-
+      debugPrint('Video trim error: $e');
       if (!mounted) return;
-
       setState(() => _isSavingVideo = false);
       CustomSnackBar.failure(message: 'Could not trim this video.');
     }
@@ -198,28 +119,16 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
     );
   }
 
-  String _formatDuration(double milliseconds) {
-    final totalMilliseconds = milliseconds.isFinite ? milliseconds.round() : 0;
-    final duration = Duration(milliseconds: totalMilliseconds);
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final remainingSeconds = duration.inSeconds
-        .remainder(60)
-        .toString()
-        .padLeft(2, '0');
-
-    if (duration.inHours > 0) {
-      final hours = duration.inHours.toString().padLeft(2, '0');
-      return '$hours:$minutes:$remainingSeconds';
-    }
-
-    return '$minutes:$remainingSeconds';
-  }
-
   @override
   void dispose() {
-    _trimmer.videoPlayerController?.pause();
-    _trimmer.dispose();
+    _videoController?.dispose();
     super.dispose();
+  }
+
+  String _fmt(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   @override
@@ -300,7 +209,7 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
       );
     }
 
-    if (_loadError != null) {
+    if (_loadError != null || _videoController == null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -314,7 +223,7 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                _loadError!,
+                _loadError ?? 'Could not open this video.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white,
@@ -334,9 +243,7 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
       );
     }
 
-    final aspectRatio =
-        _trimmer.videoPlayerController?.value.aspectRatio ?? (9 / 16);
-    final viewerWidth = MediaQuery.of(context).size.width - 32;
+    final controller = _videoController!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -346,23 +253,33 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
           style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
         ),
         const SizedBox(height: 20),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white12),
-          ),
-          child: AspectRatio(
-            aspectRatio: aspectRatio > 0 ? aspectRatio : (9 / 16),
+
+        // Replace the video preview Expanded widget:
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white12),
+            ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: VideoViewer(trimmer: _trimmer),
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: SizedBox(
+                  width: controller.value.size.width,
+                  height: controller.value.size.height,
+                  child: VideoPlayer(controller),
+                ),
+              ),
             ),
           ),
         ),
         const SizedBox(height: 20),
+
+        // Trim controls
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(14),
@@ -373,55 +290,200 @@ class _VideoTrimScreenState extends State<VideoTrimScreen> {
           ),
           child: Column(
             children: [
-              TrimViewer(
-                trimmer: _trimmer,
-                viewerHeight: 56,
-                viewerWidth: viewerWidth,
-                onChangeStart: (value) => setState(() => _startValue = value),
-                onChangeEnd: (value) => setState(() => _endValue = value),
-                onChangePlaybackState:
-                    (value) => setState(() => _isPlaying = value),
+              // Custom range slider
+              _TrimRangeSlider(
+                startFraction: _startFraction,
+                endFraction: _endFraction,
+                maxFraction:
+                    _videoDuration > _maxDuration
+                        ? _maxDuration.inMilliseconds /
+                            _videoDuration.inMilliseconds
+                        : 1.0,
+                onChanged: (start, end) {
+                  setState(() {
+                    _startFraction = start;
+                    _endFraction = end;
+                  });
+                  // Seek to start when trimming
+                  final seekTo = _videoDuration * start;
+                  controller.seekTo(seekTo);
+                },
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                    child: _InfoCard(
-                      label: 'Start',
-                      value: _formatDuration(_startValue),
-                    ),
+                    child: _InfoCard(label: 'Start', value: _fmt(_startTrim)),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: _InfoCard(
                       label: 'Selected',
-                      value: _formatDuration(_selectedDurationMs),
+                      value: _fmt(_selectedDuration),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: _InfoCard(
-                      label: 'End',
-                      value: _formatDuration(_effectiveEndValue),
-                    ),
+                    child: _InfoCard(label: 'End', value: _fmt(_endTrim)),
                   ),
                 ],
               ),
             ],
           ),
         ),
-        const Spacer(),
+        const SizedBox(height: 20),
+
+        // Play/pause
         Center(
-          child: IconButton(
-            onPressed: _togglePlayback,
-            iconSize: 64,
-            color: Colors.white,
-            icon: Icon(
-              _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
-            ),
+          child: ValueListenableBuilder<VideoPlayerValue>(
+            valueListenable: controller,
+            builder: (_, value, __) {
+              return IconButton(
+                onPressed: () {
+                  value.isPlaying ? controller.pause() : controller.play();
+                },
+                iconSize: 64,
+                color: Colors.white,
+                icon: Icon(
+                  value.isPlaying
+                      ? Icons.pause_circle_filled
+                      : Icons.play_circle_fill,
+                ),
+              );
+            },
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A dual-handle range slider for trimming
+class _TrimRangeSlider extends StatefulWidget {
+  final double startFraction;
+  final double endFraction;
+  final double maxFraction;
+  final void Function(double start, double end) onChanged;
+
+  const _TrimRangeSlider({
+    required this.startFraction,
+    required this.endFraction,
+    required this.maxFraction,
+    required this.onChanged,
+  });
+
+  @override
+  State<_TrimRangeSlider> createState() => _TrimRangeSliderState();
+}
+
+class _TrimRangeSliderState extends State<_TrimRangeSlider> {
+  static const double _handleWidth = 20.0;
+  static const double _height = 56.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: _height,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final totalWidth = constraints.maxWidth;
+          final trackWidth = totalWidth - _handleWidth * 2;
+          final startX = _handleWidth + widget.startFraction * trackWidth;
+          final endX = _handleWidth + widget.endFraction * trackWidth;
+
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onHorizontalDragUpdate: (details) {
+              final dx = details.localPosition.dx;
+              final midX = (startX + endX) / 2;
+              final maxF = widget.maxFraction;
+              final windowSize = widget.endFraction - widget.startFraction;
+
+              if (dx < midX) {
+                // Moving start handle — keep window size fixed if at max
+                double newStart = ((dx - _handleWidth) / trackWidth).clamp(0.0, widget.endFraction - 0.02);
+                double newEnd = widget.endFraction;
+                // If window exceeds max, push end back
+                if (newEnd - newStart > maxF) {
+                  newEnd = (newStart + maxF).clamp(0.0, 1.0);
+                }
+                widget.onChanged(newStart, newEnd);
+              } else {
+                // Moving end handle
+                double newEnd = ((dx - _handleWidth) / trackWidth).clamp(widget.startFraction + 0.02, 1.0);
+                double newStart = widget.startFraction;
+                // If window exceeds max, push start forward
+                if (newEnd - newStart > maxF) {
+                  newStart = (newEnd - maxF).clamp(0.0, 1.0);
+                }
+                widget.onChanged(newStart, newEnd);
+              }
+            },
+            child: Stack(
+              children: [
+                // Background track
+                Positioned.fill(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white12,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                // Selected range highlight
+                Positioned(
+                  left: startX,
+                  right: totalWidth - endX,
+                  top: 16,
+                  bottom: 16,
+                  child: Container(
+                    color: AppColors.primary.withValues(alpha: 0.4),
+                  ),
+                ),
+                // Start handle
+                Positioned(
+                  left: startX - _handleWidth,
+                  top: 0,
+                  bottom: 0,
+                  width: _handleWidth,
+                  child: _Handle(isLeft: true),
+                ),
+                // End handle
+                Positioned(
+                  left: endX,
+                  top: 0,
+                  bottom: 0,
+                  width: _handleWidth,
+                  child: _Handle(isLeft: false),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _Handle extends StatelessWidget {
+  final bool isLeft;
+
+  const _Handle({required this.isLeft});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.horizontal(
+          left: isLeft ? const Radius.circular(6) : Radius.zero,
+          right: isLeft ? Radius.zero : const Radius.circular(6),
+        ),
+      ),
+      child: Center(
+        child: Icon(Icons.drag_handle, color: Colors.black54, size: 14),
+      ),
     );
   }
 }

@@ -3,6 +3,7 @@ import UIKit
 import Firebase
 import UserNotifications
 
+
 @main
 @objc class AppDelegate: FlutterAppDelegate {
   override func application(
@@ -15,6 +16,10 @@ import UserNotifications
       }
 
     GeneratedPluginRegistrant.register(with: self)
+
+ if let registrar = registrar(forPlugin: "VideoTrimmer") {
+     VideoTrimmer.register(with: registrar)
+ }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }
