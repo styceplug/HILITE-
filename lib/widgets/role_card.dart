@@ -69,7 +69,7 @@ class RoleCard extends StatelessWidget {
                         topLeft: Radius.circular(cardRadius),
                         bottomLeft: Radius.circular(cardRadius),
                       ),
-                      color: AppColors.black.withOpacity(0.1),
+                      color: AppColors.black.withOpacity(0.2),
                     ),
                   ),
                 ),

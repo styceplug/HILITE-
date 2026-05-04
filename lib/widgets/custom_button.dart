@@ -38,7 +38,7 @@ class CustomButton extends StatelessWidget {
 
     final Color effectiveBgColor = isDisabled
         ? Colors.grey.shade500.withOpacity(0.4)
-        : backgroundColor ?? (isDark ? AppColors.primary : Color(0xFF85CE5C));
+        : backgroundColor ?? (isDark ? AppColors.buttonColor : AppColors.buttonColor);
 
     final Color effectiveTextColor = textStyle?.color ??
         (effectiveBgColor.computeLuminance() < 0.5 ? Colors.white : Colors.black);
@@ -54,7 +54,7 @@ class CustomButton extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: effectiveBgColor,
-          borderRadius: borderRadius ?? BorderRadius.circular(Dimensions.radius30),
+          borderRadius: borderRadius ?? BorderRadius.circular(Dimensions.radius15),
           border: Border.all(color: borderColor ?? effectiveBgColor)
         ),
         child: isLoading
@@ -82,7 +82,7 @@ class CustomButton extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: textStyle ??
                     TextStyle(
-                      color: effectiveTextColor,
+                      color: AppColors.textColor,
                       fontSize: Dimensions.font16,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Poppins'

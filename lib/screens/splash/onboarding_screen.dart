@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hilite/widgets/custom_button.dart';
 import 'package:iconsax/iconsax.dart';
 
 import '../../routes/routes.dart';
@@ -24,18 +25,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     AppConstants.getPngAsset('onboard3'),
   ];
 
-  final List<String> onboardTitles = ['Videos', 'Highlights', 'Reels'];
-
-  final List<String> onboardSubtitles = [
-    'Watch and share the best short footballing videos from millions of creators.',
-    'Upload the highlights of your best footballing moments',
-    'Engage and connect with exciting creators in Africa’s best footballing community.',
+  final List<String> onboardTitles = [
+    'Get Seen.\nGet Signed.',
+    'Turn Your Highlights\nInto Opportunities',
+    'Connect. Grow.\nGet noticed.',
   ];
 
-  final List<List<Color>> backgroundGradients = [
-    [const Color(0xffE5AFAF), const Color(0xffF5DCDC)],
-    [const Color(0xffC4BCFF), const Color(0xffE4E1FF)],
-    [const Color(0xffC2D8BE), const Color(0xffE4F1DF)],
+  final List<String> onboardSubtitles = [
+    'Upload your highlights \nGet discovered by scouts.',
+    'Upload your clips and let scouts, clubs, and fans discover you.',
+    'Join Africa\'s fastest-growing football community.',
   ];
 
   void _nextPage() {
@@ -64,9 +63,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           child: Container(
-
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: PageView.builder(
@@ -78,35 +77,38 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     itemBuilder: (context, index) {
                       return Column(
                         mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-
                           Padding(
                             padding: EdgeInsets.symmetric(
                               horizontal: Dimensions.width30,
                             ),
                             child: Stack(
                               children: [
-                                Text(
-                                  onboardSubtitles[index],
-                                  textAlign: TextAlign.left,
-                                  style: TextStyle(
-                                    fontSize: Dimensions.font10 * 3,
-                                    fontWeight: FontWeight.w600,
-                                    foreground:
-                                        Paint()
-                                          ..style = PaintingStyle.stroke
-                                          ..strokeWidth = 2
-                                          ..color = Colors.black.withOpacity(0.7),
-                                  ),
-                                ),
-                                Text(
-                                  onboardSubtitles[index],
-                                  textAlign: TextAlign.left,
-                                  style: TextStyle(
-                                    fontSize: Dimensions.font10 * 3,
-                                    color: AppColors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      onboardTitles[index],
+                                      textAlign: TextAlign.left,
+                                      style: TextStyle(
+                                        fontSize: Dimensions.font10 * 3.3,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFFD6D9E0),
+                                      ),
+                                    ),
+                                    SizedBox(height: Dimensions.height10),
+                                    Text(
+                                      onboardSubtitles[index],
+                                      textAlign: TextAlign.left,
+                                      style: TextStyle(
+                                        fontSize: Dimensions.font18,
+                                        fontFamily: 'Poppins',
+                                        color: Color(0xFFD6D9E0),
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -120,11 +122,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   padding: EdgeInsets.only(
                     bottom: Dimensions.height100,
                     top: Dimensions.height30,
+                    left: Dimensions.width30,
                   ),
                   child: Column(
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.start,
                         children: List.generate(onboardImages.length, (index) {
                           bool isActive = index == _currentPage;
                           return AnimatedContainer(
@@ -135,11 +138,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             height: Dimensions.height10,
                             width:
                                 isActive
-                                    ? Dimensions.width25
+                                    ? Dimensions.width50
                                     : Dimensions.width10,
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              border: Border.all(color: AppColors.black,width: 0.5),
+                              border: Border.all(
+                                color: AppColors.black,
+                                width: 0.5,
+                              ),
                               borderRadius: BorderRadius.circular(
                                 Dimensions.radius10,
                               ),
@@ -148,39 +154,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         }),
                       ),
                       SizedBox(height: Dimensions.height30),
-                      GestureDetector(
-                        onTap: _nextPage,
-                        child: Stack(
-                          alignment: Alignment.center,
+                      Padding(
+                        padding: EdgeInsets.only(right: Dimensions.width30),
+                        child: _currentPage < onboardImages.length - 1 ? GestureDetector(
+                          onTap: _nextPage,
+                          child: CustomButton(
+                            onPressed: _nextPage,
+                            text: 'Continue',
+                            backgroundColor: AppColors.buttonColor,
+                          ),
+                        ) : Column(
                           children: [
-                            SizedBox(
-                              height: Dimensions.height10 * 8,
-                              width: Dimensions.height10 * 8,
-                              child: CircularProgressIndicator(
-                                value: (_currentPage + 1) / onboardImages.length,
-                                strokeWidth: 3,
-                                color: AppColors.white,
-                              ),
+                            CustomButton(
+                              onPressed: () {
+                                Get.toNamed(AppRoutes.selectCategoryScreen);
+                              },
+                              text: 'Get Started',
+                              backgroundColor: AppColors.buttonColor,
                             ),
-                            Container(
-                              height: Dimensions.height65,
-                              width: Dimensions.height65,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                Iconsax.arrow_right_3,
-                                size: Dimensions.iconSize24,
-                                color: AppColors.black,
-                              ),
+                            SizedBox(height: Dimensions.height15),
+                            CustomButton(
+                              onPressed: () {
+                                Get.toNamed(AppRoutes.loginScreen);
+                              },
+                              text: 'Login',
+                              backgroundColor: AppColors.buttonColor.withOpacity(0.1),
+                              borderColor: AppColors.buttonColor.withOpacity(0.4),
                             ),
                           ],
                         ),

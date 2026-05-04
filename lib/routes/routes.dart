@@ -6,6 +6,7 @@ import 'package:hilite/screens/authentication/forgot_password.dart';
 import 'package:hilite/screens/authentication/login_screen.dart';
 import 'package:hilite/screens/authentication/role_forms/footballer_form.dart';
 import 'package:hilite/screens/authentication/role_forms/scout_club_form.dart';
+import 'package:hilite/screens/authentication/role_forms/team_form.dart';
 import 'package:hilite/screens/authentication/select_category_screen.dart';
 import 'package:hilite/screens/authentication/verify_profile.dart';
 import 'package:hilite/screens/home/home_screen.dart';
@@ -63,7 +64,8 @@ class AppRoutes {
 
   //forms
   static const String footballerForm = '/footballer-form';
-  static const String scoutClubForm = '/scout-club-form';
+  static const String agentForm = '/agent-form';
+  static const String clubForm = '/club-form';
   static const String fanForm = '/fan-form';
 
   //inapp
@@ -297,9 +299,16 @@ class AppRoutes {
       transition: Transition.fadeIn,
     ),
     GetPage(
-      name: scoutClubForm,
+      name: agentForm,
       page: () {
-        return const ScoutClubForm();
+        return const AgentProfileForm();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: clubForm,
+      page: () {
+        return const ClubProfileForm();
       },
       transition: Transition.fadeIn,
     ),

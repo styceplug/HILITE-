@@ -1,29 +1,28 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:get/get.dart';
-import 'package:hilite/controllers/auth_controller.dart';
-
+import '../../../controllers/auth_controller.dart';
 import '../../../utils/colors.dart';
 import '../../../utils/dimensions.dart';
-import '../../../utils/storage_helper.dart';
 import '../../../widgets/country_state_dropdown.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_textfield.dart';
 
-
-class AgentProfileForm extends StatefulWidget {
-  const AgentProfileForm({Key? key}) : super(key: key);
+class ClubProfileForm extends StatefulWidget {
+  const ClubProfileForm({Key? key}) : super(key: key);
 
   @override
-  State<AgentProfileForm> createState() => _AgentProfileFormState();
+  State<ClubProfileForm> createState() => _ClubProfileFormState();
 }
 
-class _AgentProfileFormState extends State<AgentProfileForm> {
+class _ClubProfileFormState extends State<ClubProfileForm> {
   final formKey = GlobalKey<FormState>();
 
   String? selectedCountry;
   String? selectedState;
+  String selectedClubType = '';
+  String headCoachOrManager = '';
+  int? selectedYear;
   bool isPasswordVisible = false;
   bool termsPolicy = false;
   Timer? debounceTimer;
@@ -36,9 +35,7 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController bioController = TextEditingController();
   final TextEditingController contactNumberController = TextEditingController();
-  final TextEditingController agencyNameController = TextEditingController();
-  final TextEditingController licenseController = TextEditingController();
-  final TextEditingController experienceController = TextEditingController();
+  final TextEditingController clubNameController = TextEditingController();
 
   @override
   void dispose() {
@@ -49,9 +46,7 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
     passwordController.dispose();
     bioController.dispose();
     contactNumberController.dispose();
-    agencyNameController.dispose();
-    licenseController.dispose();
-    experienceController.dispose();
+    clubNameController.dispose();
     super.dispose();
   }
 
@@ -68,25 +63,26 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
     authController.checkUsername(username);
   }
 
-  Map<String, dynamic> agentBody() => {
+  Map<String, dynamic> clubBody() => {
     "name": nameController.text,
     "username": usernameController.text,
     "email": emailController.text,
     "password": passwordController.text,
-    "role": "agent",
+    "role": "club",
     "country": selectedCountry,
     "state": selectedState,
     "number": contactNumberController.text,
-    "agencyName": agencyNameController.text,
-    "registrationId": licenseController.text,
-    "experience": experienceController.text,
-    "bio": bioController.text,
+    "clubName": clubNameController.text,
+    "yearFounded": selectedYear ?? 0,
+    "clubType": selectedClubType.toLowerCase(),
+    "manager": headCoachOrManager,
+    "bio": bioController.text
   };
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
+      backgroundColor: AppColors.white,
       body: SingleChildScrollView(
         child: Form(
           key: formKey,
@@ -159,21 +155,12 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
                       style: TextStyle(color: AppColors.grey5, fontSize: Dimensions.font13),
                     ),
                     SizedBox(height: Dimensions.height20),
+                    CustomTextField(labelText: "Club Name *", controller: clubNameController),
+                    SizedBox(height: Dimensions.height20),
                     CustomTextField(
                       labelText: "Contact Number *",
                       controller: contactNumberController,
                       keyboardType: TextInputType.phone,
-                    ),
-                    SizedBox(height: Dimensions.height20),
-                    CustomTextField(
-                      labelText: "Agency Name *",
-                      controller: agencyNameController,
-                    ),
-                    SizedBox(height: Dimensions.height20),
-                    CustomTextField(
-                      labelText: "License / Registration ID",
-                      controller: licenseController,
-                      keyboardType: TextInputType.number,
                     ),
                     SizedBox(height: Dimensions.height20),
                     CountryState(
@@ -188,17 +175,28 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
                       onStateChanged: (state) => setState(() => selectedState = state),
                     ),
                     SizedBox(height: Dimensions.height20),
-                    CustomTextField(
-                      labelText: "Experience / Players Represented",
-                      controller: experienceController,
+                    _buildBottomPickerField(
+                      title: "Head Coach or Manager *",
+                      value: headCoachOrManager,
+                      options: const ["Head Coach", "Manager"],
+                      onSelected: (value) => setState(() => headCoachOrManager = value),
                     ),
+                    SizedBox(height: Dimensions.height20),
+                    _buildBottomPickerField(
+                      title: "Club Type * (Academy or Amateur or Pro.)",
+                      value: selectedClubType,
+                      options: const ["Academy", "Amateur", "Professional"],
+                      onSelected: (value) => setState(() => selectedClubType = value),
+                    ),
+                    SizedBox(height: Dimensions.height20),
+                    _buildYearPicker(),
                     SizedBox(height: Dimensions.height20),
                     CustomTextField(
                       labelText: "Add Bio",
                       maxLines: 3,
                       controller: bioController,
                     ),
-                    SizedBox(height: Dimensions.height20),
+                    SizedBox(height: Dimensions.height30),
                     InkWell(
                       onTap: toggleTerms,
                       child: Row(
@@ -217,10 +215,10 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
                     ),
                     SizedBox(height: Dimensions.height30),
                     CustomButton(
-                      text: "Submit Agent Profile",
+                      text: "Submit Club Profile",
                       onPressed: () {
                         if (termsPolicy) {
-                          authController.registerOthers(agentBody());
+                          authController.registerOthers(clubBody());
                         }
                       },
                     ),
@@ -246,7 +244,7 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
             right: -Dimensions.width100,
             bottom: Dimensions.height20,
             child: Text(
-              'SCOUT',
+              'CLUB',
               style: TextStyle(
                 fontFamily: 'BebasNeue',
                 fontSize: Dimensions.font30 * 4,
@@ -266,7 +264,7 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
                   ),
                   const Spacer(),
                   Text(
-                    'AGENT PROFILE SETUP',
+                    'CLUB PROFILE SETUP',
                     style: TextStyle(
                       fontFamily: 'BebasNeue',
                       fontSize: Dimensions.font30 * 1.2,
@@ -276,7 +274,7 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
                   ),
                   SizedBox(height: Dimensions.height10),
                   Text(
-                    'Kindly fill in your required details below.',
+                    'Kindly fill in your football club details below.',
                     style: TextStyle(
                       fontSize: Dimensions.font15,
                       color: AppColors.white.withOpacity(0.9),
@@ -286,6 +284,134 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomPickerField({
+    required String title,
+    required String value,
+    required List<String> options,
+    required Function(String) onSelected,
+  }) {
+    return InkWell(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(Dimensions.radius20)),
+          ),
+          builder: (_) => _buildBottomPicker(
+            title: title,
+            options: options,
+            onSelected: (val) {
+              onSelected(val);
+              Navigator.pop(context);
+            },
+          ),
+        );
+      },
+      child: _buildPickerContainer(title: title, value: value),
+    );
+  }
+
+  Widget _buildYearPicker() {
+    final currentYear = DateTime.now().year;
+    final years = List.generate(200, (index) => currentYear - index);
+
+    return InkWell(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(Dimensions.radius20)),
+          ),
+          builder: (_) {
+            return SizedBox(
+              height: Dimensions.screenHeight / 2,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(Dimensions.width20),
+                    child: Text(
+                      'Select Year Founded',
+                      style: TextStyle(
+                        fontSize: Dimensions.font18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  const Divider(),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: years.length,
+                      itemBuilder: (context, index) {
+                        final year = years[index];
+                        return ListTile(
+                          title: Text(year.toString()),
+                          onTap: () {
+                            setState(() => selectedYear = year);
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+      child: _buildPickerContainer(
+        title: "Year Founded",
+        value: selectedYear != null ? selectedYear.toString() : '',
+      ),
+    );
+  }
+
+  Widget _buildPickerContainer({required String title, required String value}) {
+    return Container(
+      width: Dimensions.screenWidth,
+      padding: EdgeInsets.symmetric(horizontal: Dimensions.width10, vertical: Dimensions.height15),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.primary),
+        borderRadius: BorderRadius.circular(Dimensions.radius15),
+      ),
+      child: Text(
+        value.isEmpty ? title : value,
+        style: TextStyle(
+          color: value.isEmpty ? AppColors.black.withOpacity(0.5) : AppColors.black,
+          fontSize: Dimensions.font15,
+          fontFamily: 'Poppins',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomPicker({
+    required String title,
+    required List<String> options,
+    required Function(String) onSelected,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: Dimensions.width20, vertical: Dimensions.height20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontFamily: 'BebasNeue',
+              fontSize: Dimensions.font20,
+              color: AppColors.primary,
+            ),
+          ),
+          SizedBox(height: Dimensions.height10),
+          ...options.map((option) => ListTile(title: Text(option), onTap: () => onSelected(option))),
         ],
       ),
     );

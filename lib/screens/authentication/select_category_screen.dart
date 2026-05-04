@@ -22,33 +22,31 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
 
   AuthController authController = Get.find<AuthController>();
 
-
-
   @override
   void initState() {
     super.initState();
   }
 
-
-
-  Map<String, dynamic> body(String username, String password, String email,
-      String name, String bio) {
+  Map<String, dynamic> body(
+    String username,
+    String password,
+    String email,
+    String name,
+    String bio,
+  ) {
     return {
       "name": name,
       "username": username,
       "email": email,
       "password": password,
-      "bio": bio
+      "bio": bio,
     };
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: AppColors.backgroundColor,
       body: Container(
         child: Column(
           children: [
@@ -67,7 +65,7 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
                       style: TextStyle(
                         fontFamily: 'BebasNeue',
                         fontSize: Dimensions.font30 * 4,
-                        color: AppColors.white.withOpacity(0.1),
+                        color: AppColors.white.withOpacity(0),
                       ),
                     ),
                   ),
@@ -80,27 +78,24 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
                           horizontal: Dimensions.width20,
                           vertical: Dimensions.height50,
                         ),
-                        child: Text(
-                          'HILITE',
-                          style: TextStyle(
-                            fontFamily: 'BebasNeue',
-                            fontSize: Dimensions.font30,
-                            color: AppColors.white,
-                          ),
+                        child: Image.asset(
+                          AppConstants.getPngAsset('logo3'),
+                          height: Dimensions.height70,
                         ),
                       ),
-                      Spacer(),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: Dimensions.width20,
-                        ),
-                        child: Text(
-                          'SELECT HOW YOU WANT TO USE HILITE',
-                          style: TextStyle(
-                            fontFamily: 'BebasNeue',
-                            fontSize: Dimensions.font30*1.1,
-                            color: AppColors.white,
-                            height: 1.1,
+                      Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: Dimensions.width20,
+                          ),
+                          child: Text(
+                            'CHOOSE ACCOUNT TYPE',
+                            style: TextStyle(
+                              fontFamily: 'BebasNeue',
+                              fontSize: Dimensions.font30 * 1.1,
+                              color: AppColors.white,
+                              height: 1.1,
+                            ),
                           ),
                         ),
                       ),
@@ -124,49 +119,67 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
             ),
             SizedBox(height: Dimensions.height10),
 
-            RoleCard(
-              title: 'Players & Creators',
-              description:
-              'Showcase your talent, share highlights, and connect with agents, scouts, and clubs looking for the next big star.',
-              image: 'footballer-img',
-              isSelected: selectedRole == 'player',
-              onTap: () => setState(() => selectedRole = 'player'),
-            ),
-            RoleCard(
-              title: 'Scout & Clubs',
-              description:
-              'Discover top football talents, analyze player stats, and build professional connections with clubs and creators.',
-              image: 'scout-img',
-              isSelected: selectedRole == 'scout-club',
-              onTap: () => setState(() => selectedRole = 'scout-club'),
-            ),
-            RoleCard(
-              title: 'Fans',
-              description:
-              'Stay close to the game — follow players, watch highlights, and join the football community that never sleeps.',
-              image: 'fans-img',
-              isSelected: selectedRole == 'fan',
-              onTap: () => setState(() => selectedRole = 'fan'),
-            ),
-            Spacer(),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: Dimensions.width20,
-                vertical: Dimensions.height50,
-              ),
-              child: CustomButton(
-                text: 'Continue',
-                backgroundColor: AppColors.white,
-                onPressed: () {
-                  if (selectedRole == 'player') {
-                    Get.toNamed(AppRoutes.footballerForm);
-                  } else if (selectedRole == 'scout-club') {
-                    Get.toNamed(AppRoutes.scoutClubForm);
-                  } else if (selectedRole == 'fan') {
-                    Get.toNamed(AppRoutes.createAccountScreen);
-                  }
-                },
-                isDisabled: selectedRole.isEmpty,
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    RoleCard(
+                      title: 'Player',
+                      description:
+                          'Show your game, get discovered.',
+                      image: 'footballer-img',
+                      isSelected: selectedRole == 'player',
+                      onTap: () => setState(() => selectedRole = 'player'),
+                    ),
+                    RoleCard(
+                      title: 'Scout',
+                      description:
+                          'Find the next star',
+                      image: 'scout-img',
+                      isSelected: selectedRole == 'scout',
+                      onTap: () => setState(() => selectedRole = 'scout'),
+                    ),
+                    RoleCard(
+                      title: 'Team',
+                      description:
+                          'Showcase, build your legacy',
+                      image: 'team',
+                      isSelected: selectedRole == 'club',
+                      onTap: () => setState(() => selectedRole = 'club'),
+                    ),
+                    RoleCard(
+                      title: 'Fans',
+                      description:
+                          'Feel the game, support rising stars',
+                      image: 'fans',
+                      isSelected: selectedRole == 'fan',
+                      onTap: () => setState(() => selectedRole = 'fan'),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: Dimensions.width20,
+                        vertical: Dimensions.height50,
+                      ),
+                      child: CustomButton(
+                        text: 'Continue',
+                        textStyle: TextStyle(color: AppColors.black,fontWeight: FontWeight.w500),
+                        backgroundColor: AppColors.white,
+                        onPressed: () {
+                          if (selectedRole == 'player') {
+                            Get.toNamed(AppRoutes.footballerForm);
+                          } else if (selectedRole == 'scout') {
+                            Get.toNamed(AppRoutes.agentForm);
+                          } else if (selectedRole == 'club') {
+                            Get.toNamed(AppRoutes.clubForm);
+                          }else if (selectedRole == 'fan') {
+                            Get.toNamed(AppRoutes.createAccountScreen);
+                          }
+                        },
+                        isDisabled: selectedRole.isEmpty,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

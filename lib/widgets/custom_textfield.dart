@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hilite/utils/colors.dart';
 
 import '../utils/dimensions.dart';
 
@@ -51,8 +52,8 @@ class CustomTextField extends StatelessWidget {
         (isDark
             ? Colors.white10
             : const Color(0xFFDBD0C8).withValues(alpha: 0.1));
-    final Color borderColor = theme.dividerColor;
-    final Color focusColor = theme.colorScheme.primary.withValues(alpha: 0.6);
+    final Color borderColor = Colors.white;
+    final Color focusColor = Colors.white;
     final Color enabledBorderColor = theme.colorScheme.secondary;
 
     return TextFormField(
@@ -64,7 +65,10 @@ class CustomTextField extends StatelessWidget {
       maxLines: maxLines,
       autofillHints: autofillHints,
       keyboardType: keyboardType,
-      style: TextStyle(color: textColor, fontFamily: 'Poppins'),
+      style: TextStyle(
+        color: textColor ?? AppColors.textColor,
+        fontFamily: 'Poppins',
+      ),
       validator: validator,
       decoration: InputDecoration(
         filled: true,
@@ -79,25 +83,27 @@ class CustomTextField extends StatelessWidget {
         hintText: hintText,
         prefixIcon:
             prefixIcon != null
-                ? Icon(prefixIcon, color: textColor?.withValues(alpha: 0.6))
+                ? Icon(prefixIcon, color: textColor?.withValues(alpha: 0.6) ?? AppColors.textColor.withOpacity(0.6))
                 : null,
         suffixIcon: suffixIcon,
         hintStyle:
             hintStyle ??
             TextStyle(
-              color: textColor?.withValues(alpha: 0.5),
+              color:
+                  textColor?.withValues(alpha: 0.5) ??
+                  AppColors.textColor.withOpacity(0.6),
               fontFamily: 'Poppins',
             ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Dimensions.radius20),
+          borderRadius: BorderRadius.circular(Dimensions.radius10),
           borderSide: BorderSide(color: borderColor),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Dimensions.radius20),
+          borderRadius: BorderRadius.circular(Dimensions.radius10),
           borderSide: BorderSide(color: enabledBorderColor),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Dimensions.radius20),
+          borderRadius: BorderRadius.circular(Dimensions.radius10),
           borderSide: BorderSide(color: focusColor),
         ),
       ),

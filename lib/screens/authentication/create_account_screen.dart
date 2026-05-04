@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/auth_controller.dart';
 import 'package:hilite/widgets/snackbars.dart';
+import 'package:iconsax/iconsax.dart';
 
 import '../../routes/routes.dart';
+import '../../utils/app_constants.dart';
 import '../../utils/colors.dart';
 import '../../utils/dimensions.dart';
 import '../../utils/storage_helper.dart';
@@ -64,7 +66,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     final passwordValid = _validatePassword(password);
     if (!passwordValid) {
       CustomSnackBar.failure(
-        message: 'Password must be at least 8 chars, include 1 uppercase and 1 symbol',
+        message:
+            'Password must be at least 8 chars, include 1 uppercase and 1 symbol',
       );
       return;
     }
@@ -73,7 +76,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
     if (!authController.isUsernameAvailable.value) {
       CustomSnackBar.failure(
-        message: authController.usernameMessage.value ?? 'Username not available',
+        message:
+            authController.usernameMessage.value ?? 'Username not available',
       );
       return;
     }
@@ -86,12 +90,11 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         "email": email,
         "password": password,
         "bio": bio,
-        "role": "fan"
+        "role": "fan",
       };
 
       // 2. Pass the 'body' to the function
       authController.registerFan(body);
-
     } catch (e, s) {
       print(
         'Failed to save data locally. Try again. ${e.toString()}, ${s.toString()}',
@@ -124,7 +127,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -133,67 +135,47 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
               width: Dimensions.screenWidth,
               padding: EdgeInsets.symmetric(vertical: Dimensions.height20),
               color: AppColors.primary,
-              child: Stack(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Positioned(
-                    right: -Dimensions.width100 * 4,
-                    bottom: Dimensions.height20,
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: Dimensions.width20,
+                      vertical: Dimensions.height50,
+                    ),
+                    child: Image.asset(
+                      AppConstants.getPngAsset('logo3'),
+                      height: Dimensions.height70,
+                    ),
+                  ),
+                  Spacer(),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: Dimensions.width20,
+                    ),
                     child: Text(
-                      'CREATE ACCOUNT',
+                      'CREATE YOUR FAN ACCOUNT',
                       style: TextStyle(
                         fontFamily: 'BebasNeue',
-                        fontSize: Dimensions.font30 * 4,
-                        color: AppColors.white.withOpacity(0.1),
+                        fontSize: Dimensions.font30 * 1.2,
+                        color: AppColors.white,
+                        height: 1.1,
                       ),
                     ),
                   ),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: Dimensions.width20,
-                          vertical: Dimensions.height50,
-                        ),
-                        child: Text(
-                          'HILITE',
-                          style: TextStyle(
-                            fontFamily: 'BebasNeue',
-                            fontSize: Dimensions.font30,
-                            color: AppColors.white,
-                          ),
-                        ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: Dimensions.width20,
+                    ),
+                    child: Text(
+                      'Follow players, clubs, and enjoy the game',
+                      style: TextStyle(
+                        fontSize: Dimensions.font16,
+                        color: AppColors.white,
+                        height: 1.1,
                       ),
-                      Spacer(),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: Dimensions.width20,
-                        ),
-                        child: Text(
-                          'CREATE AN ACCOUNT TODAY!',
-                          style: TextStyle(
-                            fontFamily: 'BebasNeue',
-                            fontSize: Dimensions.font30 * 1.2,
-                            color: AppColors.white,
-                            height: 1.1,
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: Dimensions.width20,
-                        ),
-                        child: Text(
-                          'Get news,game updates highlights and more info on your favorite teams',
-                          style: TextStyle(
-                            fontSize: Dimensions.font16,
-                            color: AppColors.white,
-                            height: 1.1,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -207,11 +189,18 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  CustomTextField(hintText: 'Full Name *',controller: nameController,),
+                  CustomTextField(
+                    hintText: 'Full Name *',
+                    controller: nameController,
+                    prefixIcon: Iconsax.user,
+                    autofillHints: [AutofillHints.name],
+                  ),
                   SizedBox(height: Dimensions.height20),
                   CustomTextField(
                     hintText: 'Pick Username *',
                     controller: usernameController,
+                    prefixIcon: Iconsax.profile_circle,
+                    autofillHints: [AutofillHints.username],
                     onChanged: (value) {
                       if (value.trim().isNotEmpty) {
                         debounceTimer?.cancel();
@@ -270,18 +259,22 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                   CustomTextField(
                     hintText: 'Email Address *',
                     controller: emailController,
+                    prefixIcon: Icons.mail_outline,
                     autofillHints: [AutofillHints.email],
                     keyboardType: TextInputType.emailAddress,
                   ),
                   SizedBox(height: Dimensions.height20),
                   CustomTextField(
-                    labelText: "Add Bio",
+                    hintText: "Add Bio",
                     maxLines: 3,
                     controller: bioController,
+                    // prefixIcon: Icons.edit,
+                    keyboardType: TextInputType.text,
                   ),
                   SizedBox(height: Dimensions.height20),
                   CustomTextField(
                     hintText: 'Password',
+                    prefixIcon: Icons.lock_outline,
                     maxLines: 1,
                     controller: passwordController,
                     obscureText: isPasswordVisible,

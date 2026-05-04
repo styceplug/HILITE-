@@ -4,9 +4,16 @@ import 'package:flutter/material.dart';
 
 class AppColors {
 
+  //MOD
+  static const Color buttonColor = Color(0xFF175BBC);
+  static const Color textColor = Color(0xFFD6D9E0);
+  static const Color backgroundColor = Color(0xFF030A1B);
+
+
   // ===== Primary Branding =====
+
   static const Color primary = Color(0xFF0B1F33);
-  static const Color secondary = Color(0xFFFFFFFF); // White
+  static const Color secondary = Color(0xFFFFFFFF);
 
   // ===== Accent & Background =====
   static const Color accent = Color(0xFFF2F4F7); // Light gray for contrast/background
