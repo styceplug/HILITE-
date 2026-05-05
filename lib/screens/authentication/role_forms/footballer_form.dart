@@ -1,8 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/auth_controller.dart';
+import 'package:hilite/utils/app_constants.dart';
+import 'package:hilite/widgets/custom_appbar.dart';
 import 'package:intl/intl.dart';
 
 import '../../../routes/routes.dart';
@@ -12,6 +15,7 @@ import '../../../utils/storage_helper.dart';
 import '../../../widgets/country_state_dropdown.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_textfield.dart';
+import '../../../widgets/snackbars.dart';
 
 class FootballerForm extends StatefulWidget {
   const FootballerForm({super.key});
@@ -63,7 +67,7 @@ class _FootballerFormState extends State<FootballerForm> {
   }
 
   void checkUsername() {
-    final username = usernameController.text.trim();
+    final username = usernameController.text.trim().toLowerCase();
     authController.checkUsername(username);
   }
 
@@ -73,12 +77,12 @@ class _FootballerFormState extends State<FootballerForm> {
   }
 
   Map<String, dynamic> body() {
-    int? height = int.tryParse(
-      heightController.text.replaceAll(RegExp(r'[^0-9]'), ''),
-    );
-    int? weight = int.tryParse(
-      weightController.text.replaceAll(RegExp(r'[^0-9]'), ''),
-    );
+    // int? height = int.tryParse(
+    //   heightController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+    // );
+    // int? weight = int.tryParse(
+    //   weightController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+    // );
 
     return {
       "name": nameController.text.trim(),
@@ -86,39 +90,20 @@ class _FootballerFormState extends State<FootballerForm> {
       "email": emailController.text.trim(),
       "password": passwordController.text.trim(),
       "role": "player",
-      "country": selectedCountry,
-      "state": selectedState,
-      "dob": dobController.text,
-      "number": contactController.text,
+      // "country": selectedCountry,
+      // "state": selectedState,
+      // "dob": dobController.text,
+      // "number": contactController.text,
       "position": positionController.text,
       "preferredFoot": footController.text.toLowerCase(),
-      "currentClub": clubController.text,
-      "height": height ?? 0, // default to 0 if parsing fails
-      "weight": weight ?? 0, // default to 0 if parsing fails
-      "bio": bioController.text,
+      // "currentClub": clubController.text,
+      // "height": height ?? 0, // default to 0 if parsing fails
+      // "weight": weight ?? 0, // default to 0 if parsing fails
+      // "bio": bioController.text,
     };
   }
 
-  /// Date Picker for DOB
-  Future<void> _pickDate() async {
-    final DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime(2000),
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
-      builder:
-          (context, child) =>
-          Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: ColorScheme.light(primary: AppColors.primary),
-            ),
-            child: child!,
-          ),
-    );
-    if (pickedDate != null) {
-      dobController.text = DateFormat('yyyy-MM-dd').format(pickedDate);
-    }
-  }
+
 
   /// Bottom modal picker
   void _showBottomPicker({
@@ -132,8 +117,7 @@ class _FootballerFormState extends State<FootballerForm> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder:
-          (context) =>
-          _buildBottomPicker(
+          (context) => _buildBottomPicker(
             title: title,
             options: options,
             onSelected: (value) {
@@ -144,7 +128,11 @@ class _FootballerFormState extends State<FootballerForm> {
     );
   }
 
-  Widget _buildPickerContainer({required String title, required String value}) {
+  Widget _buildPickerContainer({
+    required String title,
+    required String value,
+    required String image,
+  }) {
     return Container(
       width: Dimensions.screenWidth,
       padding: EdgeInsets.symmetric(
@@ -152,19 +140,32 @@ class _FootballerFormState extends State<FootballerForm> {
         vertical: Dimensions.height15,
       ),
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.primary),
-        borderRadius: BorderRadius.circular(Dimensions.radius15),
+        border: Border.all(color: AppColors.textColor.withOpacity(0.4)),
+        borderRadius: BorderRadius.circular(Dimensions.radius10),
+        color: AppColors.white.withOpacity(0.1)
       ),
-      child: Text(
-        value.isEmpty ? title : value,
-        style: TextStyle(
-          color:
-          value.isEmpty
-              ? AppColors.black.withOpacity(0.5)
-              : AppColors.black,
-          fontSize: Dimensions.font15,
-          fontFamily: 'Poppins',
-        ),
+      child: Row(
+        children: [
+          Image.asset(
+            AppConstants.getPngAsset(image),
+            height: Dimensions.iconSize30,
+          ),
+          SizedBox(width: Dimensions.width15),
+          Text(
+            value.isEmpty ? title : value,
+            style: TextStyle(
+              color:
+                  value.isEmpty
+                      ? AppColors.textColor.withOpacity(0.5)
+                      : AppColors.textColor,
+              fontSize: Dimensions.font18,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Poppins',
+            ),
+          ),
+          Spacer(),
+          Icon(Icons.arrow_drop_down,color: AppColors.textColor,)
+        ],
       ),
     );
   }
@@ -194,11 +195,10 @@ class _FootballerFormState extends State<FootballerForm> {
             ),
             SizedBox(height: Dimensions.height10),
             ...options.map(
-                  (option) =>
-                  ListTile(
-                    title: Text(option),
-                    onTap: () => onSelected(option),
-                  ),
+              (option) => ListTile(
+                title: Text(option),
+                onTap: () => onSelected(option),
+              ),
             ),
           ],
         ),
@@ -209,61 +209,38 @@ class _FootballerFormState extends State<FootballerForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: CustomAppbar(
+        backgroundColor: Color(0xFF030A1B),
+        leadingIcon: BackButton(color: AppColors.white),
+      ),
       body: SingleChildScrollView(
         child: Form(
           key: formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // HEADER
-              Container(
-                height: Dimensions.screenHeight / 3,
-                width: Dimensions.screenWidth,
-                color: AppColors.primary,
-                child: Stack(
-                  children: [
-                    Positioned(
-                      right: -Dimensions.width100 * 2,
-                      bottom: Dimensions.height20,
-                      child: Text(
-                        'PLAYER PROFILE',
-                        style: TextStyle(
-                          fontFamily: 'BebasNeue',
-                          fontSize: Dimensions.font30 * 4,
-                          color: AppColors.white.withOpacity(0.1),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: Dimensions.width20,
-                        vertical: Dimensions.height50,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'HILITE',
-                            style: TextStyle(
-                              fontFamily: 'BebasNeue',
-                              fontSize: Dimensions.font30,
-                              color: AppColors.white,
-                            ),
-                          ),
-                          SizedBox(height: Dimensions.height10),
-                          Text(
-                            'PLAYER PROFILE SETUP',
-                            style: TextStyle(
-                              fontFamily: 'BebasNeue',
-                              fontSize: Dimensions.font30 * 1.2,
-                              color: AppColors.white,
-                              height: 1.1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              Image.asset(
+                AppConstants.getPngAsset('logo3'),
+                height: Dimensions.height70,
+              ),
+              SizedBox(height: Dimensions.height20),
+
+              Text(
+                'Create your Player account',
+                style: TextStyle(
+                  fontSize: Dimensions.font23,
+                  color: AppColors.textColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: Dimensions.height5),
+
+              Text(
+                'Follow scouted and show off your talent.',
+                style: TextStyle(
+                  fontSize: Dimensions.font16,
+                  color: AppColors.textColor.withOpacity(0.8),
+                  fontWeight: FontWeight.w400,
                 ),
               ),
 
@@ -276,21 +253,22 @@ class _FootballerFormState extends State<FootballerForm> {
                 child: Column(
                   children: [
                     CustomTextField(
-                      hintText: 'Full Name *',
+                      hintText: 'Full Name',
                       controller: nameController,
+                      prefixIcon: CupertinoIcons.person_crop_circle,
+                      autofillHints: [AutofillHints.name],
                     ),
                     SizedBox(height: Dimensions.height20),
                     CustomTextField(
-                      hintText: 'Pick Username *',
+                      hintText: 'Username',
+                      prefixIcon: Icons.person_pin,
                       controller: usernameController,
                       onChanged: (value) {
-                        if (value
-                            .trim()
-                            .isNotEmpty) {
+                        if (value.trim().isNotEmpty) {
                           debounceTimer?.cancel();
                           debounceTimer = Timer(
                             const Duration(milliseconds: 600),
-                                () {
+                            () {
                               checkUsername();
                             },
                           );
@@ -314,9 +292,9 @@ class _FootballerFormState extends State<FootballerForm> {
                                 ? Icons.check_circle
                                 : Icons.error,
                             color:
-                            authController.isUsernameAvailable.value
-                                ? Colors.green
-                                : Colors.red,
+                                authController.isUsernameAvailable.value
+                                    ? Colors.green
+                                    : Colors.red,
                             size: Dimensions.iconSize16,
                           );
                         }
@@ -324,45 +302,36 @@ class _FootballerFormState extends State<FootballerForm> {
                       }),
                     ),
                     SizedBox(height: Dimensions.height5),
-                    Obx(
-                          () =>
-                      authController.usernameMessage.value.isNotEmpty
-                          ? Text(
-                        authController.usernameMessage.value,
-                        style: TextStyle(
-                          color:
-                          authController.isUsernameAvailable.value
-                              ? Colors.green
-                              : Colors.red,
-                          fontSize: Dimensions.font12,
-                        ),
-                      )
-                          : const SizedBox.shrink(),
-                    ),
-                    SizedBox(height: Dimensions.height20),
-
-                    GestureDetector(
-                      onTap: _pickDate,
-                      child: AbsorbPointer(
-                        child: CustomTextField(
-                          labelText: "Date of Birth (YYYY-MM-DD) *",
-                          controller: dobController,
-                        ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Obx(
+                        () =>
+                            authController.usernameMessage.value.isNotEmpty
+                                ? Text(
+                                  authController.usernameMessage.value,
+                                  style: TextStyle(
+                                    color:
+                                        authController.isUsernameAvailable.value
+                                            ? Colors.green
+                                            : Colors.red,
+                                    fontSize: Dimensions.font12,
+                                  ),
+                                )
+                                : const SizedBox.shrink(),
                       ),
                     ),
                     SizedBox(height: Dimensions.height20),
-
                     CustomTextField(
-                      labelText: "Contact Number *",
-                      controller: contactController,
-                      keyboardType: TextInputType.phone,
+                      hintText: 'Email',
+                      prefixIcon: Icons.mail,
+                      controller: emailController,
+                      autofillHints: [AutofillHints.email],
+                      keyboardType: TextInputType.emailAddress,
                     ),
                     SizedBox(height: Dimensions.height20),
-
                     GestureDetector(
                       onTap:
-                          () =>
-                          _showBottomPicker(
+                          () => _showBottomPicker(
                             title: "Select Playing Position ",
                             options: [
                               'GK', // Goalkeeper
@@ -383,16 +352,16 @@ class _FootballerFormState extends State<FootballerForm> {
                             },
                           ),
                       child: _buildPickerContainer(
-                        title: "Playing Position *",
+                        title: "Position",
                         value: positionController.text,
+                        image: 'jersey',
                       ),
                     ),
                     SizedBox(height: Dimensions.height20),
 
                     GestureDetector(
                       onTap:
-                          () =>
-                          _showBottomPicker(
+                          () => _showBottomPicker(
                             title: "Preferred Foot",
                             options: ['Left', 'Right', 'Both'],
                             onSelected: (val) {
@@ -402,75 +371,18 @@ class _FootballerFormState extends State<FootballerForm> {
                             },
                           ),
                       child: _buildPickerContainer(
-                        title: "Preferred Foot *",
+                        title: "Preferred Foot",
                         value: footController.text,
+                        image: 'cleats',
                       ),
                     ),
                     SizedBox(height: Dimensions.height20),
 
                     CustomTextField(
-                      labelText: "Current Club Name / Free Agent",
-                      controller: clubController,
-                    ),
-                    SizedBox(height: Dimensions.height20),
-
-                    Row(
-                      children: [
-
-                        Expanded(
-                          child: CustomTextField(
-                            hintText: 'Height in ft',
-                            controller: heightController,
-                            keyboardType: TextInputType.numberWithOptions(),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: CustomTextField(hintText: 'Weight in Kg',
-                            controller: weightController,
-                            keyboardType: TextInputType.numberWithOptions(),),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: Dimensions.height20),
-
-                    CountryState(
-                      selectedCountry: selectedCountry,
-                      selectedState: selectedState,
-                      onCountryChanged: (country) {
-                        setState(() {
-                          selectedCountry = country;
-                          selectedState = null;
-                        });
-                      },
-                      onStateChanged: (state) {
-                        setState(() {
-                          selectedState = state;
-                        });
-                      },
-                    ),
-
-                    SizedBox(height: Dimensions.height20),
-                    CustomTextField(
-                      labelText: "Player Bio / Description",
-                      controller: bioController,
-                      maxLines: 4,
-                    ),
-                    SizedBox(height: Dimensions.height20),
-
-                    CustomTextField(
-                      hintText: 'Email Address *',
-                      controller: emailController,
-                      autofillHints: [AutofillHints.email],
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-
-                    SizedBox(height: Dimensions.height20),
-                    CustomTextField(
                       hintText: 'Password',
                       maxLines: 1,
                       controller: passwordController,
-                      obscureText: isPasswordVisible,
+                      obscureText: !isPasswordVisible,
                       suffixIcon: InkWell(
                         onTap: () {
                           togglePass();
@@ -483,15 +395,7 @@ class _FootballerFormState extends State<FootballerForm> {
                         ),
                       ),
                     ),
-                    SizedBox(height: Dimensions.height20),
-                    Text(
-                      'Password must be at least 8 character long and include 1 capital letter and 1 symbol',
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                        color: AppColors.grey5,
-                        fontSize: Dimensions.font13,
-                      ),
-                    ),
+
                     SizedBox(height: Dimensions.height20),
                     InkWell(
                       onTap: () {
@@ -502,15 +406,16 @@ class _FootballerFormState extends State<FootballerForm> {
                         children: [
                           Icon(
                             termsPolicy
-                                ? Icons.check_box_outlined
-                                : Icons.check_box_outline_blank,
-                            color: AppColors.grey5,
+                                ? Icons.toggle_on
+                                : Icons.toggle_off,
+                            color: AppColors.buttonColor,
+                            size: Dimensions.iconSize30*2,
                           ),
                           SizedBox(width: Dimensions.width5),
                           Text(
-                            'I agree to  the Terms and Privacy Policy',
+                            'I am 13 years or older',
                             style: TextStyle(
-                              color: AppColors.grey5,
+                              color: AppColors.white,
                               fontSize: Dimensions.font13,
                             ),
                           ),
@@ -518,10 +423,25 @@ class _FootballerFormState extends State<FootballerForm> {
                       ),
                     ),
                     SizedBox(height: Dimensions.height20),
+                    Text(
+                      'By signing up, you agree to our Terms of Service and Privacy Policy',
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
+                        color: AppColors.textColor,
+                        fontSize: Dimensions.font13,
+                      ),
+                    ),
+                    SizedBox(height: Dimensions.height20),
+
+
 
                     CustomButton(
                       text: "Submit Player Profile",
                       onPressed: () {
+                        if (!termsPolicy) {
+                          CustomSnackBar.failure(message: "You must confirm you are 13 or older.");
+                          return;
+                        }
                         if (formKey.currentState!.validate()) {
                           authController.registerOthers(body());
                         }
@@ -538,3 +458,103 @@ class _FootballerFormState extends State<FootballerForm> {
     );
   }
 }
+
+
+
+
+
+
+//DOB
+
+/*/// Date Picker for DOB
+Future<void> _pickDate() async {
+  final DateTime? pickedDate = await showDatePicker(
+    context: context,
+    initialDate: DateTime(2000),
+    firstDate: DateTime(1950),
+    lastDate: DateTime.now(),
+    builder:
+        (context, child) => Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: ColorScheme.light(primary: AppColors.primary),
+      ),
+      child: child!,
+    ),
+  );
+  if (pickedDate != null) {
+    dobController.text = DateFormat('yyyy-MM-dd').format(pickedDate);
+  }
+}*/
+/*GestureDetector(
+                      onTap: _pickDate,
+                      child: AbsorbPointer(
+                        child: CustomTextField(
+                          labelText: "Date of Birth (YYYY-MM-DD) *",
+                          controller: dobController,
+                        ),
+                      ),
+                    ),*/
+
+//NUMBER
+/*CustomTextField(
+                      labelText: "Contact Number *",
+                      controller: contactController,
+                      keyboardType: TextInputType.phone,
+                    ),*/
+
+//CLUB
+/*  CustomTextField(
+                      labelText: "Current Club Name / Free Agent",
+                      controller: clubController,
+                    ),
+                    SizedBox(height: Dimensions.height20),*/
+
+//HEIGHT & WEIGHT
+/* Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(
+                            hintText: 'Height in ft',
+                            controller: heightController,
+                            keyboardType: TextInputType.numberWithOptions(),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: CustomTextField(
+                            hintText: 'Weight in Kg',
+                            controller: weightController,
+                            keyboardType: TextInputType.numberWithOptions(),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: Dimensions.height20),*/
+
+//COUNTRY STATE
+/* CountryState(
+                      selectedCountry: selectedCountry,
+                      selectedState: selectedState,
+                      onCountryChanged: (country) {
+                        setState(() {
+                          selectedCountry = country;
+                          selectedState = null;
+                        });
+                      },
+                      onStateChanged: (state) {
+                        setState(() {
+                          selectedState = state;
+                        });
+                      },
+                    ),
+
+                    SizedBox(height: Dimensions.height20),*/
+
+//BIO
+/*CustomTextField(
+                      labelText: "Player Bio / Description",
+                      controller: bioController,
+                      maxLines: 4,
+                    ),
+
+                    SizedBox(height: Dimensions.height20),*/

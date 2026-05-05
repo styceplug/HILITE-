@@ -25,6 +25,7 @@ class AuthRepo {
   }
 
   Future<Response> registerOthers(Map<String, dynamic> body) async {
+    print(body);
     return await apiClient.postData(AppConstants.POST_REGISTER_OTHERS, body);
   }
 

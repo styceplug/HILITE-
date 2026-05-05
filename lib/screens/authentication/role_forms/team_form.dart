@@ -1,12 +1,16 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:get/get.dart';
 import '../../../controllers/auth_controller.dart';
+import '../../../utils/app_constants.dart';
 import '../../../utils/colors.dart';
 import '../../../utils/dimensions.dart';
-import '../../../widgets/country_state_dropdown.dart';
+import '../../../widgets/custom_appbar.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_textfield.dart';
+import '../../../widgets/snackbars.dart';
+
 
 class ClubProfileForm extends StatefulWidget {
   const ClubProfileForm({Key? key}) : super(key: key);
@@ -18,11 +22,7 @@ class ClubProfileForm extends StatefulWidget {
 class _ClubProfileFormState extends State<ClubProfileForm> {
   final formKey = GlobalKey<FormState>();
 
-  String? selectedCountry;
-  String? selectedState;
-  String selectedClubType = '';
-  String headCoachOrManager = '';
-  int? selectedYear;
+  String? selectedClubType;
   bool isPasswordVisible = false;
   bool termsPolicy = false;
   Timer? debounceTimer;
@@ -33,9 +33,13 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController bioController = TextEditingController();
-  final TextEditingController contactNumberController = TextEditingController();
   final TextEditingController clubNameController = TextEditingController();
+
+  final List<Map<String, String>> clubTypeOptions = [
+    {"title": "Academy", "image": "jersey"}, // Replace 'jersey' with actual png name
+    {"title": "Amateur", "image": "cleats"}, // Replace 'cleats' with actual png name
+    {"title": "Professional", "image": "logo3"}, // Replace 'logo3' with actual png name
+  ];
 
   @override
   void dispose() {
@@ -44,8 +48,6 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
     usernameController.dispose();
     emailController.dispose();
     passwordController.dispose();
-    bioController.dispose();
-    contactNumberController.dispose();
     clubNameController.dispose();
     super.dispose();
   }
@@ -64,160 +66,214 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
   }
 
   Map<String, dynamic> clubBody() => {
-    "name": nameController.text,
-    "username": usernameController.text,
-    "email": emailController.text,
+    "username": clubNameController.text.trim().toLowerCase(),
+    "email": emailController.text.trim(),
     "password": passwordController.text,
     "role": "club",
-    "country": selectedCountry,
-    "state": selectedState,
-    "number": contactNumberController.text,
-    "clubName": clubNameController.text,
-    "yearFounded": selectedYear ?? 0,
-    "clubType": selectedClubType.toLowerCase(),
-    "manager": headCoachOrManager,
-    "bio": bioController.text
+    "clubName": clubNameController.text.trim(),
+    "clubType": selectedClubType?.toLowerCase(),
   };
+
+  // --- NEW FULL SCREEN PICKER LOGIC ---
+  void _openFullScreenClubPicker() {
+    // Hide keyboard before navigating
+    FocusScope.of(context).unfocus();
+
+    Get.to(
+          () => Scaffold(
+        backgroundColor: const Color(0xFF030A1B), // Match your dark theme
+        appBar: CustomAppbar(
+          title: 'Select Club Type',
+          backgroundColor: const Color(0xFF030A1B),
+          leadingIcon: const BackButton(color: Colors.white),
+        ),
+        body: ListView.builder(
+          padding: EdgeInsets.all(Dimensions.width20),
+          itemCount: clubTypeOptions.length,
+          itemBuilder: (context, index) {
+            final item = clubTypeOptions[index];
+            final isSelected = selectedClubType == item['title'];
+
+            return GestureDetector(
+              onTap: () {
+                setState(() => selectedClubType = item['title']);
+                Get.back(); // Return to form after selecting
+              },
+              child: Container(
+                margin: EdgeInsets.only(bottom: Dimensions.height15),
+                padding: EdgeInsets.all(Dimensions.width15),
+                decoration: BoxDecoration(
+                  color: AppColors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(Dimensions.radius10),
+                  border: Border.all(
+                    color: isSelected ? AppColors.buttonColor : Colors.transparent,
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Image.asset(
+                      AppConstants.getPngAsset(item['image']!),
+                      height: Dimensions.iconSize30 * 1.2,
+                    ),
+                    SizedBox(width: Dimensions.width15),
+                    Text(
+                      item['title']!,
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontSize: Dimensions.font18,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    const Spacer(),
+                    if (isSelected)
+                      Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.buttonColor,
+                        size: Dimensions.iconSize24,
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      transition: Transition.rightToLeft, // Smooth slide animation
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: const Color(0xFF030A1B), // Assuming dark mode background
+      appBar: CustomAppbar(
+        backgroundColor: const Color(0xFF030A1B),
+        leadingIcon: BackButton(color: AppColors.white),
+      ),
       body: SingleChildScrollView(
         child: Form(
           key: formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _buildHeader(),
+              Image.asset(
+                AppConstants.getPngAsset('logo3'),
+                height: Dimensions.height70,
+              ),
+              SizedBox(height: Dimensions.height20),
+
+              Text(
+                'Create your team account',
+                style: TextStyle(
+                  fontSize: Dimensions.font23,
+                  color: AppColors.textColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: Dimensions.height5),
+
+              Text(
+                'Follow players and manage your club',
+                style: TextStyle(
+                  fontSize: Dimensions.font16,
+                  color: AppColors.textColor.withOpacity(0.8),
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
               Padding(
                 padding: EdgeInsets.all(Dimensions.width20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CustomTextField(
-                      hintText: 'Pick Username *',
-                      controller: usernameController,
-                      onChanged: (value) {
-                        if (value.trim().isNotEmpty) {
-                          debounceTimer?.cancel();
-                          debounceTimer = Timer(const Duration(milliseconds: 600), checkUsername);
-                        }
-                      },
-                      suffixIcon: Obx(() {
-                        if (authController.isCheckingUsername.value) {
-                          return Container(
-                            padding: EdgeInsets.all(Dimensions.width10),
-                            child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 4),
-                          );
-                        } else if (authController.usernameMessage.isNotEmpty) {
-                          return Icon(
-                            authController.isUsernameAvailable.value ? Icons.check_circle : Icons.error,
-                            color: authController.isUsernameAvailable.value ? Colors.green : Colors.red,
-                            size: Dimensions.iconSize16,
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      }),
+                      labelText: "Club Name",
+                      controller: clubNameController,
+                      prefixIcon: CupertinoIcons.person_circle_fill,
+                      autofillHints: const [AutofillHints.name],
                     ),
-                    SizedBox(height: Dimensions.height5),
-                    Obx(() => authController.usernameMessage.value.isNotEmpty
-                        ? Text(
-                      authController.usernameMessage.value,
-                      style: TextStyle(
-                        color: authController.isUsernameAvailable.value ? Colors.green : Colors.red,
-                        fontSize: Dimensions.font12,
-                      ),
-                    )
-                        : const SizedBox.shrink()),
                     SizedBox(height: Dimensions.height20),
+
                     CustomTextField(
-                      hintText: 'Email Address *',
+                      hintText: 'Email',
+                      prefixIcon: Icons.mail,
                       controller: emailController,
                       autofillHints: const [AutofillHints.email],
                       keyboardType: TextInputType.emailAddress,
                     ),
                     SizedBox(height: Dimensions.height20),
+
                     CustomTextField(
                       hintText: 'Password',
+                      prefixIcon: Icons.lock,
                       maxLines: 1,
                       controller: passwordController,
                       obscureText: !isPasswordVisible,
                       suffixIcon: InkWell(
                         onTap: togglePass,
-                        child: Icon(!isPasswordVisible ? Icons.visibility_off : Icons.visibility),
+                        child: Icon(
+                          !isPasswordVisible
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
                       ),
                     ),
                     SizedBox(height: Dimensions.height20),
-                    Text(
-                      'Password must be at least 8 character long and include 1 capital letter and 1 symbol',
-                      textAlign: TextAlign.left,
-                      style: TextStyle(color: AppColors.grey5, fontSize: Dimensions.font13),
+
+                    // --- FULL SCREEN PICKER TRIGGER ---
+                    GestureDetector(
+                      onTap: _openFullScreenClubPicker,
+                      child: _buildPickerContainer(
+                        title: "Club Type",
+                        value: selectedClubType ?? '', // Safe null fallback
+                        image: 'jersey',
+                      ),
                     ),
+
                     SizedBox(height: Dimensions.height20),
-                    CustomTextField(labelText: "Club Name *", controller: clubNameController),
-                    SizedBox(height: Dimensions.height20),
-                    CustomTextField(
-                      labelText: "Contact Number *",
-                      controller: contactNumberController,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    SizedBox(height: Dimensions.height20),
-                    CountryState(
-                      selectedCountry: selectedCountry,
-                      selectedState: selectedState,
-                      onCountryChanged: (country) {
-                        setState(() {
-                          selectedCountry = country;
-                          selectedState = null;
-                        });
-                      },
-                      onStateChanged: (state) => setState(() => selectedState = state),
-                    ),
-                    SizedBox(height: Dimensions.height20),
-                    _buildBottomPickerField(
-                      title: "Head Coach or Manager *",
-                      value: headCoachOrManager,
-                      options: const ["Head Coach", "Manager"],
-                      onSelected: (value) => setState(() => headCoachOrManager = value),
-                    ),
-                    SizedBox(height: Dimensions.height20),
-                    _buildBottomPickerField(
-                      title: "Club Type * (Academy or Amateur or Pro.)",
-                      value: selectedClubType,
-                      options: const ["Academy", "Amateur", "Professional"],
-                      onSelected: (value) => setState(() => selectedClubType = value),
-                    ),
-                    SizedBox(height: Dimensions.height20),
-                    _buildYearPicker(),
-                    SizedBox(height: Dimensions.height20),
-                    CustomTextField(
-                      labelText: "Add Bio",
-                      maxLines: 3,
-                      controller: bioController,
-                    ),
-                    SizedBox(height: Dimensions.height30),
                     InkWell(
                       onTap: toggleTerms,
                       child: Row(
                         children: [
                           Icon(
-                            termsPolicy ? Icons.check_box_outlined : Icons.check_box_outline_blank,
-                            color: AppColors.grey5,
+                            termsPolicy ? Icons.toggle_on : Icons.toggle_off,
+                            color: AppColors.buttonColor,
+                            size: Dimensions.iconSize30 * 2,
                           ),
                           SizedBox(width: Dimensions.width5),
                           Text(
-                            'I agree to the Terms and Privacy Policy',
-                            style: TextStyle(color: AppColors.grey5, fontSize: Dimensions.font13),
+                            'I am 13 years or older',
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: Dimensions.font13,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(height: Dimensions.height30),
+                    SizedBox(height: Dimensions.height20),
+                    Text(
+                      'By signing up, you agree to our Terms of Service and Privacy Policy',
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
+                        color: AppColors.textColor,
+                        fontSize: Dimensions.font13,
+                      ),
+                    ),
+                    SizedBox(height: Dimensions.height20),
                     CustomButton(
                       text: "Submit Club Profile",
                       onPressed: () {
-                        if (termsPolicy) {
+                        if (!termsPolicy) {
+                          CustomSnackBar.failure(message: 'You must confirm you are 13 or older.');
+                          return;
+                        }
+                        if (selectedClubType == null) {
+                          CustomSnackBar.failure(message: 'Please select a Club Type.');
+                          return;
+                        }
+                        if (formKey.currentState!.validate()) {
                           authController.registerOthers(clubBody());
                         }
                       },
@@ -233,90 +289,45 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildPickerContainer({required String title, required String value, required String image}) {
     return Container(
-      height: Dimensions.screenHeight / 3.5,
       width: Dimensions.screenWidth,
-      color: AppColors.primary,
-      child: Stack(
+      padding: EdgeInsets.symmetric(
+        horizontal: Dimensions.width10,
+        vertical: Dimensions.height15,
+      ),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.textColor.withOpacity(0.4)),
+        borderRadius: BorderRadius.circular(Dimensions.radius10),
+        color: AppColors.white.withOpacity(0.1),
+      ),
+      child: Row(
         children: [
-          Positioned(
-            right: -Dimensions.width100,
-            bottom: Dimensions.height20,
-            child: Text(
-              'CLUB',
-              style: TextStyle(
-                fontFamily: 'BebasNeue',
-                fontSize: Dimensions.font30 * 4,
-                color: AppColors.white.withOpacity(0.08),
-              ),
+          Image.asset(
+            AppConstants.getPngAsset(image),
+            height: Dimensions.iconSize30,
+          ),
+          SizedBox(width: Dimensions.width15),
+          Text(
+            value.isEmpty ? title : value,
+            style: TextStyle(
+              color: value.isEmpty
+                  ? AppColors.textColor.withOpacity(0.5)
+                  : AppColors.textColor,
+              fontSize: Dimensions.font18,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Poppins',
             ),
           ),
-          SafeArea(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: Dimensions.width20, vertical: Dimensions.height20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  InkWell(
-                    onTap: () => Get.back(),
-                    child: Icon(Icons.arrow_back_ios_new, color: AppColors.white),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'CLUB PROFILE SETUP',
-                    style: TextStyle(
-                      fontFamily: 'BebasNeue',
-                      fontSize: Dimensions.font30 * 1.2,
-                      color: AppColors.white,
-                      height: 1.1,
-                    ),
-                  ),
-                  SizedBox(height: Dimensions.height10),
-                  Text(
-                    'Kindly fill in your football club details below.',
-                    style: TextStyle(
-                      fontSize: Dimensions.font15,
-                      color: AppColors.white.withOpacity(0.9),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          const Spacer(),
+          Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textColor, size: Dimensions.iconSize16),
         ],
       ),
     );
   }
+}
 
-  Widget _buildBottomPickerField({
-    required String title,
-    required String value,
-    required List<String> options,
-    required Function(String) onSelected,
-  }) {
-    return InkWell(
-      onTap: () {
-        showModalBottomSheet(
-          context: context,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(Dimensions.radius20)),
-          ),
-          builder: (_) => _buildBottomPicker(
-            title: title,
-            options: options,
-            onSelected: (val) {
-              onSelected(val);
-              Navigator.pop(context);
-            },
-          ),
-        );
-      },
-      child: _buildPickerContainer(title: title, value: value),
-    );
-  }
-
-  Widget _buildYearPicker() {
+/*  Widget _buildYearPicker() {
     final currentYear = DateTime.now().year;
     final years = List.generate(200, (index) => currentYear - index);
 
@@ -370,50 +381,78 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
         value: selectedYear != null ? selectedYear.toString() : '',
       ),
     );
-  }
+  }*/
 
-  Widget _buildPickerContainer({required String title, required String value}) {
-    return Container(
-      width: Dimensions.screenWidth,
-      padding: EdgeInsets.symmetric(horizontal: Dimensions.width10, vertical: Dimensions.height15),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.primary),
-        borderRadius: BorderRadius.circular(Dimensions.radius15),
-      ),
-      child: Text(
-        value.isEmpty ? title : value,
-        style: TextStyle(
-          color: value.isEmpty ? AppColors.black.withOpacity(0.5) : AppColors.black,
-          fontSize: Dimensions.font15,
-          fontFamily: 'Poppins',
-        ),
-      ),
-    );
-  }
+//USERNAME
+/*CustomTextField(
+                      hintText: 'Pick Username *',
+                      controller: usernameController,
+                      onChanged: (value) {
+                        if (value.trim().isNotEmpty) {
+                          debounceTimer?.cancel();
+                          debounceTimer = Timer(const Duration(milliseconds: 600), checkUsername);
+                        }
+                      },
+                      suffixIcon: Obx(() {
+                        if (authController.isCheckingUsername.value) {
+                          return Container(
+                            padding: EdgeInsets.all(Dimensions.width10),
+                            child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 4),
+                          );
+                        } else if (authController.usernameMessage.isNotEmpty) {
+                          return Icon(
+                            authController.isUsernameAvailable.value ? Icons.check_circle : Icons.error,
+                            color: authController.isUsernameAvailable.value ? Colors.green : Colors.red,
+                            size: Dimensions.iconSize16,
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }),
+                    ),
+                    SizedBox(height: Dimensions.height5),
+                    Obx(() => authController.usernameMessage.value.isNotEmpty
+                        ? Text(
+                      authController.usernameMessage.value,
+                      style: TextStyle(
+                        color: authController.isUsernameAvailable.value ? Colors.green : Colors.red,
+                        fontSize: Dimensions.font12,
+                      ),
+                    )
+                        : const SizedBox.shrink()),
+                    SizedBox(height: Dimensions.height20),*/
 
-  Widget _buildBottomPicker({
-    required String title,
-    required List<String> options,
-    required Function(String) onSelected,
-  }) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: Dimensions.width20, vertical: Dimensions.height20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontFamily: 'BebasNeue',
-              fontSize: Dimensions.font20,
-              color: AppColors.primary,
-            ),
-          ),
-          SizedBox(height: Dimensions.height10),
-          ...options.map((option) => ListTile(title: Text(option), onTap: () => onSelected(option))),
-        ],
-      ),
-    );
-  }
-}
+/*SizedBox(height: Dimensions.height20),
+                    CustomTextField(
+                      labelText: "Contact Number *",
+                      controller: contactNumberController,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    SizedBox(height: Dimensions.height20),
+                    CountryState(
+                      selectedCountry: selectedCountry,
+                      selectedState: selectedState,
+                      onCountryChanged: (country) {
+                        setState(() {
+                          selectedCountry = country;
+                          selectedState = null;
+                        });
+                      },
+                      onStateChanged: (state) => setState(() => selectedState = state),
+                    ),
+                    SizedBox(height: Dimensions.height20),
+                    _buildBottomPickerField(
+                      title: "Head Coach or Manager *",
+                      value: headCoachOrManager,
+                      options: const ["Head Coach", "Manager"],
+                      onSelected: (value) => setState(() => headCoachOrManager = value),
+                    ),
+                    SizedBox(height: Dimensions.height20),
+                   */
+
+/*SizedBox(height: Dimensions.height20),
+                    CustomTextField(
+                      labelText: "Add Bio",
+                      maxLines: 3,
+                      controller: bioController,
+                    ),
+                    SizedBox(height: Dimensions.height30),*/
