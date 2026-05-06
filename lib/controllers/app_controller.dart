@@ -9,6 +9,7 @@ import 'package:hilite/screens/home/pages/live_score_screen.dart';
 import 'package:hilite/screens/home/pages/activities_screen.dart';
 import 'package:hilite/screens/home/pages/profile_screen.dart';
 import 'package:hilite/screens/home/pages/reels_screen.dart';
+import 'package:hilite/screens/posting/upload_content.dart';
 import 'package:hilite/utils/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -38,6 +39,7 @@ class AppController extends GetxController {
   final List<Widget> pages = [
     ReelsScreen(),
     ActivitiesScreen(),
+    UploadContent(),
     ChatListScreen(),
     ProfileScreen(),
   ];

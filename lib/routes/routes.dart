@@ -40,7 +40,6 @@ import '../screens/home/pages/activities_screen.dart';
 import '../screens/messaging/chat_list_screen.dart';
 import '../screens/messaging/messaging_screen.dart';
 import '../screens/splash/splash.dart';
-import '../screens/splash/splash_screen.dart';
 import '../screens/trials/create_trails_screen.dart';
 import '../screens/trials/trial_details_screen.dart';
 
@@ -210,13 +209,7 @@ class AppRoutes {
     ),
 
     //general
-    GetPage(
-      name: splashScreen,
-      page: () {
-        return const SplashScreen();
-      },
-      transition: Transition.fadeIn,
-    ),
+
     GetPage(
       name: splash,
       page: () {

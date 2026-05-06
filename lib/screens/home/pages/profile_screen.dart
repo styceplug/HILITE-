@@ -13,6 +13,7 @@ import 'package:hilite/widgets/custom_button.dart';
 import 'package:hilite/widgets/snackbars.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../controllers/user_controller.dart';
 import '../../../models/post_model.dart';
@@ -20,8 +21,6 @@ import '../../../utils/others.dart';
 import '../../../widgets/post_grid_shimmer.dart';
 import '../../../widgets/profile_avatar.dart';
 import '../../../widgets/reels_video_item.dart';
-import '../../others/others_profile.dart';
-import '../../others/relationship_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -34,6 +33,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserController userController = Get.find<UserController>();
   NotificationController notificationController =
       Get.find<NotificationController>();
+
+  int _selectedTabIndex = 0;
 
   @override
   void initState() {
@@ -48,18 +49,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return GetBuilder<UserController>(
       builder: (controller) {
-        print('this has been rebuilt');
         var user = controller.user.value;
 
         if (user == null) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          );
         }
 
-        var player = user.playerDetails;
-        var club = user.clubDetails;
-        var agent = user.agentDetails;
+        final bool isProRole = (user.role == 'club' || user.role == 'agent');
+        final List<String> profileTabs =
+            isProRole
+                ? ['Squad', 'Highlights', 'Saved', 'Info']
+                : ['Highlights', 'Saved'];
 
-        print(user.bio);
+        if (_selectedTabIndex >= profileTabs.length) {
+          _selectedTabIndex = 0;
+        }
 
         return RefreshIndicator(
           color: AppColors.primary,
@@ -67,130 +73,128 @@ class _ProfileScreenState extends State<ProfileScreen> {
             userController.getPersonalPosts('video');
             userController.getPersonalPosts('image');
           },
-          child: Container(
+          child: SizedBox(
             height: Dimensions.screenHeight,
             width: Dimensions.screenWidth,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.symmetric(
-                horizontal: Dimensions.width20,
-                vertical: Dimensions.height50,
-              ),
+              padding: EdgeInsets.symmetric(vertical: Dimensions.height50),
               child: Column(
                 children: [
                   SizedBox(height: Dimensions.height20),
 
                   /// 🔝 Header Icons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Obx(() {
-                        final count = notificationController.unreadCount.value;
-                        return InkWell(
-                          onTap: () {
-                            Get.toNamed(AppRoutes.notificationsScreen);
-                          },
-                          child: Stack(
-                            children: [
-                              Icon(
-                                CupertinoIcons.bell,
-                                size: Dimensions.iconSize30,
-                              ),
-                              if (count > 0)
-                                Positioned(
-                                  right: 0,
-                                  top: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Text(
-                                      count > 99 ? '99+' : '$count',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 9,
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: Dimensions.width20,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Obx(() {
+                          final count =
+                              notificationController.unreadCount.value;
+                          return InkWell(
+                            onTap:
+                                () =>
+                                    Get.toNamed(AppRoutes.notificationsScreen),
+                            child: Stack(
+                              children: [
+                                Icon(
+                                  CupertinoIcons.bell,
+                                  size: Dimensions.iconSize30,
+                                  color: AppColors.white,
+                                ),
+                                if (count > 0)
+                                  Positioned(
+                                    right: 0,
+                                    top: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        count > 99 ? '99+' : '$count',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                            ],
-                          ),
-                        );
-                      }),
+                              ],
+                            ),
+                          );
+                        }),
 
-                      MyProfileAvatar(
-                        avatarUrl: user.profilePicture,
-                        onImageSelected: (XFile file) {
-                          userController.uploadProfilePicture(file);
-                        },
-                      ),
-
-                      InkWell(
-                        onTap: () => Get.toNamed(AppRoutes.settingsScreen),
-                        child: Icon(
-                          Iconsax.more_circle,
-                          size: Dimensions.iconSize24,
+                        MyProfileAvatar(
+                          avatarUrl: user.profilePicture,
+                          onImageSelected: (XFile file) {
+                            userController.uploadProfilePicture(file);
+                          },
                         ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: Dimensions.height20),
 
+                        InkWell(
+                          onTap: () => Get.toNamed(AppRoutes.settingsScreen),
+                          child: Icon(
+                            Iconsax.more_circle,
+                            size: Dimensions.iconSize24,
+                            color: AppColors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: Dimensions.height10),
+
+                  /// 🏷️ Name display logic
                   if (user.role == 'club') ...[
                     Text(
-                      club?.clubName ?? '',
+                      user.clubDetails?.clubName ?? '',
                       style: TextStyle(
-                        fontSize: Dimensions.font18,
-                        fontWeight: FontWeight.w600,
+                        fontSize: Dimensions.font22,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.white,
                       ),
                     ),
                   ],
-
                   if (user.role == 'agent') ...[
                     Text(
-                      user.agentDetails!.agencyName,
+                      user.agentDetails?.agencyName ?? '',
                       style: TextStyle(
-                        fontSize: Dimensions.font18,
-                        fontWeight: FontWeight.w600,
+                        fontSize: Dimensions.font22,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.white,
                       ),
                     ),
                   ],
-
                   if (user.role == 'fan' || user.role == 'player') ...[
                     Text(
                       user.name,
                       style: TextStyle(
-                        fontSize: Dimensions.font18,
-                        fontWeight: FontWeight.w600,
+                        fontSize: Dimensions.font22,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.white,
                       ),
                     ),
                   ],
-
-                  Text(
-                    '@${user.username}'.toLowerCase(),
-                    style: TextStyle(
-                      fontSize: Dimensions.font14,
-                      fontWeight: FontWeight.w400,
-                      color: AppColors.black.withOpacity(0.7),
-                    ),
-                  ),
-                  SizedBox(height: Dimensions.height10),
 
                   /// 📖 Bio
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: Dimensions.width20,
+                      vertical: Dimensions.height10,
                     ),
                     child: Text(
                       user.bio ?? 'No Bio Yet',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: Dimensions.font13,
+                        fontSize: Dimensions.font14,
                         fontWeight: FontWeight.w400,
-                        color: AppColors.black.withOpacity(0.8),
+                        color: AppColors.white.withOpacity(0.8),
                         height: 1.4,
                       ),
                     ),
@@ -198,173 +202,116 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   SizedBox(height: Dimensions.height10),
 
-                  /// 📊 Stats
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildStat('Posts', '${user.posts}', 'posts'),
-                      _divider(),
-                      _buildStat('Followers', '${user.followers}', 'followers'),
-                      _divider(),
-                      _buildStat('Following', '${user.following}', 'following'),
-                    ],
-                  ),
-
-                  SizedBox(height: Dimensions.height30),
-
-                  /// ⚽ Player Info
-                  if (user.role == 'player') ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildInfoTag('Position: ${player?.position ?? '-'}'),
-                        _buildInfoTag('Height: ${player?.height ?? '-'}cm'),
-                        _buildInfoTag('Weight: ${player?.weight ?? '-'}kg'),
-                      ],
-                    ),
-                    SizedBox(height: Dimensions.height20),
-                  ],
-
-                  /// 🏢 Club Info
-                  if (user.role == 'club') ...[
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              _buildInfoTag(
-                                'Year Founded: ${user.clubDetails?.yearFounded}',
-                              ),
-                              SizedBox(width: Dimensions.width20),
-                              _buildInfoTag(
-                                'Club Type: ${club?.clubType.capitalizeFirst ?? '-'}',
-                              ),
-                              SizedBox(width: Dimensions.width20),
-                              _buildInfoTag('Manager: ${club?.manager ?? '-'}'),
-                              SizedBox(width: Dimensions.width20),
-
-                              _buildInfoTag('Country: ${user.country ?? '-'}'),
-                              SizedBox(width: Dimensions.width20),
-
-                              _buildInfoTag('State: ${user.state ?? '-'}'),
-                              SizedBox(width: Dimensions.width20),
-                            ],
-                          ),
-                          SizedBox(height: Dimensions.width20),
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  /// 🤝 Agent Info
-                  if (user.role == 'agent') ...[
-                    Padding(
-                      padding: EdgeInsets.only(bottom: Dimensions.height15),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _buildInfoTag(
-                              'Agency: ${agent?.agencyName ?? '-'}',
-                            ),
-                            SizedBox(width: Dimensions.width10),
-                            _buildInfoTag(
-                              'Experience: ${agent?.experience ?? '-'}',
-                            ),
-                            SizedBox(width: Dimensions.width10),
-                            _buildInfoTag(
-                              'Licence Number: ${agent?.registrationId}',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-
                   /// ✏️ Edit Profile Button
-                  Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: CustomButton(
-                              text: 'Edit Profile',
-                              onPressed: () {
-                                Get.toNamed(AppRoutes.editProfileScreen);
-                              },
-                              backgroundColor: AppColors.primary,
-                              borderRadius: BorderRadius.circular(
-                                Dimensions.radius10,
-                              ),
-                            ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: Dimensions.width20,
+                    ),
+                    child: Row(
+                      children: [
+                        CustomButton(
+                          text: 'Edit Page',
+                          icon: Iconsax.edit,
+                          onPressed:
+                              () => Get.toNamed(AppRoutes.editProfileScreen),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: Dimensions.width30,
+                            vertical: Dimensions.height15,
                           ),
-
-                          if (user.role != 'fan') ...[
-                            SizedBox(width: Dimensions.width10),
-                            CustomButton(
-                              onPressed: () {
-                                Get.toNamed(AppRoutes.uploadContent);
-                              },
-                              text: 'Add Post',
-                              borderRadius: BorderRadius.circular(
-                                Dimensions.radius10,
-                              ),
-                              backgroundColor: AppColors.white,
-                              borderColor: AppColors.primary,
-                            ),
-                          ],
-                        ],
-                      ),
-                      SizedBox(height: Dimensions.height10),
-                      if (user.role == 'club' || user.role == 'agent') ...[
-                        Row(
-                          children: [
-                            CustomButton(
-                              text: 'Create Trial',
-                              onPressed: () {
-                                Get.toNamed(AppRoutes.createTrialScreen);
-                              },
-                              backgroundColor: AppColors.secondary,
-                              borderColor: AppColors.primary,
-                              borderRadius: BorderRadius.circular(
-                                Dimensions.radius10,
-                              ),
-                            ),
-                            if (user.role == 'club') ...[
-                              SizedBox(width: Dimensions.width20),
-                              Expanded(
-                                child: CustomButton(
-                                  onPressed: () {
-                                    Get.toNamed(
-                                      AppRoutes.createCompetitionScreen,
-                                    );
-                                  },
-                                  text: 'Create Competition',
-                                  borderRadius: BorderRadius.circular(
-                                    Dimensions.radius10,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
+                          backgroundColor: AppColors.buttonColor,
+                          borderRadius: BorderRadius.circular(
+                            Dimensions.radius10,
+                          ),
                         ),
-                        SizedBox(width: Dimensions.width10),
+                        SizedBox(width: Dimensions.width20),
+                        Expanded(
+                          child: CustomButton(
+                            onPressed: () {
+                              // Get.toNamed(AppRoutes.uploadContent);
+                            },
+                            text: 'Preview Page',
+                            icon: Icons.visibility,
+                            borderRadius: BorderRadius.circular(
+                              Dimensions.radius10,
+                            ),
+                            backgroundColor: AppColors.white.withOpacity(0.1),
+                            borderColor: AppColors.primary,
+                          ),
+                        ),
                       ],
-                    ],
+                    ),
+                  ),
+                  SizedBox(height: Dimensions.height20),
+
+                  /// 📊 Stats
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: Dimensions.width20,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        const Spacer(),
+                        Text(
+                          user.followers.toSocialString(),
+                          style: TextStyle(
+                            fontSize: Dimensions.font17,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.white,
+                          ),
+                        ),
+                        SizedBox(width: Dimensions.width5),
+                        Text(
+                          'Followers',
+                          style: TextStyle(
+                            fontSize: Dimensions.font17,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.white.withOpacity(0.8),
+                          ),
+                        ),
+                        const Spacer(),
+
+                        _divider(),
+                        const Spacer(),
+
+                        Text(
+                          user.following.toSocialString(),
+                          style: TextStyle(
+                            fontSize: Dimensions.font17,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.white,
+                          ),
+                        ),
+                        SizedBox(width: Dimensions.width5),
+                        Text(
+                          'Following',
+                          style: TextStyle(
+                            fontSize: Dimensions.font17,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.white.withOpacity(0.8),
+                          ),
+                        ),
+                        const Spacer(),
+                      ],
+                    ),
                   ),
 
                   SizedBox(height: Dimensions.height30),
 
-                  Builder(
-                    builder: (context) {
-                      if (controller.isFirstLoad &&
-                          controller.postCache.values.every((l) => l.isEmpty)) {
-                        return const PostGridShimmer();
-                      }
+                  /// 📑 DYNAMIC TAB BAR
+                  _buildCustomTabBar(profileTabs),
 
-                      return _buildContentGrid(controller);
-                    },
+                  SizedBox(height: Dimensions.height20),
+
+                  /// 🖼️ TAB CONTENT RENDERER
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: Dimensions.width20,
+                    ),
+                    child: _buildSelectedTabContent(
+                      controller,
+                      profileTabs[_selectedTabIndex],
+                    ),
                   ),
 
                   SizedBox(height: Dimensions.height30),
@@ -377,50 +324,163 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildTabItem(UserController controller, String type, String label) {
-    bool isSelected = controller.currentPostType == type;
-    return InkWell(
-      onTap: () => controller.getPersonalPosts(type),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: Dimensions.font16,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? AppColors.primary : AppColors.grey4,
-            ),
-          ),
-          SizedBox(height: 5),
-          if (isSelected)
-            Container(
-              height: 3,
-              width: 40,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(2),
+  Widget _buildCustomTabBar(List<String> tabs) {
+    return Container(
+      width: Dimensions.screenWidth,
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: AppColors.white.withOpacity(0.1), width: 1),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(tabs.length, (index) {
+          bool isSelected = _selectedTabIndex == index;
+          return Expanded(
+            child: InkWell(
+              onTap: () => setState(() => _selectedTabIndex = index),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: Dimensions.height10,
+                    ),
+                    child: Text(
+                      tabs[index],
+                      style: TextStyle(
+                        fontSize: Dimensions.font14,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w400,
+                        color:
+                            isSelected
+                                ? AppColors.white
+                                : AppColors.white.withOpacity(0.5),
+                      ),
+                    ),
+                  ),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 2,
+                    width: isSelected ? Dimensions.width40 : 0,
+                    decoration: BoxDecoration(
+                      color: AppColors.buttonColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ],
               ),
             ),
-        ],
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildSelectedTabContent(
+    UserController controller,
+    String currentTab,
+  ) {
+    if (currentTab == 'Highlights') {
+      if (controller.isFirstLoad &&
+          controller.postCache.values.every((l) => l.isEmpty)) {
+        // --- CALLED NEW SKELETONIZER LOADER HERE ---
+        return _buildSkeletonGrid();
+      }
+      return _buildContentGrid(controller);
+    } else if (currentTab == 'Saved') {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(height: Dimensions.height30),
+            Icon(
+              Iconsax.save_2,
+              size: Dimensions.iconSize30 * 4,
+              color: AppColors.textColor.withOpacity(0.1),
+            ),
+            SizedBox(height: Dimensions.height10),
+            Text(
+              'No saved items yet.',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: Dimensions.font18,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (currentTab == 'Squad' || currentTab == 'Info') {
+      return Center(
+        child: Text(
+          'No $currentTab data yet.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  // --- NEW: SKELETONIZER GRID BUILDER ---
+  Widget _buildSkeletonGrid() {
+    return Skeletonizer(
+      enabled: true,
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 2,
+          mainAxisSpacing: 2,
+          childAspectRatio: 3 / 4,
+        ),
+        itemCount: 6,
+        // Show 6 fake items while loading
+        itemBuilder: (context, index) {
+          return Container(
+            color: Colors.grey[800],
+            child: const Center(
+              child: Icon(
+                Icons.play_circle_outline,
+                color: Colors.white30,
+                size: 30,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildContentGrid(UserController controller) {
-    // 1. Merge all cached lists into one
     List<PersonalPostModel> allPosts = [
       ...?controller.postCache['video'],
       ...?controller.postCache['image'],
     ];
 
     PostController postController = Get.find<PostController>();
-
     allPosts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     if (allPosts.isEmpty) {
       return Padding(
         padding: EdgeInsets.only(top: Dimensions.height30),
-        child: const Text("No posts yet."),
+        child: Column(
+          children: [
+            Icon(
+              Iconsax.image,
+              size: Dimensions.iconSize30 * 4,
+              color: AppColors.white.withOpacity(0.2),
+            ),
+            SizedBox(height: Dimensions.height10),
+            CustomButton(
+              onPressed: () {
+                Get.toNamed(AppRoutes.uploadContent);
+              },
+              text: 'Create your first post',
+            ),
+          ],
+        ),
       );
     }
 
@@ -430,15 +490,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: EdgeInsets.zero,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        crossAxisSpacing: 5,
-        mainAxisSpacing: 5,
-        childAspectRatio: 1,
+        crossAxisSpacing: 2,
+        mainAxisSpacing: 2,
+        childAspectRatio: 3 / 4,
       ),
       itemCount: allPosts.length,
       itemBuilder: (context, index) {
         final post = allPosts[index];
-
-        // We use the post's own type, not a controller state
         final postType = post.type;
 
         return GestureDetector(
@@ -464,24 +522,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
           onLongPress: () {
             if (post.id == null) return;
-
             Get.dialog(
               AlertDialog(
-                title: Text('Delete Post'),
-                content: Text(
-                  'Are you sure you want to delete this post? This action cannot be undone',
+                title: const Text('Delete Post'),
+                content: const Text(
+                  'Are you sure you want to delete this post? This action cannot be undone.',
                 ),
                 actions: [
                   TextButton(
                     onPressed: () => Get.back(),
-                    child: Text('Cancel'),
+                    child: const Text('Cancel'),
                   ),
                   TextButton(
                     onPressed: () {
                       Get.back();
                       postController.deleteUserPost(post.id!, post.type!);
                     },
-                    child: Text('Delete'),
+                    child: const Text(
+                      'Delete',
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ),
                 ],
               ),
@@ -494,131 +554,93 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildTileItem(PersonalPostModel post, String type) {
-    // 1. TEXT
-    if (type == 'text') {
-      return Container(
-        padding: const EdgeInsets.all(8),
-        color: AppColors.grey2,
-        child: Center(
-          child: Text(
-            post.text ?? '',
-            maxLines: 4,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: Dimensions.font12),
-          ),
-        ),
-      );
-    }
-    // 2. IMAGE
-    else if (type == 'image') {
-      // 🛡️ Safety Check: If url is null or empty, show a placeholder instead of crashing
+    Widget tileContent;
+
+    if (type == 'image') {
       if (post.mediaUrl == null || post.mediaUrl!.isEmpty) {
-        return Container(
-          color: AppColors.grey2,
+        tileContent = Container(
+          color: AppColors.grey2.withOpacity(0.2),
           child: const Icon(Icons.broken_image, color: Colors.grey),
         );
-      }
-
-      return Container(
-        decoration: BoxDecoration(
-          color: AppColors.grey2,
-          image: DecorationImage(
-            image: NetworkImage(post.mediaUrl!),
-            fit: BoxFit.cover,
+      } else {
+        tileContent = Container(
+          decoration: BoxDecoration(
+            color: AppColors.grey2.withOpacity(0.2),
+            image: DecorationImage(
+              image: NetworkImage(post.mediaUrl!),
+              fit: BoxFit.cover,
+            ),
           ),
-        ),
-      );
-    }
-    // 3. VIDEO
-    else {
-      return Stack(
+        );
+      }
+    } else {
+      // VIDEO TILE
+      tileContent = Stack(
         fit: StackFit.expand,
         children: [
           Container(color: AppColors.black),
-          // If you have a thumbnail, render it here safely
+
           if (post.thumbnail != null && post.thumbnail!.isNotEmpty)
             Image.network(post.thumbnail!, fit: BoxFit.cover),
 
           const Center(
-            child: Icon(Icons.play_circle_fill, color: Colors.white, size: 30),
+            child: Icon(
+              Icons.play_circle_outline_rounded,
+              color: Colors.white70,
+              size: 30,
+            ),
           ),
+
+          // Duration Badge
+          if (post.duration != null)
+            Positioned(
+              bottom: 6,
+              right: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.75),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  post.duration!.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
         ],
       );
     }
-  }
 
-  /// 🧩 Clickable Stat Widget
-  Widget _buildStat(String label, String value, String type) {
-    return InkWell(
-      onTap: () {
-        // Navigate to the new RelationshipScreen
-        Get.to(
-          () => RelationshipScreen(title: label, type: type, targetId: null),
-        );
-      },
+    return ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: Dimensions.font22,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: Dimensions.font14,
-                fontWeight: FontWeight.w400,
-                color: Colors.grey[700], // Slight grey to indicate clickable
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: tileContent,
     );
   }
 
-  /// ┆ Divider
   Widget _divider() => Container(
     width: 0.5,
-    height: Dimensions.height50,
-    color: AppColors.grey4,
+    height: Dimensions.height20,
+    color: AppColors.white.withOpacity(0.3),
   );
+}
 
-  /// 🔖 Info Tag
-  Widget _buildInfoTag(String text) => Container(
-    padding: EdgeInsets.symmetric(
-      horizontal: Dimensions.width10,
-      vertical: Dimensions.height5,
-    ),
-    decoration: BoxDecoration(
-      color: AppColors.grey2,
-      borderRadius: BorderRadius.circular(Dimensions.radius10),
-    ),
-    child: Text(
-      text,
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: Dimensions.font13,
-        fontWeight: FontWeight.w500,
-        color: AppColors.black,
-      ),
-    ),
-  );
-
-  /// 📦 Placeholder Box
-  Widget _buildBox() => Container(
-    height: Dimensions.height100 * 2,
-    width: Dimensions.screenWidth / 3.5,
-    decoration: BoxDecoration(
-      color: AppColors.grey2,
-      borderRadius: BorderRadius.circular(Dimensions.radius10),
-    ),
-  );
+extension SocialFormat on num {
+  String toSocialString() {
+    if (this >= 1000000) {
+      double res = this / 1000000;
+      return '${res.toStringAsFixed(res % 1 == 0 ? 0 : 1)}m';
+    } else if (this >= 1000) {
+      double res = this / 1000;
+      return '${res.toStringAsFixed(res % 1 == 0 ? 0 : 1)}k';
+    } else {
+      return toString();
+    }
+  }
 }
 
 class ProfileImageViewer extends StatelessWidget {

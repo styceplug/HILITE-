@@ -54,6 +54,7 @@ dependencies:
   path_provider: ^2.1.5
   just_audio: ^0.10.5
   video_compress: ^3.1.2
+  skeletonizer: ^2.1.3
 #  ffmpeg_kit_flutter_min: 0.2.1
 #  video_editor: ^3.0.0
 #  video_trimmer: ^5.0.0

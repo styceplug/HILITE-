@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/auth_controller.dart';
@@ -55,11 +56,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
     if (name.isEmpty || username.isEmpty || email.isEmpty || password.isEmpty) {
       CustomSnackBar.failure(message: 'Please fill all required fields');
-      return;
-    }
-
-    if (termsPolicy == false) {
-      CustomSnackBar.failure(message: 'Please accept Terms & Privacy Policy');
       return;
     }
 
@@ -129,55 +125,30 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              height: Dimensions.screenHeight / 3,
-              width: Dimensions.screenWidth,
-              padding: EdgeInsets.symmetric(vertical: Dimensions.height20),
-              color: AppColors.primary,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: Dimensions.width20,
-                      vertical: Dimensions.height50,
-                    ),
-                    child: Image.asset(
-                      AppConstants.getPngAsset('logo3'),
-                      height: Dimensions.height70,
-                    ),
-                  ),
-                  Spacer(),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: Dimensions.width20,
-                    ),
-                    child: Text(
-                      'CREATE YOUR FAN ACCOUNT',
-                      style: TextStyle(
-                        fontFamily: 'BebasNeue',
-                        fontSize: Dimensions.font30 * 1.2,
-                        color: AppColors.white,
-                        height: 1.1,
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: Dimensions.width20,
-                    ),
-                    child: Text(
-                      'Follow players, clubs, and enjoy the game',
-                      style: TextStyle(
-                        fontSize: Dimensions.font16,
-                        color: AppColors.white,
-                        height: 1.1,
-                      ),
-                    ),
-                  ),
-                ],
+            Image.asset(
+              AppConstants.getPngAsset('logo3'),
+              height: Dimensions.height70,
+            ),
+            SizedBox(height: Dimensions.height20),
+        
+            Text(
+              'Create your fan account',
+              style: TextStyle(
+                fontSize: Dimensions.font23,
+                color: AppColors.textColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: Dimensions.height5),
+        
+            Text(
+              'Follow players, clubs, and enjoy the game',
+              style: TextStyle(
+                fontSize: Dimensions.font16,
+                color: AppColors.textColor.withOpacity(0.8),
+                fontWeight: FontWeight.w400,
               ),
             ),
             SizedBox(height: Dimensions.height20),
@@ -187,19 +158,18 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                 vertical: Dimensions.height20,
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   CustomTextField(
-                    hintText: 'Full Name *',
+                    hintText: 'Full Name',
                     controller: nameController,
-                    prefixIcon: Iconsax.user,
+                    prefixIcon: CupertinoIcons.person_alt_circle_fill,
                     autofillHints: [AutofillHints.name],
                   ),
                   SizedBox(height: Dimensions.height20),
                   CustomTextField(
-                    hintText: 'Pick Username *',
+                    hintText: 'Username',
                     controller: usernameController,
-                    prefixIcon: Iconsax.profile_circle,
+                    prefixIcon: Icons.person_pin,
                     autofillHints: [AutofillHints.username],
                     onChanged: (value) {
                       if (value.trim().isNotEmpty) {
@@ -240,44 +210,40 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     }),
                   ),
                   SizedBox(height: Dimensions.height5),
-                  Obx(
-                    () =>
-                        authController.usernameMessage.value.isNotEmpty
-                            ? Text(
-                              authController.usernameMessage.value,
-                              style: TextStyle(
-                                color:
-                                    authController.isUsernameAvailable.value
-                                        ? Colors.green
-                                        : Colors.red,
-                                fontSize: Dimensions.font12,
-                              ),
-                            )
-                            : const SizedBox.shrink(),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Obx(
+                      () =>
+                          authController.usernameMessage.value.isNotEmpty
+                              ? Text(
+                                authController.usernameMessage.value,
+                                style: TextStyle(
+                                  color:
+                                      authController.isUsernameAvailable.value
+                                          ? Colors.green
+                                          : Colors.red,
+                                  fontSize: Dimensions.font12,
+                                ),
+                              )
+                              : const SizedBox.shrink(),
+                    ),
                   ),
                   SizedBox(height: Dimensions.height20),
                   CustomTextField(
                     hintText: 'Email Address *',
                     controller: emailController,
-                    prefixIcon: Icons.mail_outline,
+                    prefixIcon: Icons.mail,
                     autofillHints: [AutofillHints.email],
                     keyboardType: TextInputType.emailAddress,
                   ),
-                  SizedBox(height: Dimensions.height20),
-                  CustomTextField(
-                    hintText: "Add Bio",
-                    maxLines: 3,
-                    controller: bioController,
-                    // prefixIcon: Icons.edit,
-                    keyboardType: TextInputType.text,
-                  ),
+        
                   SizedBox(height: Dimensions.height20),
                   CustomTextField(
                     hintText: 'Password',
-                    prefixIcon: Icons.lock_outline,
+                    prefixIcon: Icons.lock,
                     maxLines: 1,
                     controller: passwordController,
-                    obscureText: isPasswordVisible,
+                    obscureText: !isPasswordVisible,
                     suffixIcon: InkWell(
                       onTap: () {
                         togglePass();
@@ -291,50 +257,25 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     ),
                   ),
                   SizedBox(height: Dimensions.height20),
+        
                   Text(
-                    'Password must be at least 8 character long and include 1 capital letter and 1 symbol',
+                    'By signing up, you agree to our Terms of Service and Privacy Policy',
                     textAlign: TextAlign.left,
                     style: TextStyle(
-                      color: AppColors.grey5,
+                      color: AppColors.textColor,
                       fontSize: Dimensions.font13,
                     ),
                   ),
+        
                   SizedBox(height: Dimensions.height20),
-                  InkWell(
-                    onTap: () {
-                      toggleTerms();
-                      print(termsPolicy);
-                    },
-                    child: Row(
-                      children: [
-                        Icon(
-                          termsPolicy
-                              ? Icons.check_box_outlined
-                              : Icons.check_box_outline_blank,
-                          color: AppColors.grey5,
-                        ),
-                        SizedBox(width: Dimensions.width5),
-                        Text(
-                          'I agree to  the Terms and Privacy Policy',
-                          style: TextStyle(
-                            color: AppColors.grey5,
-                            fontSize: Dimensions.font13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: Dimensions.height20),
+        
                   CustomButton(
-                    text: 'CREATE ACCOUNT',
+                    text: 'SIGN UP',
                     onPressed: createAccount,
+                    backgroundColor: AppColors.buttonColor,
                   ),
                   SizedBox(height: Dimensions.height20),
-                  Text(
-                    'By agreeing to the above terms, you are consenting that your personal information will be collected, stored, and processed on behalf of HILITE',
-                    textAlign: TextAlign.justify,
-                    style: TextStyle(color: AppColors.grey5),
-                  ),
+        
                 ],
               ),
             ),

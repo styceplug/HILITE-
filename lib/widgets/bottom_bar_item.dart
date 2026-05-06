@@ -43,8 +43,8 @@ class _BottomBarItemState extends State<BottomBarItem> {
             // icon
             Image.asset(
               AppConstants.getPngAsset(widget.image),
-              width: Dimensions.iconSize20,
-              height: Dimensions.iconSize20,
+              width: Dimensions.width30,
+              height: Dimensions.height30,
               color:
                   widget.isActive
                       ? AppColors.white

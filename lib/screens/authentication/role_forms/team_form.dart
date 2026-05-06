@@ -36,9 +36,13 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
   final TextEditingController clubNameController = TextEditingController();
 
   final List<Map<String, String>> clubTypeOptions = [
-    {"title": "Academy", "image": "jersey"}, // Replace 'jersey' with actual png name
-    {"title": "Amateur", "image": "cleats"}, // Replace 'cleats' with actual png name
-    {"title": "Professional", "image": "logo3"}, // Replace 'logo3' with actual png name
+    {"title": "Professional Club", "image": "pro-club"},
+    {"title": "Semi-Pro Club", "image": "semi-pro-club"},
+    {"title": "Amateur Club", "image": "amateur-club"},
+    {"title": "Academy", "image": "acad-club"},
+    {"title": "College Team", "image": "coll-club"},
+    {"title": "Youth Club", "image": "youth-club"},
+
   ];
 
   @override
@@ -74,16 +78,15 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
     "clubType": selectedClubType?.toLowerCase(),
   };
 
-  // --- NEW FULL SCREEN PICKER LOGIC ---
   void _openFullScreenClubPicker() {
-    // Hide keyboard before navigating
     FocusScope.of(context).unfocus();
 
     Get.to(
           () => Scaffold(
-        backgroundColor: const Color(0xFF030A1B), // Match your dark theme
         appBar: CustomAppbar(
           title: 'Select Club Type',
+          titleColor: AppColors.textColor,
+          subtitle: 'Follow players and manage your club',
           backgroundColor: const Color(0xFF030A1B),
           leadingIcon: const BackButton(color: Colors.white),
         ),
@@ -97,7 +100,7 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
             return GestureDetector(
               onTap: () {
                 setState(() => selectedClubType = item['title']);
-                Get.back(); // Return to form after selecting
+                Get.back();
               },
               child: Container(
                 margin: EdgeInsets.only(bottom: Dimensions.height15),
@@ -114,7 +117,7 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
                   children: [
                     Image.asset(
                       AppConstants.getPngAsset(item['image']!),
-                      height: Dimensions.iconSize30 * 1.2,
+                      height: Dimensions.iconSize30*0.8,
                     ),
                     SizedBox(width: Dimensions.width15),
                     Text(
@@ -140,14 +143,13 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
           },
         ),
       ),
-      transition: Transition.rightToLeft, // Smooth slide animation
+      transition: Transition.rightToLeft,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF030A1B), // Assuming dark mode background
       appBar: CustomAppbar(
         backgroundColor: const Color(0xFF030A1B),
         leadingIcon: BackButton(color: AppColors.white),
@@ -226,7 +228,7 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
                       onTap: _openFullScreenClubPicker,
                       child: _buildPickerContainer(
                         title: "Club Type",
-                        value: selectedClubType ?? '', // Safe null fallback
+                        value: selectedClubType ?? '',
                         image: 'jersey',
                       ),
                     ),
@@ -263,7 +265,8 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
                     ),
                     SizedBox(height: Dimensions.height20),
                     CustomButton(
-                      text: "Submit Club Profile",
+                      text: "Sign Up",
+                      backgroundColor: AppColors.buttonColor,
                       onPressed: () {
                         if (!termsPolicy) {
                           CustomSnackBar.failure(message: 'You must confirm you are 13 or older.');

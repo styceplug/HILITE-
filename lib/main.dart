@@ -82,9 +82,13 @@ class MyApp extends StatelessWidget {
                   theme: ThemeData(
                     fontFamily: 'Poppins',
                     scaffoldBackgroundColor: AppColors.backgroundColor,
+                    textTheme: Theme.of(context).textTheme.apply(
+                      bodyColor: AppColors.textColor,
+                      displayColor: AppColors.textColor,
+                    )
                   ),
                   getPages: AppRoutes.routes,
-                  initialRoute: AppRoutes.onboardingScreen,
+                  initialRoute: AppRoutes.splash,
                   builder: (context, child) {
                     final loaderController = Get.find<GlobalLoaderController>();
                     return Obx(() {

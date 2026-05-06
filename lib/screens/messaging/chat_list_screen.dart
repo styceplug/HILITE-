@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/user_controller.dart';
+import 'package:hilite/utils/colors.dart';
 import 'package:intl/intl.dart';
 
 import '../../controllers/chat_controller.dart';
@@ -29,7 +30,6 @@ class ChatListScreen extends StatelessWidget {
     ctrl.currentUserId = effectiveId;
 
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,7 +118,7 @@ class _SearchBar extends StatelessWidget {
             size: 20,
           ),
           filled: true,
-          fillColor: const Color(0xFFF9FAFB),
+          fillColor: AppColors.white.withOpacity(0.1),
           contentPadding: const EdgeInsets.symmetric(vertical: 10),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),

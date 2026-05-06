@@ -15,7 +15,7 @@ class CustomButton extends StatelessWidget {
   final Color? backgroundColor;
   final Color? borderColor;
   final TextStyle? textStyle;
-  final Widget? icon;
+  final IconData? icon;
 
   const CustomButton({
     super.key,
@@ -71,7 +71,7 @@ class CustomButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              icon!,
+              Icon(icon,size: Dimensions.iconSize24,color: AppColors.white,),
               const SizedBox(width: 8),
             ],
             Flexible(

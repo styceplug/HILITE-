@@ -1,6 +1,8 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/auth_controller.dart';
+import 'package:hilite/widgets/custom_appbar.dart';
 import 'package:hilite/widgets/snackbars.dart';
 
 import '../../routes/routes.dart';
@@ -32,98 +34,60 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          Container(
-            height: Dimensions.screenHeight / 3,
-            width: Dimensions.screenWidth,
-            padding: EdgeInsets.symmetric(vertical: Dimensions.height20),
-            color: AppColors.primary,
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -Dimensions.width100 * 2,
-                  bottom: Dimensions.height20,
-                  child: Text(
-                    'FORGOT PASSWORD',
-                    style: TextStyle(
-                      fontFamily: 'BebasNeue',
-                      fontSize: Dimensions.font30 * 4,
-                      color: AppColors.white.withOpacity(0.1),
-                    ),
-                  ),
-                ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: Dimensions.width20,
-                        vertical: Dimensions.height50,
-                      ),
-                      child: Text(
-                        'HILITE',
-                        style: TextStyle(
-                          fontFamily: 'BebasNeue',
-                          fontSize: Dimensions.font30,
-                          color: AppColors.white,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: Dimensions.width20,
-                      ),
-                      child: Text(
-                        'FORGOT PASSWORD?',
-                        style: TextStyle(
-                          fontFamily: 'BebasNeue',
-                          fontSize: Dimensions.font30 * 1.2,
-                          color: AppColors.white,
-                          height: 1.1,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      appBar: CustomAppbar(leadingIcon: BackButton(color: AppColors.textColor)),
+      body: Padding(
+        padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Forgot Password?',
+              style: TextStyle(
+                color: AppColors.textColor,
+                fontSize: Dimensions.font25,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          SizedBox(height: Dimensions.height20),
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: Dimensions.width20,
-              vertical: Dimensions.height20,
+            SizedBox(height: Dimensions.height5),
+            Text(
+              'We will send a password reset link to your email.',
+              style: TextStyle(
+                color: AppColors.textColor,
+                fontSize: Dimensions.font14,
+                fontWeight: FontWeight.w400,
+              ),
             ),
-            child: Column(
+            SizedBox(height: Dimensions.height50),
+            Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 CustomTextField(
-                  hintText: 'Input Email Address',
+                  hintText: 'Username or Email',
+                  prefixIcon: CupertinoIcons.person_crop_circle,
                   controller: mailController,
-                  labelText: 'Email Address',
+                  // labelText: 'Email Address',
                   autofillHints: [AutofillHints.email],
                   keyboardType: TextInputType.emailAddress,
                 ),
                 SizedBox(height: Dimensions.height20),
 
                 CustomButton(
-                  text: 'REQUEST RESET LINK',
+                  text: 'Reset Password',
                   onPressed: () {
                     requestLink();
                   },
+                  backgroundColor: AppColors.buttonColor,
                 ),
-                SizedBox(height: Dimensions.height20),
+                /*SizedBox(height: Dimensions.height20),
                 Text(
                   'If there is an existing record attached to provided mail, a password reset link will be sent to your email',
                   textAlign: TextAlign.justify,
                   style: TextStyle(color: AppColors.grey5),
-                ),
+                ),*/
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
