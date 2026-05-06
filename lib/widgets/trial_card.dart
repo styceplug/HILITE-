@@ -167,12 +167,13 @@ class TrialCard extends StatelessWidget {
                         ],
                       ),
                       CustomButton(
-                        onPressed: () {},
+                        onPressed: onTap,
                         text: 'JOIN',
                         textStyle: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: Dimensions.font13,
                         ),
+                        borderRadius: BorderRadius.circular(Dimensions.radius10),
                         padding: EdgeInsets.symmetric(
                           horizontal: Dimensions.width10*1.2,
                           vertical: Dimensions.height10,

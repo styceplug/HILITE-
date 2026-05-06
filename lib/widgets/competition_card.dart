@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:get/get_utils/src/extensions/string_extensions.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 
 import '../models/competition_model.dart';
+import '../routes/routes.dart';
 import '../utils/colors.dart';
 import '../utils/dimensions.dart';
 import 'custom_button.dart';
-
-
 
 class CompetitionCard extends StatelessWidget {
   final CompetitionModel competition;
@@ -22,20 +22,22 @@ class CompetitionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Format Date safely
     String formattedDate = "Date TBA";
     if (competition.date != null) {
       try {
         DateTime dt = DateTime.parse(competition.date.toString());
         formattedDate = DateFormat('MMM d, yyyy').format(dt);
       } catch (e) {
-        // Fallback if parsing fails
       }
     }
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: Dimensions.width20,
+          vertical: Dimensions.height20,
+        ),
         margin: EdgeInsets.only(bottom: Dimensions.height20),
         decoration: BoxDecoration(
           color: Color(0XFF09142E),
@@ -70,6 +72,7 @@ class CompetitionCard extends StatelessWidget {
                 children: [
                   Text(
                     competition.name ?? '',
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: Dimensions.font18,
                       fontWeight: FontWeight.w700,
@@ -91,8 +94,22 @@ class CompetitionCard extends StatelessWidget {
                           color: AppColors.textColor,
                         ),
                       ),
+                      Spacer(),
+
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: Dimensions.width5,
+                        ),
+                        child: Icon(
+                          Icons.money,
+                          size: Dimensions.iconSize16,
+                          color: AppColors.textColor,
+                        ),
+                      ),
+                      Text('₦${competition.registrationFee}',style: TextStyle(fontWeight: FontWeight.w700),)
                     ],
                   ),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -115,77 +132,39 @@ class CompetitionCard extends StatelessWidget {
                                   color: AppColors.textColor,
                                 ),
                               ),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: Dimensions.width10,
-                                ),
-                                child: Icon(
-                                  Icons.circle,
-                                  size: Dimensions.iconSize16 * 0.5,
-                                  color: AppColors.textColor,
-                                ),
-                              ),
-                              Icon(
-                                Icons.person,
-                                color: Colors.white,
-                                size: Dimensions.iconSize20 * 0.7,
-                              ),
-                              SizedBox(width: Dimensions.width5),
-                              Text(
-                                competition.sId?.capitalizeFirst ?? '',
-                                style: TextStyle(
-                                  fontSize: Dimensions.font14,
-                                  fontWeight: FontWeight.w400,
-                                  color: AppColors.textColor,
-                                ),
-                              ),
+
                             ],
                           ),
                           Row(
                             children: [
                               Icon(
-                                Iconsax.bubble,
+                                Iconsax.cup,
                                 color: Colors.white,
                                 size: Dimensions.iconSize20 * 0.7,
                               ),
                               SizedBox(width: Dimensions.width5),
                               Text(
-                                competition.prize.toString(),
+
+                                '${competition.clubsNeeded} Teams',
                                 style: TextStyle(
                                   fontSize: Dimensions.font14,
                                   fontWeight: FontWeight.w400,
                                   color: AppColors.textColor,
                                 ),
                               ),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: Dimensions.width10,
-                                ),
-                                child: Icon(
-                                  Icons.circle,
-                                  size: Dimensions.iconSize16 * 0.5,
-                                  color: AppColors.textColor,
-                                ),
-                              ),
-                              Text(
-                                '${competition.registeredCount} Going',
-                                style: TextStyle(
-                                  fontSize: Dimensions.font14,
-                                  fontWeight: FontWeight.w400,
-                                  color: AppColors.textColor,
-                                ),
-                              ),
+
                             ],
                           ),
                         ],
                       ),
                       CustomButton(
-                        onPressed: () {},
-                        text: 'JOIN',
+                        onPressed: onTap,
+                        text: 'View details',
                         textStyle: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: Dimensions.font13,
                         ),
+                        borderRadius: BorderRadius.circular(Dimensions.radius10),
                         padding: EdgeInsets.symmetric(
                           horizontal: Dimensions.width10*1.2,
                           vertical: Dimensions.height10,
@@ -206,25 +185,4 @@ class CompetitionCard extends StatelessWidget {
     );
   }
 
-  Widget _buildMetaInfo(IconData icon, String text) {
-    return Expanded(
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: Colors.grey[400]),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

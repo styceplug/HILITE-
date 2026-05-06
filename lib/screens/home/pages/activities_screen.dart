@@ -83,32 +83,29 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
             ),
           ),
         ),
-        actionIcon: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: Dimensions.width10,
-            vertical: Dimensions.height10,
+        // --- FIX: Wrapped in GestureDetector & added isClub check ---
+        actionIcon: isClub
+            ? GestureDetector(
+          onTap: _showCreateBottomSheet,
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: Dimensions.width10,
+              vertical: Dimensions.height10,
+            ),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.white.withOpacity(0.1),
+            ),
+            child: Icon(
+              CupertinoIcons.add,
+              size: Dimensions.iconSize24,
+              color: AppColors.white,
+            ),
           ),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.white.withOpacity(0.1),
-          ),
-          child: Icon(
-            CupertinoIcons.add,
-            size: Dimensions.iconSize24,
-            color: AppColors.white,
-          ),
-        ),
+        )
+            : const SizedBox.shrink(), // Hides the button if not a club
         centerTitle: false,
       ),
-
-      /* // --- UNIFIED FAB FOR CLUBS ---
-      floatingActionButton: isClub
-          ? FloatingActionButton(
-        onPressed: _showCreateBottomSheet,
-        backgroundColor: AppColors.buttonColor,
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
-      )
-          : null,*/
       body: Column(
         children: [
           _buildCustomTabBar(),
@@ -380,6 +377,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
                   ),
                 ),
               ],
+
+              SizedBox(height: Dimensions.height150)
             ],
           );
         });
@@ -429,7 +428,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
   Widget _buildCompetitionsTab() {
     return GetBuilder<CompetitionController>(
       builder: (compCtrl) {
-        // If you add an isLoading flag to CompetitionController later, you can add the skeleton here too!
         if (compCtrl.competitionList.isEmpty) {
           return _buildEmptyState(
             icon: Icons.emoji_events_outlined,
