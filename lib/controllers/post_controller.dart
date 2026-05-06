@@ -202,7 +202,7 @@ class PostController extends GetxController {
   }
 
   Future<void> getBookmarks() async {
-    loader.showLoader();
+    // loader.showLoader();
     update();
 
     Response response = await postRepo.getBookmarkedPosts();
@@ -215,7 +215,7 @@ class PostController extends GetxController {
       ApiChecker.checkApi(response);
     }
 
-    loader.hideLoader();
+    // loader.hideLoader();
     update();
   }
 

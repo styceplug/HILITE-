@@ -83,7 +83,7 @@ class AppController extends GetxController {
     } else if (loggedIn) {
       Get.offAllNamed(AppRoutes.homeScreen);
     } else {
-      Get.offAllNamed(AppRoutes.splashScreen);
+      Get.offAllNamed(AppRoutes.onboardingScreen);
     }
   }
 

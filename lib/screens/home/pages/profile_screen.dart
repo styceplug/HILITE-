@@ -21,6 +21,7 @@ import '../../../utils/others.dart';
 import '../../../widgets/post_grid_shimmer.dart';
 import '../../../widgets/profile_avatar.dart';
 import '../../../widgets/reels_video_item.dart';
+import '../../others/bookmarks_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -31,6 +32,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   UserController userController = Get.find<UserController>();
+  PostController postController = Get.find<PostController>();
   NotificationController notificationController =
       Get.find<NotificationController>();
 
@@ -42,6 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       userController.getPersonalPosts('video');
       // userController.loadCachedUser();
+      postController.getBookmarks();
     });
   }
 
@@ -72,6 +75,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onRefresh: () async {
             userController.getPersonalPosts('video');
             userController.getPersonalPosts('image');
+            postController.getBookmarks();
+            CustomSnackBar.showToast(message: 'Refreshed');
           },
           child: SizedBox(
             height: Dimensions.screenHeight,
@@ -387,27 +392,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return _buildSkeletonGrid();
       }
       return _buildContentGrid(controller);
-    } else if (currentTab == 'Saved') {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(height: Dimensions.height30),
-            Icon(
-              Iconsax.save_2,
-              size: Dimensions.iconSize30 * 4,
-              color: AppColors.textColor.withOpacity(0.1),
-            ),
-            SizedBox(height: Dimensions.height10),
-            Text(
-              'No saved items yet.',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: Dimensions.font18,
+    }else if (currentTab == 'Saved') {
+      return GetBuilder<PostController>(
+        builder: (postCtrl) {
+          if (postCtrl.bookmarkList.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(height: Dimensions.height30),
+                  Icon(
+                    Iconsax.save_2,
+                    size: Dimensions.iconSize30 * 4,
+                    color: AppColors.textColor.withOpacity(0.1),
+                  ),
+                  SizedBox(height: Dimensions.height10),
+                  const Text(
+                    'No saved items yet.',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
               ),
+            );
+          }
+
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 2,
+              mainAxisSpacing: 2,
+              childAspectRatio: 3 / 4, // Match highlights aspect ratio
             ),
-          ],
-        ),
+            itemCount: postCtrl.bookmarkList.length,
+            itemBuilder: (context, index) {
+              final post = postCtrl.bookmarkList[index];
+              return GestureDetector(
+                onTap: () {
+                  Get.to(() => BookmarkPlayerScreen(
+                    posts: postCtrl.bookmarkList,
+                    initialIndex: index,
+                  ));
+                },
+                child: _buildBookmarkTileItem(post), // New builder for PostModel
+              );
+            },
+          );
+        },
       );
     } else if (currentTab == 'Squad' || currentTab == 'Info') {
       return Center(
@@ -450,6 +486,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildBookmarkTileItem(PostModel post) {
+    Widget tileContent;
+
+    if (post.type == 'video') {
+      tileContent = Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(color: AppColors.black),
+          if (post.video?.thumbnailUrl != null && post.video!.thumbnailUrl!.isNotEmpty)
+            Image.network(post.video!.thumbnailUrl!, fit: BoxFit.cover),
+          const Center(
+            child: Icon(
+              Icons.play_circle_outline_rounded,
+              color: Colors.white70,
+              size: 30,
+            ),
+          ),
+        ],
+      );
+    } else if (post.type == 'image') {
+      tileContent = Image.network(
+        post.image?.url ?? '',
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          color: AppColors.grey2.withOpacity(0.2),
+          child: const Icon(Icons.broken_image, color: Colors.grey),
+        ),
+      );
+    } else {
+      tileContent = Container(
+        padding: const EdgeInsets.all(8),
+        color: AppColors.grey2.withOpacity(0.2),
+        child: Center(
+          child: Text(
+            post.text ?? '',
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 10, color: Colors.white),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    // Apply the exact same rounded corners as the Highlights tab
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: tileContent,
     );
   }
 

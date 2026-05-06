@@ -127,6 +127,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            SizedBox(height: Dimensions.height100),
             Image.asset(
               AppConstants.getPngAsset('logo3'),
               height: Dimensions.height70,
