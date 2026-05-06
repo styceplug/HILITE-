@@ -1,56 +1,43 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_utils/src/extensions/string_extensions.dart';
+import 'package:get/get.dart';
+import 'package:hilite/models/trial_model.dart';
+import 'package:hilite/utils/colors.dart';
+import 'package:hilite/utils/dimensions.dart';
+import 'package:hilite/widgets/custom_button.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 
-import '../models/competition_model.dart';
-import '../utils/colors.dart';
-import '../utils/dimensions.dart';
-import 'custom_button.dart';
-
-
-
-class CompetitionCard extends StatelessWidget {
-  final CompetitionModel competition;
+class TrialCard extends StatelessWidget {
+  final TrialModel trial;
   final VoidCallback onTap;
 
-  const CompetitionCard({
-    Key? key,
-    required this.competition,
-    required this.onTap,
-  }) : super(key: key);
+  const TrialCard({required this.trial, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    // Format Date safely
-    String formattedDate = "Date TBA";
-    if (competition.date != null) {
-      try {
-        DateTime dt = DateTime.parse(competition.date.toString());
-        formattedDate = DateFormat('MMM d, yyyy').format(dt);
-      } catch (e) {
-        // Fallback if parsing fails
-      }
-    }
+    final dateFormatter = DateFormat('MMM d, yyyy');
+    final int registeredCount = trial.registeredCount;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.only(bottom: Dimensions.height20),
+        padding: EdgeInsets.symmetric(
+          horizontal: Dimensions.width20,
+          vertical: Dimensions.height20,
+        ),
         decoration: BoxDecoration(
           color: Color(0XFF09142E),
-
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(Dimensions.radius10),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child:
-        Row(
+        child: Row(
           children: [
             Container(
               height: Dimensions.height70,
@@ -58,7 +45,7 @@ class CompetitionCard extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 image: DecorationImage(
-                  image: NetworkImage(competition.creator?.profilePicture ?? ''),
+                  image: NetworkImage(trial.creator?.profilePicture ?? ''),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -69,7 +56,7 @@ class CompetitionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    competition.name ?? '',
+                    trial.name,
                     style: TextStyle(
                       fontSize: Dimensions.font18,
                       fontWeight: FontWeight.w700,
@@ -84,7 +71,7 @@ class CompetitionCard extends StatelessWidget {
                       ),
                       SizedBox(width: Dimensions.width5),
                       Text(
-                        competition.location ?? '',
+                        trial.location,
                         style: TextStyle(
                           fontSize: Dimensions.font14,
                           fontWeight: FontWeight.w400,
@@ -108,7 +95,7 @@ class CompetitionCard extends StatelessWidget {
                               ),
                               SizedBox(width: Dimensions.width5),
                               Text(
-                                formattedDate,
+                                dateFormatter.format(trial.date),
                                 style: TextStyle(
                                   fontSize: Dimensions.font14,
                                   fontWeight: FontWeight.w400,
@@ -132,7 +119,7 @@ class CompetitionCard extends StatelessWidget {
                               ),
                               SizedBox(width: Dimensions.width5),
                               Text(
-                                competition.sId?.capitalizeFirst ?? '',
+                                trial.ageGroup.capitalizeFirst ?? '',
                                 style: TextStyle(
                                   fontSize: Dimensions.font14,
                                   fontWeight: FontWeight.w400,
@@ -150,7 +137,7 @@ class CompetitionCard extends StatelessWidget {
                               ),
                               SizedBox(width: Dimensions.width5),
                               Text(
-                                competition.prize.toString(),
+                                trial.type.capitalizeFirst ?? '',
                                 style: TextStyle(
                                   fontSize: Dimensions.font14,
                                   fontWeight: FontWeight.w400,
@@ -168,7 +155,7 @@ class CompetitionCard extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                '${competition.registeredCount} Going',
+                                '$registeredCount Going',
                                 style: TextStyle(
                                   fontSize: Dimensions.font14,
                                   fontWeight: FontWeight.w400,
@@ -199,31 +186,6 @@ class CompetitionCard extends StatelessWidget {
             ),
           ],
         ),
-
-
-
-      ),
-    );
-  }
-
-  Widget _buildMetaInfo(IconData icon, String text) {
-    return Expanded(
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: Colors.grey[400]),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -14,7 +14,6 @@ import '../../models/message_model.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../utils/app_constants.dart';
 
-
 enum _VoiceComposerMode { idle, recording, preview }
 
 class MessagingScreen extends StatefulWidget {
@@ -53,13 +52,15 @@ class _MessagingScreenState extends State<MessagingScreen>
   final Set<String> _retainedVoiceDraftPaths = <String>{};
 
   bool get _isRecording => _voiceMode == _VoiceComposerMode.recording;
+
   bool get _hasVoiceDraft =>
       _voiceMode == _VoiceComposerMode.preview &&
-          _draftRecordingPath != null &&
-          _draftRecordingPath!.trim().isNotEmpty;
+      _draftRecordingPath != null &&
+      _draftRecordingPath!.trim().isNotEmpty;
+
   bool get _isDraftPlaying =>
       _draftPlayer.playing &&
-          _draftPlayer.playerState.processingState != ProcessingState.completed;
+      _draftPlayer.playerState.processingState != ProcessingState.completed;
 
   @override
   void initState() {
@@ -339,7 +340,7 @@ class _MessagingScreenState extends State<MessagingScreen>
       final draftPath = _draftRecordingPath;
       final processingState = _draftPlayer.playerState.processingState;
       if ((processingState == ProcessingState.idle ||
-          processingState == ProcessingState.completed) &&
+              processingState == ProcessingState.completed) &&
           draftPath != null) {
         if (processingState == ProcessingState.idle) {
           if (mounted) {
@@ -513,7 +514,7 @@ class _ChatHeader extends StatelessWidget {
     final rawName = peer?.displayName.trim() ?? '';
     final displayName = rawName.isNotEmpty ? rawName : 'User';
     final avatarLetter =
-    rawName.isNotEmpty ? rawName.characters.first.toUpperCase() : '?';
+        rawName.isNotEmpty ? rawName.characters.first.toUpperCase() : '?';
 
     final hasImage = (peer?.profilePicture.trim().isNotEmpty ?? false);
     final isOnline = presence?.isOnline ?? false;
@@ -523,13 +524,21 @@ class _ChatHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF030A1B),
-        border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.05))),
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withOpacity(0.05)),
+        ),
       ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Colors.white),
-            onPressed: () => Get.back(),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 20,
+              color: Colors.white,
+            ),
+            onPressed: () {
+              Get.back();
+            },
           ),
           Stack(
             children: [
@@ -537,13 +546,17 @@ class _ChatHeader extends StatelessWidget {
                 radius: 20,
                 backgroundColor: Colors.white.withOpacity(0.1),
                 backgroundImage:
-                hasImage ? NetworkImage(peer!.profilePicture) : null,
-                child: !hasImage
-                    ? Text(
-                  avatarLetter,
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-                )
-                    : null,
+                    hasImage ? NetworkImage(peer!.profilePicture) : null,
+                child:
+                    !hasImage
+                        ? Text(
+                          avatarLetter,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        )
+                        : null,
               ),
               if (isOnline)
                 Positioned(
@@ -555,7 +568,10 @@ class _ChatHeader extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: const Color(0xFF22C55E),
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF030A1B), width: 2),
+                      border: Border.all(
+                        color: const Color(0xFF030A1B),
+                        width: 2,
+                      ),
                     ),
                   ),
                 ),
@@ -589,8 +605,12 @@ class _ChatHeader extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isOnline ? const Color(0xFF22C55E) : Colors.white.withOpacity(0.5),
-                      fontWeight: isOnline ? FontWeight.w500 : FontWeight.normal,
+                      color:
+                          isOnline
+                              ? const Color(0xFF22C55E)
+                              : Colors.white.withOpacity(0.5),
+                      fontWeight:
+                          isOnline ? FontWeight.w500 : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -640,7 +660,7 @@ class _MessageList extends StatelessWidget {
         controller: scrollCtrl,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         itemCount:
-        groups.length +
+            groups.length +
             (ctrl.peerIsTyping.value ? 1 : 0) +
             (ctrl.isLoading.value ? 1 : 0),
         itemBuilder: (_, i) {
@@ -648,7 +668,10 @@ class _MessageList extends StatelessWidget {
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(12),
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               ),
             );
           }
@@ -694,24 +717,30 @@ class _MessageList extends StatelessWidget {
       backgroundColor: const Color(0xFF1F2937),
       builder:
           (_) => SafeArea(
-        child: ListTile(
-          leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-          title: const Text(
-            'Delete for me',
-            style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w500),
+            child: ListTile(
+              leading: const Icon(
+                Icons.delete_outline,
+                color: Colors.redAccent,
+              ),
+              title: const Text(
+                'Delete for me',
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                ctrl.deleteMessage(msgId);
+              },
+            ),
           ),
-          onTap: () {
-            Navigator.pop(context);
-            ctrl.deleteMessage(msgId);
-          },
-        ),
-      ),
     );
   }
 
   List<({String label, List<ChatMessage> messages})> _groupByDate(
-      List<ChatMessage> msgs,
-      ) {
+    List<ChatMessage> msgs,
+  ) {
     final map = <String, List<ChatMessage>>{};
 
     for (final m in msgs) {
@@ -784,7 +813,8 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     // Determine colors based on sender
     // Note: Use your primary AppColor for `mine`, e.g., AppColors.buttonColor
-    final Color bubbleColor = mine ? const Color(0xFF2563EB) : Colors.white.withOpacity(0.1);
+    final Color bubbleColor =
+        mine ? const Color(0xFF2563EB) : Colors.white.withOpacity(0.1);
     final Color textColor = Colors.white;
 
     return Align(
@@ -803,9 +833,9 @@ class _MessageBubble extends StatelessWidget {
               topLeft: const Radius.circular(18),
               topRight: const Radius.circular(18),
               bottomLeft:
-              mine ? const Radius.circular(18) : const Radius.circular(4),
+                  mine ? const Radius.circular(18) : const Radius.circular(4),
               bottomRight:
-              mine ? const Radius.circular(4) : const Radius.circular(18),
+                  mine ? const Radius.circular(4) : const Radius.circular(18),
             ),
           ),
           child: Column(
@@ -828,7 +858,10 @@ class _MessageBubble extends StatelessWidget {
                     Icon(
                       allRead ? Icons.done_all : Icons.done,
                       size: 14,
-                      color: allRead ? const Color(0xFF34B7F1) : textColor.withOpacity(0.6),
+                      color:
+                          allRead
+                              ? const Color(0xFF34B7F1)
+                              : textColor.withOpacity(0.6),
                     ),
                   ],
                 ],
@@ -850,7 +883,9 @@ class _MessageBubble extends StatelessWidget {
           return const SizedBox(
             width: 200,
             height: 120,
-            child: Center(child: Icon(Icons.broken_image, color: Colors.white54)),
+            child: Center(
+              child: Icon(Icons.broken_image, color: Colors.white54),
+            ),
           );
         }
 
@@ -867,10 +902,12 @@ class _MessageBubble extends StatelessWidget {
               fit: BoxFit.cover,
               errorBuilder:
                   (_, __, ___) => const SizedBox(
-                width: 200,
-                height: 120,
-                child: Center(child: Icon(Icons.broken_image, color: Colors.white54)),
-              ),
+                    width: 200,
+                    height: 120,
+                    child: Center(
+                      child: Icon(Icons.broken_image, color: Colors.white54),
+                    ),
+                  ),
             ),
           ),
         );
@@ -880,10 +917,7 @@ class _MessageBubble extends StatelessWidget {
         if (audioUrl == null && localAudioPath == null) {
           return Text(
             'Audio unavailable',
-            style: TextStyle(
-              color: textColor,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: textColor, fontSize: 14),
           );
         }
 
@@ -897,11 +931,7 @@ class _MessageBubble extends StatelessWidget {
       default:
         return Text(
           msg.text ?? '',
-          style: TextStyle(
-            fontSize: 15,
-            color: textColor,
-            height: 1.4,
-          ),
+          style: TextStyle(fontSize: 15, color: textColor, height: 1.4),
         );
     }
   }
@@ -982,16 +1012,16 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
       animation: _anim,
       builder:
           (_, __) => Transform.translate(
-        offset: Offset(0, _anim.value),
-        child: Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.5),
-            shape: BoxShape.circle,
+            offset: Offset(0, _anim.value),
+            child: Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.5),
+                shape: BoxShape.circle,
+              ),
+            ),
           ),
-        ),
-      ),
     );
   }
 }
@@ -1073,27 +1103,39 @@ class _InputBar extends StatelessWidget {
                 ),
                 builder:
                     (_) => SafeArea(
-                  child: Wrap(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.image_outlined, color: Colors.white),
-                        title: const Text('Send image', style: TextStyle(color: Colors.white)),
-                        onTap: () {
-                          Navigator.pop(context);
-                          onPickImage();
-                        },
+                      child: Wrap(
+                        children: [
+                          ListTile(
+                            leading: const Icon(
+                              Icons.image_outlined,
+                              color: Colors.white,
+                            ),
+                            title: const Text(
+                              'Send image',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            onTap: () {
+                              Navigator.pop(context);
+                              onPickImage();
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(
+                              Icons.mic_outlined,
+                              color: Colors.white,
+                            ),
+                            title: const Text(
+                              'Send audio',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            onTap: () {
+                              Navigator.pop(context);
+                              onPickAudio();
+                            },
+                          ),
+                        ],
                       ),
-                      ListTile(
-                        leading: const Icon(Icons.mic_outlined, color: Colors.white),
-                        title: const Text('Send audio', style: TextStyle(color: Colors.white)),
-                        onTap: () {
-                          Navigator.pop(context);
-                          onPickAudio();
-                        },
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
               );
             },
           ),
@@ -1139,7 +1181,7 @@ class _InputBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Obx(
-                () => AnimatedOpacity(
+            () => AnimatedOpacity(
               opacity: ctrl.isSending.value ? 0.5 : 1.0,
               duration: const Duration(milliseconds: 150),
               child: GestureDetector(
@@ -1152,19 +1194,19 @@ class _InputBar extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child:
-                  ctrl.isSending.value
-                      ? const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                      : const Icon(
-                    Icons.send_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                      ctrl.isSending.value
+                          ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                          : const Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                 ),
               ),
             ),
@@ -1266,32 +1308,32 @@ class _InputBar extends StatelessWidget {
                   GestureDetector(
                     onTap: onPlayVoiceDraft,
                     child:
-                    isDraftLoading
-                        ? const SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: Padding(
-                        padding: EdgeInsets.all(8),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(0xFF2563EB),
-                        ),
-                      ),
-                    )
-                        : Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF2563EB),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isDraftPlaying
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        color: Colors.white,
-                      ),
-                    ),
+                        isDraftLoading
+                            ? const SizedBox(
+                              width: 36,
+                              height: 36,
+                              child: Padding(
+                                padding: EdgeInsets.all(8),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF2563EB),
+                                ),
+                              ),
+                            )
+                            : Container(
+                              width: 36,
+                              height: 36,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF2563EB),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isDraftPlaying
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                                color: Colors.white,
+                              ),
+                            ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1324,21 +1366,21 @@ class _InputBar extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Obx(
-                () => _buildCircleButton(
+            () => _buildCircleButton(
               icon: Icons.send_rounded,
               backgroundColor: const Color(0xFF2563EB),
               iconColor: Colors.white,
               onTap: ctrl.isSending.value ? null : onSendVoiceDraft,
               child:
-              ctrl.isSending.value
-                  ? const Padding(
-                padding: EdgeInsets.all(12),
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-                  : null,
+                  ctrl.isSending.value
+                      ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                      : null,
             ),
           ),
         ],
@@ -1358,13 +1400,11 @@ class _InputBar extends StatelessWidget {
       child: Container(
         width: 48,
         height: 48,
-        decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle),
-        child:
-        child ??
-            Icon(
-              icon,
-              color: iconColor,
-            ),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          shape: BoxShape.circle,
+        ),
+        child: child ?? Icon(icon, color: iconColor),
       ),
     );
   }
@@ -1386,26 +1426,42 @@ class _InputBar extends StatelessWidget {
 // Reusable Blinking Dot for Recording UI
 class _BlinkingDot extends StatefulWidget {
   const _BlinkingDot();
+
   @override
   State<_BlinkingDot> createState() => _BlinkingDotState();
 }
-class _BlinkingDotState extends State<_BlinkingDot> with SingleTickerProviderStateMixin {
+
+class _BlinkingDotState extends State<_BlinkingDot>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 500))..repeat(reverse: true);
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat(reverse: true);
   }
+
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _controller,
-      child: Container(width: 10, height: 10, decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle)),
+      child: Container(
+        width: 10,
+        height: 10,
+        decoration: const BoxDecoration(
+          color: Colors.redAccent,
+          shape: BoxShape.circle,
+        ),
+      ),
     );
   }
 }
@@ -1443,10 +1499,10 @@ class _FullScreenImageViewer extends StatelessWidget {
             fit: BoxFit.contain,
             errorBuilder:
                 (_, __, ___) => const Icon(
-              Icons.broken_image,
-              color: Colors.white,
-              size: 40,
-            ),
+                  Icons.broken_image,
+                  color: Colors.white,
+                  size: 40,
+                ),
           ),
         ),
       ),
@@ -1572,7 +1628,7 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
     } catch (e) {
       debugPrint(
         'Audio message playback error '
-            '(remote: ${widget.url}, local: ${widget.localFilePath}): $e',
+        '(remote: ${widget.url}, local: ${widget.localFilePath}): $e',
       );
       _ready = false;
       if (mounted) {
@@ -1665,13 +1721,13 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
     final textColor = widget.mine ? Colors.white : Colors.white;
     final isPlayingActive =
         _player.playing &&
-            _player.playerState.processingState != ProcessingState.completed;
+        _player.playerState.processingState != ProcessingState.completed;
     final secondaryTextColor = Colors.white.withOpacity(0.6);
     final displayDuration = _displayDuration;
     final displayPosition =
-    _position > displayDuration && displayDuration > Duration.zero
-        ? displayDuration
-        : _position;
+        _position > displayDuration && displayDuration > Duration.zero
+            ? displayDuration
+            : _position;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1680,22 +1736,22 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
         GestureDetector(
           onTap: _togglePlay,
           child:
-          _loading
-              ? SizedBox(
-            width: 32,
-            height: 32,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: iconColor,
-            ),
-          )
-              : Icon(
-            isPlayingActive
-                ? Icons.pause_circle_filled
-                : Icons.play_circle_fill,
-            color: iconColor,
-            size: 36,
-          ),
+              _loading
+                  ? SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: iconColor,
+                    ),
+                  )
+                  : Icon(
+                    isPlayingActive
+                        ? Icons.pause_circle_filled
+                        : Icons.play_circle_fill,
+                    color: iconColor,
+                    size: 36,
+                  ),
         ),
         const SizedBox(width: 8),
         Column(
@@ -1709,16 +1765,28 @@ class _AudioMessagePlayerState extends State<_AudioMessagePlayer> {
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(
                   trackHeight: 3.0,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 14.0),
+                  thumbShape: const RoundSliderThumbShape(
+                    enabledThumbRadius: 6.0,
+                  ),
+                  overlayShape: const RoundSliderOverlayShape(
+                    overlayRadius: 14.0,
+                  ),
                   activeTrackColor: iconColor,
                   inactiveTrackColor: iconColor.withOpacity(0.3),
                   thumbColor: iconColor,
                 ),
                 child: Slider(
                   min: 0.0,
-                  max: displayDuration.inMilliseconds > 0 ? displayDuration.inMilliseconds.toDouble() : 1.0,
-                  value: displayPosition.inMilliseconds.toDouble().clamp(0.0, displayDuration.inMilliseconds > 0 ? displayDuration.inMilliseconds.toDouble() : 1.0),
+                  max:
+                      displayDuration.inMilliseconds > 0
+                          ? displayDuration.inMilliseconds.toDouble()
+                          : 1.0,
+                  value: displayPosition.inMilliseconds.toDouble().clamp(
+                    0.0,
+                    displayDuration.inMilliseconds > 0
+                        ? displayDuration.inMilliseconds.toDouble()
+                        : 1.0,
+                  ),
                   onChanged: (value) {
                     if (_ready) {
                       _player.seek(Duration(milliseconds: value.round()));

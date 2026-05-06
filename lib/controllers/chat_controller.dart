@@ -392,10 +392,14 @@ class ChatController extends GetxController {
     if (currentChatId != null) {
       socketHelper.leaveChat(currentChatId!);
     }
-    peerIsTyping.value = false;
-    if (Get.isRegistered<ChatListController>()) {
-      unawaited(Get.find<ChatListController>().loadChats());
-    }
+
+    Future.microtask(() {
+      peerIsTyping.value = false;
+
+      if (Get.isRegistered<ChatListController>()) {
+        unawaited(Get.find<ChatListController>().loadChats());
+      }
+    });
   }
 
   @override

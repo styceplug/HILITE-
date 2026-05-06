@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
+import '../../widgets/trial_card.dart';
+
 class TrialListScreen extends StatelessWidget {
   final TrialController controller = Get.find<TrialController>();
   final UserController userController = Get.find<UserController>();
@@ -63,7 +65,7 @@ class TrialListScreen extends StatelessWidget {
             separatorBuilder: (c, i) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final trial = controller.trialList[index];
-              return _TrialCard(
+              return TrialCard(
                   trial: trial,
                   onTap: () {
                     if (trial.id.isNotEmpty) {
@@ -101,161 +103,5 @@ class TrialListScreen extends StatelessWidget {
   }
 }
 
-// --- The Custom Card Widget ---
 
-class _TrialCard extends StatelessWidget {
-  final dynamic trial; // Replace 'dynamic' with TrialModel
-  final VoidCallback onTap;
 
-  const _TrialCard({required this.trial, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final dateFormatter = DateFormat('MMM d, yyyy');
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. Image & Badges Section
-            Stack(
-              children: [
-                // Banner Image
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  child: SizedBox(
-                    height: 150,
-                    width: double.infinity,
-                    child: trial.banner != null && trial.banner!.isNotEmpty
-                        ? Image.network(trial.banner!, fit: BoxFit.cover)
-                        : Container(
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.image_not_supported, color: Colors.grey),
-                    ),
-                  ),
-                ),
-
-                // Badge: Age Group
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      trial.ageGroup.toUpperCase(),
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-
-                // Badge: Type (Open/Closed)
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      trial.type.toUpperCase(), // e.g., "OPEN"
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            // 2. Details Section
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title and Price Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          trial.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            height: 1.2,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        "\$${trial.registrationFee.toStringAsFixed(0)}",
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Location Row
-                  Row(
-                    children: [
-                      Icon(Icons.location_on, size: 16, color: Colors.grey[500]),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          trial.location,
-                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  // Date Row
-                  Row(
-                    children: [
-                      Icon(Icons.calendar_today, size: 16, color: Colors.grey[500]),
-                      const SizedBox(width: 4),
-                      Text(
-                        dateFormatter.format(trial.date),
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
