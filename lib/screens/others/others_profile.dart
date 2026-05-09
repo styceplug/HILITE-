@@ -3,23 +3,19 @@ import 'package:get/get.dart';
 import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/screens/home/pages/profile_screen.dart';
 import 'package:hilite/screens/others/relationship_screen.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:hilite/widgets/snackbars.dart';
-import 'package:iconsax/iconsax.dart';
-
+import 'package:hilite/utils/colors.dart';
+import 'package:hilite/utils/dimensions.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../../data/repo/chat_repo.dart';
 import '../../models/message_model.dart';
 import '../../models/post_model.dart';
 import '../../models/user_model.dart';
 import '../../routes/routes.dart';
-import '../../utils/colors.dart';
-import '../../utils/dimensions.dart';
+import 'package:intl/intl.dart';
+
 import '../../utils/others.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/gift_bottom_modal.dart';
-import '../../widgets/post_grid_shimmer.dart';
-import '../../widgets/profile_avatar.dart';
 import '../../widgets/reels_video_item.dart';
+
 
 class OthersProfileScreen extends StatefulWidget {
   const OthersProfileScreen({super.key});
@@ -29,8 +25,9 @@ class OthersProfileScreen extends StatefulWidget {
 }
 
 class _OthersProfileState extends State<OthersProfileScreen> {
-  UserController userController = Get.find<UserController>();
+  final UserController userController = Get.find<UserController>();
   String? targetId;
+  int _selectedTabIndex = 0;
 
   @override
   void initState() {
@@ -40,420 +37,232 @@ class _OthersProfileState extends State<OthersProfileScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (targetId != null) {
+        // --- THIS IS THE ONLY PLACE WE SHOULD FETCH ---
         userController.prepareExternalProfile(targetId!);
         userController.getOthersProfile(targetId!, resetBeforeFetch: true);
         userController.getAllExternalUserPosts(targetId!);
       } else {
-        CustomSnackBar.failure(message: 'User not found');
+        Get.snackbar('Error', 'User not found', backgroundColor: Colors.red, colorText: Colors.white);
         Get.back();
       }
     });
   }
 
   @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF030A1B), // Premium Dark Background
       body: GetBuilder<UserController>(
         builder: (controller) {
-          if (targetId == null) {
-            return const SizedBox.shrink();
-          }
+          if (targetId == null) return const SizedBox.shrink();
 
-          final user = userController.othersProfile.value;
-          final isLoadingProfile =
-              controller.isOthersProfileLoading.value ||
-              user == null ||
-              user.id != targetId;
+          final realUser = controller.othersProfile.value;
 
-          if (isLoadingProfile) {
-            if (!controller.isOthersProfileLoading.value &&
-                user?.id != targetId) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && targetId != null) {
-                  userController.prepareExternalProfile(targetId!);
-                  userController.getOthersProfile(
-                    targetId!,
-                    resetBeforeFetch: true,
-                  );
-                  userController.getAllExternalUserPosts(targetId!);
-                }
-              });
-            }
+          // Determine if we are loading
+          final bool isLoadingProfile = controller.isOthersProfileLoading.value || realUser == null || realUser.id != targetId;
 
-            return const _OthersProfileShimmer();
-          }
-
+          // Smart Skeletonizer Logic using strictly typed Mock User
+          final user = isLoadingProfile ? _getMockUser() : realUser;
           final isFollowing = user.isFollowed;
           final isFollowBusy = controller.isFollowActionInProgress(user.id);
 
-          var player = user.playerDetails;
           var club = user.clubDetails;
-          var agent = user.agentDetails;
 
-          return SingleChildScrollView(
-            padding: EdgeInsets.symmetric(vertical: Dimensions.height10 * 5),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    Dimensions.width15,
-                    Dimensions.height30,
-                    Dimensions.width15,
-                    0,
-                  ),
-                  child: SizedBox(
-                    // Ensure the Stack takes up the full width so centering is accurate
-                    width: double.infinity,
+          // Determine Tabs by Role
+          List<String> profileTabs;
+          switch (user.role.toLowerCase()) {
+            case 'club':
+              profileTabs = ['Squad', 'Highlights', 'Info'];
+              break;
+            case 'agent':
+              profileTabs = ['Scouted', 'Highlights', 'Info'];
+              break;
+            case 'player':
+            default:
+              profileTabs = ['Highlights', 'Info'];
+              break;
+          }
+          if (_selectedTabIndex >= profileTabs.length) _selectedTabIndex = 0;
 
-                    // Set a height large enough to fit the Avatar/Buttons
-                    child: Stack(
-                      alignment: Alignment.topCenter,
-                      // This forces the Avatar to the exact center
-                      children: [
-                        // 1. Back Button (Pinned Left)
-                        Positioned(
-                          left: 0,
-                          child: const BackButton(color: Colors.black),
-                        ),
-
-                        OtherProfileAvatar(avatarUrl: user.profilePicture),
-
-                        // 3. Action Buttons (Pinned Right)
-                        Positioned(
-                          right: 0,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // ℹ️ Info Button
-                              InkWell(
-                                onTap: () => _showProfileDetails(context, user),
-                                borderRadius: BorderRadius.circular(50),
-                                child: Container(
-                                  padding: EdgeInsets.all(Dimensions.width10),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: AppColors.grey2,
-                                  ),
-                                  child: Icon(
-                                    Icons.info_outline_rounded,
-                                    color: AppColors.black,
-                                    size:
-                                        Dimensions
-                                            .iconSize20, // Adjusted to your snippet
-                                  ),
-                                ),
-                              ),
-
-                              SizedBox(width: Dimensions.width10),
-
-                              // 🎁 Gift Button
-                              InkWell(
-                                onTap: () {
-                                  Get.bottomSheet(
-                                    GiftSelectionBottomSheet(
-                                      recipientId: user.id,
-                                    ),
-                                    isScrollControlled: true,
-                                  );
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.all(Dimensions.width10),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: AppColors.success,
-                                  ),
-                                  child: Icon(
-                                    Iconsax.gift,
-                                    color: AppColors.white,
-                                    size: Dimensions.iconSize16,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                SizedBox(height: Dimensions.height20),
-
-                /// 🧾 Name and Username
-                Text(
-                  user.role == 'club'
-                      ? (user.clubDetails?.clubName ?? 'Unknown Club')
-                      : (user.name.capitalizeFirst ?? 'Unknown'),
-                  style: TextStyle(
-                    fontSize: Dimensions.font20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  '@${user.username}'.toLowerCase(),
-                  style: TextStyle(
-                    fontSize: Dimensions.font14,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.black.withOpacity(0.7),
-                  ),
-                ),
-
-                SizedBox(height: Dimensions.height10),
-
-                /// 📊 Stats Row
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: Dimensions.width100,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      // if (user.role != 'fan')
-                      _buildStat('Followers', '${user.followers}', 'followers'),
-                      _buildStat('Following', '${user.following}', 'following'),
-                    ],
-                  ),
-                ),
-                SizedBox(height: Dimensions.height10),
-
-                /// 🧾 Bio or Summary
-                if (user.bio?.isNotEmpty ?? false)
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: Dimensions.width30,
-                    ),
-                    child: Text(
-                      user.bio ?? '',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: Dimensions.font13,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.black.withOpacity(0.8),
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-
-                SizedBox(height: Dimensions.height15),
-
-                /// ⚽ Player Info
-                if (user.role == 'player') ...[
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        bottom: Dimensions.height15,
-                        left: Dimensions.width30,
-                        right: Dimensions.width30,
-                      ),
+          return Skeletonizer(
+            enabled: isLoadingProfile,
+            child: SafeArea(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // --- 1. App Bar Area ---
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildInfoTag('Position: ${player?.position ?? '-'}'),
-                          _buildInfoTag('Height: ${player?.height ?? '-'}cm'),
-                          _buildInfoTag(
-                            'Age Range: ${_footballAgeRangeLabel(player?.dob)}',
+                          Container(
+                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+                              onPressed: () => Get.back(),
+                            ),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+                            child: IconButton(
+                              icon: const Icon(Icons.more_horiz, color: Colors.white),
+                              onPressed: isLoadingProfile ? null : () => _showProfileDetails(context, user),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
 
-                /// 🏢 Club Info
-                if (user.role == 'club') ...[
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        bottom: Dimensions.height15,
-                        left: Dimensions.width30,
-                        right: Dimensions.width30,
+                    // --- 2. Avatar ---
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white.withOpacity(0.2), width: 3),
+                      ),
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.grey[800],
+                        backgroundImage: user.profilePicture.isNotEmpty ? NetworkImage(user.profilePicture) : null,
+                        child: user.profilePicture.isEmpty ? const Icon(Icons.person, size: 40, color: Colors.white) : null,
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+
+                    // --- 3. Name & Subtitle ---
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          user.role == 'club' ? (club?.clubName ?? user.name) : user.name.capitalizeFirst ?? 'Unknown',
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _buildSubtitle(user),
+                      style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.6)),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // --- 4. Pill Badge ---
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.blueAccent.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.blueAccent.withOpacity(0.3)),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildInfoTag('Account Name: ${user.name ?? '-'}'),
-                          SizedBox(width: Dimensions.height5),
-                          _buildInfoTag('Club Type: ${club?.clubType ?? '-'}'),
-                          SizedBox(width: Dimensions.height5),
-                          _buildInfoTag('Manager: ${club?.manager ?? '-'}'),
-                          SizedBox(width: Dimensions.height5),
-                          _buildInfoTag('Founded: ${club?.yearFounded ?? '-'}'),
-                          SizedBox(width: Dimensions.height5),
+                          const Icon(Icons.verified, color: Colors.blueAccent, size: 14),
+                          const SizedBox(width: 5),
+                          Text(
+                            _buildBadgeLabel(user),
+                            style: const TextStyle(fontSize: 12, color: Colors.blueAccent, fontWeight: FontWeight.w600),
+                          ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 20),
 
-                /// 🤝 Agent Info
-                if (user.role == 'agent') ...[
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        bottom: Dimensions.height15,
-                        left: Dimensions.width30,
-                        right: Dimensions.width30,
-                      ),
+                    // --- 5. Stats Row (Followers | Following) ---
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildStatBlock(_formatNumber(user.followers), 'Followers', 'followers', user, isLoadingProfile),
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 20),
+                          height: 20,
+                          width: 1,
+                          color: Colors.white.withOpacity(0.2),
+                        ),
+                        _buildStatBlock(_formatNumber(user.following), 'Following', 'following', user, isLoadingProfile),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // --- 6. Action Buttons ---
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Row(
                         children: [
-                          _buildInfoTag('Agency: ${agent?.agencyName ?? '-'}'),
-                          SizedBox(width: Dimensions.height5),
-                          _buildInfoTag(
-                            'Experience: ${agent?.experience ?? '-'}',
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: isLoadingProfile || isFollowBusy ? null : () {
+                                if (!isFollowing) {
+                                  userController.followUser(user.id);
+                                } else {
+                                  userController.unfollowUser(user.id);
+                                }
+                              },
+                              icon: isFollowBusy
+                                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                  : Icon(Icons.person_add_alt_1, color: isFollowing ? Colors.white : Colors.white, size: 18),
+                              label: Text(isFollowing ? 'Unfollow' : 'Follow', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isFollowing ? Colors.white.withOpacity(0.05) : const Color(0xFF1E293B),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
                           ),
-                          SizedBox(width: Dimensions.height5),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: isLoadingProfile ? null : () async {
+                                // Chat logic
+                                try {
+                                  final chatRepo = Get.find<ChatRepo>();
+                                  final response = await chatRepo.getOrCreateChat(user.id);
+
+                                  if (response.statusCode == 200 && response.body['code'] == '00') {
+                                    final chat = Chat.fromJson(Map<String, dynamic>.from(response.body['data']));
+                                    Get.toNamed(
+                                      AppRoutes.messagingScreen,
+                                      arguments: {
+                                        'chat': chat,
+                                        'peerName': user.name,
+                                        'peerUsername': user.username,
+                                        'peerProfilePicture': user.profilePicture,
+                                      },
+                                    );
+                                  } else {
+                                    Get.snackbar('Error', response.body?['message'] ?? 'Unable to open chat', backgroundColor: Colors.red, colorText: Colors.white);
+                                  }
+                                } catch (e) {
+                                  Get.snackbar('Error', 'Unable to open chat: $e', backgroundColor: Colors.red, colorText: Colors.white);
+                                }
+                              },
+                              icon: const Icon(Icons.message_rounded, color: Colors.white, size: 18),
+                              label: const Text('Message', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blueAccent,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 30),
 
-                /// 🔘 Follow & Message Buttons
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: Dimensions.width40),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Expanded(
-                        child: CustomButton(
-                          text: isFollowing ? 'Unfollow' : 'Follow',
-                          isLoading: isFollowBusy,
-                          textStyle: TextStyle(
-                            color: AppColors.white,
-                            fontSize: Dimensions.font15,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          onPressed:
-                              isFollowBusy
-                                  ? null
-                                  : () =>
-                                      !isFollowing
-                                          ? userController.followUser(user.id)
-                                          : userController.unfollowUser(user.id),
-                          backgroundColor: AppColors.primary,
-                          borderRadius: BorderRadius.circular(
-                            Dimensions.radius10,
-                          ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: Dimensions.width20,
-                            vertical: Dimensions.height10,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: Dimensions.width20),
-                      Expanded(
-                        child: CustomButton(
-                          text: 'Message',
-                          textStyle: TextStyle(
-                            color: AppColors.black,
-                            fontSize: Dimensions.font15,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          onPressed: () async {
-                            try {
-                              final chatRepo = Get.find<ChatRepo>();
+                    // --- 7. TABS ---
+                    _buildCustomTabBar(profileTabs),
+                    const SizedBox(height: 15),
 
-                              final response = await chatRepo.getOrCreateChat(
-                                user.id,
-                              );
-
-                              if (response.statusCode == 200 &&
-                                  response.body['code'] == '00') {
-                                print(
-                                  'CHAT RAW DATA: ${response.body['data']}',
-                                );
-
-                                final chat = Chat.fromJson(
-                                  Map<String, dynamic>.from(
-                                    response.body['data'],
-                                  ),
-                                );
-
-                                Get.toNamed(
-                                  AppRoutes.messagingScreen,
-                                  arguments: {
-                                    'chat': chat,
-                                    'peerName': user.name,
-                                    'peerUsername': user.username,
-                                    'peerProfilePicture': user.profilePicture,
-                                  },
-                                );
-                              } else {
-                                CustomSnackBar.failure(
-                                  message:
-                                      response.body?['message'] ??
-                                      'Unable to open chat',
-                                );
-                              }
-                            } catch (e, s) {
-                              print('OPEN CHAT ERROR: $e');
-                              print(s);
-                              CustomSnackBar.failure(
-                                message: 'Unable to open chat: $e',
-                              );
-                            }
-                          },
-                          padding: EdgeInsets.symmetric(
-                            horizontal: Dimensions.width20,
-                            vertical: Dimensions.height10,
-                          ),
-                          backgroundColor: AppColors.grey4,
-                          borderRadius: BorderRadius.circular(
-                            Dimensions.radius10,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    // --- 8. TAB CONTENT ---
+                    _buildSelectedTabContent(controller, profileTabs[_selectedTabIndex], user, isLoadingProfile),
+                  ],
                 ),
-
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: Dimensions.height20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.grid_view_rounded,
-                        size: Dimensions.iconSize20,
-                      ),
-                      SizedBox(width: Dimensions.width5),
-                      Text(
-                        'POSTS',
-                        style: TextStyle(
-                          fontSize: Dimensions.font16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                Builder(
-                  builder: (context) {
-                    final posts = controller.externalPosts;
-
-                    if (controller.isExternalPostsLoading && posts.isEmpty) {
-                      return const PostGridShimmer();
-                    }
-
-                    if (posts.isEmpty) {
-                      return const Center(child: Text("No posts found."));
-                    }
-
-                    return _buildCombinedContentGrid(controller);
-                  },
-                ),
-
-                SizedBox(height: Dimensions.height50),
-              ],
+              ),
             ),
           );
         },
@@ -461,390 +270,385 @@ class _OthersProfileState extends State<OthersProfileScreen> {
     );
   }
 
-  Widget _buildMixedTileItem(PersonalPostModel post) {
-    final isVideo = post.type == 'video';
-    final imageUrl =
-        isVideo
-            ? (post.thumbnail ?? post.mediaUrl ?? '')
-            : (post.mediaUrl ?? '');
+  // --- UI HELPERS ---
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(6),
-      child: Stack(
-        fit: StackFit.expand,
+  String _formatNumber(int number) {
+    if (number >= 1000000) return '${(number / 1000000).toStringAsFixed(1)}M';
+    if (number >= 1000) return '${(number / 1000).toStringAsFixed(1)}K';
+    return number.toString();
+  }
+
+  String _buildSubtitle(UserModel user) {
+    String age = '';
+    if (user.role == 'player' && user.playerDetails?.dob != null) {
+      final calculatedAge = _calculateAge(user.playerDetails!.dob);
+      if (calculatedAge != null) age = '$calculatedAge • ';
+    }
+
+    String country = user.country.isNotEmpty ? user.country : 'Unknown Location';
+
+    if (user.role == 'player') {
+      return '${user.playerDetails?.position.toUpperCase() ?? 'Player'} • $age$country';
+    } else if (user.role == 'club') {
+      return '${user.clubDetails?.clubType.capitalizeFirst ?? 'Professional Club'} • $country • ${user.clubDetails?.yearFounded ?? ''}';
+    } else if (user.role == 'agent') {
+      return 'Head Scout • ${user.agentDetails?.agencyName ?? 'Independent'}';
+    }
+    return 'Fan • $country';
+  }
+
+  String _buildBadgeLabel(UserModel user) {
+    if (user.role == 'player') return 'Verified Player';
+    if (user.role == 'agent') return 'Verified Scout';
+    if (user.role == 'club') return 'Verified Club';
+    return 'Verified Account';
+  }
+
+  Widget _buildStatBlock(String value, String label, String type, UserModel user, bool isLoading) {
+    return InkWell(
+      onTap: isLoading ? null : () {
+        Get.to(() => RelationshipScreen(
+          title: label,
+          type: type,
+          targetId: user.id,
+        ));
+      },
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
         children: [
-          Container(
-            color: Colors.grey.shade200,
-            child:
-                imageUrl.isNotEmpty
-                    ? Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Center(
-                          child: Icon(Icons.broken_image_outlined),
-                        );
-                      },
-                    )
-                    : const Center(
-                      child: Icon(Icons.image_not_supported_outlined),
-                    ),
-          ),
-
-          if (isVideo)
-            Container(
-              color: Colors.black.withOpacity(0.18),
-              child: const Center(
-                child: Icon(
-                  Icons.play_circle_fill_rounded,
-                  color: Colors.white,
-                  size: 34,
-                ),
-              ),
-            ),
+          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.6))),
         ],
       ),
     );
   }
 
-  Widget _buildCombinedContentGrid(UserController controller) {
-    final posts = controller.externalPosts;
+  Widget _buildPlayerStat(String label, String value) {
+    return Column(
+      children: [
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.5))),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+      ],
+    );
+  }
+
+  Widget _buildVerticalDivider() {
+    return Container(height: 30, width: 1, color: Colors.white.withOpacity(0.1));
+  }
+
+  // --- TABS LOGIC ---
+
+  Widget _buildCustomTabBar(List<String> tabs) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.1), width: 1))),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(tabs.length, (index) {
+          bool isSelected = _selectedTabIndex == index;
+          return Expanded(
+            child: InkWell(
+              onTap: () => setState(() => _selectedTabIndex = index),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Text(
+                      tabs[index].toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 2,
+                    width: isSelected ? 40 : 0,
+                    decoration: BoxDecoration(color: Colors.blueAccent, borderRadius: BorderRadius.circular(2)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildSelectedTabContent(UserController controller, String currentTab, UserModel user, bool isLoading) {
+    if (currentTab == 'Highlights') {
+      final bool isLoadingPosts = controller.isExternalPostsLoading && controller.externalPosts.isEmpty;
+      if (isLoadingPosts || isLoading) {
+        return _buildCombinedContentGrid(controller, user, dummyPosts: _getMockPosts());
+      }
+      if (controller.externalPosts.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.all(40),
+          child: Text("No highlights yet.", style: TextStyle(color: Colors.white.withOpacity(0.5))),
+        );
+      }
+      return Column(
+        children: [
+          _buildCombinedContentGrid(controller, user),
+          const SizedBox(height: 15),
+          TextButton(
+            onPressed: () {},
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("View all highlights", style: TextStyle(color: Colors.blueAccent)),
+                Icon(Icons.chevron_right, color: Colors.blueAccent, size: 18),
+              ],
+            ),
+          )
+        ],
+      );
+    } else if (currentTab == 'Squad' || currentTab == 'Scouted') {
+      return _buildSquadList();
+    } else if (currentTab == 'Info') {
+      // ✅ ALL INFO / BIO NOW RENDERED HERE
+      return _buildInfoTab(user);
+    }
+    return const SizedBox.shrink();
+  }
+
+  // --- INFO TAB ---
+  Widget _buildInfoTab(UserModel user) {
+    var player = user.playerDetails;
+    var club = user.clubDetails;
+    var agent = user.agentDetails;
+
+    return Container(
+      width: Dimensions.screenWidth,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // BIO / ABOUT
+          if (user.bio != null && user.bio!.isNotEmpty) ...[
+            const Text("About", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Text(
+              user.bio!,
+              style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.7), height: 1.5),
+            ),
+            const SizedBox(height: 25),
+          ],
+
+          // PLAYER STATS
+          if (user.role == 'player') ...[
+            const Text("Player Details", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 15),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildPlayerStat('Position', player?.position.toUpperCase() ?? '-'),
+                _buildVerticalDivider(),
+                _buildPlayerStat('Height', '${player?.height ?? '-'} cm'),
+                _buildVerticalDivider(),
+                _buildPlayerStat('Weight', '${player?.weight ?? '-'} kg'),
+                _buildVerticalDivider(),
+                _buildPlayerStat('Foot', player?.preferredFoot.capitalizeFirst ?? '-'),
+              ],
+            ),
+          ],
+
+          // CLUB STATS
+          if (user.role == 'club') ...[
+            const Text("Club Details", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 15),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildPlayerStat('Type', club?.clubType.capitalizeFirst ?? '-'),
+                _buildVerticalDivider(),
+                _buildPlayerStat('Manager', club?.manager ?? '-'),
+                _buildVerticalDivider(),
+                _buildPlayerStat('Founded', club?.yearFounded ?? '-'),
+              ],
+            ),
+          ],
+
+          // AGENT STATS
+          if (user.role == 'agent') ...[
+            const Text("Agent Details", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 15),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildPlayerStat('Agency', agent?.agencyName ?? '-'),
+                _buildVerticalDivider(),
+                _buildPlayerStat('Experience', agent?.experience ?? '-'),
+              ],
+            ),
+          ],
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  // --- GRID RENDERER ---
+  Widget _buildCombinedContentGrid(UserController controller, UserModel user, {List<PersonalPostModel>? dummyPosts}) {
+    final posts = dummyPosts ?? controller.externalPosts;
 
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(horizontal: 15),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        crossAxisSpacing: 5,
-        mainAxisSpacing: 5,
-        childAspectRatio: 1,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 15,
+        childAspectRatio: 0.65,
       ),
       itemCount: posts.length,
       itemBuilder: (context, index) {
         final post = posts[index];
+        final isVideo = post.type == 'video';
+        final imageUrl = isVideo ? (post.thumbnail ?? post.mediaUrl ?? '') : (post.mediaUrl ?? '');
+        final dateFormatted = DateFormat('MMM d, yyyy').format(post.createdAt);
 
         return GestureDetector(
-          onTap: () {
+          onTap: dummyPosts != null ? null : () {
             if (post.type == 'video') {
               final videoOnly = posts.where((p) => p.type == 'video').toList();
+              final converted = videoOnly.map((p) => personalToPostModel(p, authorProfile: controller.othersProfile.value)).toList();
+              final tappedVideoIndex = videoOnly.indexWhere((p) => p.id == post.id);
 
-              final converted =
-                  videoOnly
-                      .map(
-                        (p) => personalToPostModel(
-                          p,
-                          authorProfile: controller.othersProfile.value,
-                        ),
-                      )
-                      .toList();
-
-              final tappedVideoIndex = videoOnly.indexWhere(
-                (p) => p.id == post.id,
-              );
-
-              Get.to(
-                () => ProfileReelsPlayer(
-                  videos: converted,
-                  initialIndex: tappedVideoIndex == -1 ? 0 : tappedVideoIndex,
-                  authorProfile: controller.othersProfile.value,
-                ),
-              );
+              Get.to(() => ProfileReelsPlayer(
+                videos: converted,
+                initialIndex: tappedVideoIndex == -1 ? 0 : tappedVideoIndex,
+                authorProfile: controller.othersProfile.value,
+              ));
             } else {
               Get.to(() => ProfileImageViewer(imageUrl: post.mediaUrl ?? ''));
             }
           },
-          child: _buildMixedTileItem(post),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Container(
+                        color: Colors.white.withOpacity(0.05),
+                        child: imageUrl.isNotEmpty
+                            ? Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (c, e, s) => Icon(Icons.broken_image, color: Colors.white.withOpacity(0.2)))
+                            : Icon(Icons.image, color: Colors.white.withOpacity(0.2)),
+                      ),
+                      if (isVideo) ...[
+                        Container(color: Colors.black.withOpacity(0.2)),
+                        Center(child: Icon(Icons.play_arrow_rounded, color: Colors.white.withOpacity(0.9), size: 36)),
+                        if (post.duration != null)
+                          Positioned(
+                            bottom: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(4)),
+                              child: Text(
+                                "${post.duration!.round()}s",
+                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          )
+                      ]
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(user.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+              Text(dateFormatted, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11)),
+            ],
+          ),
         );
       },
     );
   }
 
-  void _showProfileDetails(BuildContext context, UserModel user) {
-    Get.bottomSheet(
-      Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle Bar
-            Center(
-              child: Container(
-                width: 40,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Header
-            Row(
-              children: [
-                Icon(
-                  Icons.person_pin_circle_outlined,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 10),
-                const Text(
-                  'About this Account',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            Flexible(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // --- 1. General Info ---
-                    _buildSectionTitle('General Information'),
-                    _buildDetailRow(
-                      Icons.person_outline,
-                      'Full Name',
-                      user.name,
-                    ),
-                    _buildDetailRow(
-                      Icons.alternate_email,
-                      'Username',
-                      '@${user.username}',
-                    ),
-                    if (user.country.isNotEmpty)
-                      _buildDetailRow(
-                        Icons.flag_outlined,
-                        'Country',
-                        user.country,
-                      ),
-                    if (user.state.isNotEmpty)
-                      _buildDetailRow(
-                        Icons.location_city,
-                        'State/Region',
-                        user.state,
-                      ),
-                    _buildDetailRow(
-                      Icons.calendar_today,
-                      'Joined',
-                      _formatDate(user.createdAt.toString()),
-                    ),
-
-                    const SizedBox(height: 15),
-
-                    // --- 2. Role Specific Info ---
-
-                    // PLAYER
-                    if (user.role == 'player' &&
-                        user.playerDetails != null) ...[
-                      _buildSectionTitle('Player Details'),
-                      _buildDetailRow(
-                        Icons.sports_soccer,
-                        'Position',
-                        user.playerDetails?.position ?? '-',
-                      ),
-                      _buildDetailRow(
-                        Icons.shield_outlined,
-                        'Current Club',
-                        user.playerDetails?.currentClub ?? '-',
-                      ),
-                      _buildDetailRow(
-                        Icons.straighten,
-                        'Height',
-                        '${user.playerDetails?.height ?? '-'} cm',
-                      ),
-                      _buildDetailRow(
-                        Icons.fitness_center,
-                        'Weight',
-                        '${user.playerDetails?.weight ?? '-'} kg',
-                      ),
-                      _buildDetailRow(
-                        Icons.do_not_step,
-                        'Preferred Foot',
-                        user.playerDetails?.preferredFoot.capitalizeFirst ??
-                            '-',
-                      ),
-                      _buildDetailRow(
-                        Icons.cake,
-                        'Age Range',
-                        _footballAgeRangeLabel(user.playerDetails?.dob),
-                      ),
-                    ],
-
-                    // CLUB
-                    if (user.role == 'club' && user.clubDetails != null) ...[
-                      _buildSectionTitle('Club Details'),
-                      _buildDetailRow(
-                        Icons.shield,
-                        'Club Name',
-                        user.clubDetails?.clubName ?? user.name,
-                      ),
-                      _buildDetailRow(
-                        Icons.category,
-                        'Type',
-                        user.clubDetails?.clubType.capitalizeFirst ?? '-',
-                      ),
-                      _buildDetailRow(
-                        Icons.person,
-                        'Manager',
-                        user.clubDetails?.manager ?? '-',
-                      ),
-                      _buildDetailRow(
-                        Icons.history,
-                        'Founded',
-                        user.clubDetails?.yearFounded ?? '-',
-                      ),
-                      // Removed 'League' since it is not in your ClubDetails model
-                    ],
-
-                    // AGENT
-                    if (user.role == 'agent' && user.agentDetails != null) ...[
-                      _buildSectionTitle('Agent Profile'),
-                      _buildDetailRow(
-                        Icons.business_center,
-                        'Agency',
-                        user.agentDetails?.agencyName ?? '-',
-                      ),
-                      // Fixed: Changed 'licenseId' to 'registrationId'
-                      _buildDetailRow(
-                        Icons.verified_user,
-                        'Registration ID',
-                        user.agentDetails?.registrationId ?? 'Not Listed',
-                      ),
-                      _buildDetailRow(
-                        Icons.work_history,
-                        'Experience',
-                        user.agentDetails?.experience ?? '-',
-                      ),
-                    ],
-
-                    const SizedBox(height: 15),
-                    // Contact
-                    _buildSectionTitle('Contact'),
-                    _buildDetailRow(Icons.email_outlined, 'Email', user.email),
-                    // if(user.number.isNotEmpty)
-                    //   _buildDetailRow(Icons.phone_android, 'Phone', user.number),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      isScrollControlled: true,
-    );
-  }
-
-  String _footballAgeRangeLabel(dynamic dob) {
-    final age = _calculateAge(dob);
-    if (age == null) return 'Not listed';
-
-    // Football-ish buckets
-    if (age < 18) return 'U18';
-    if (age < 21) return 'U21';
-    if (age < 30) return 'U30';
-    if (age < 35) return 'U34';
-    return '35+';
-  }
-
-  int? _calculateAge(dynamic dob) {
-    if (dob == null) return null;
-
-    DateTime? birthDate;
-
-    if (dob is DateTime) {
-      birthDate = dob;
-    } else if (dob is String && dob.trim().isNotEmpty) {
-      birthDate = DateTime.tryParse(dob);
-    } else {
-      return null;
-    }
-
-    if (birthDate == null) return null;
-
-    final now = DateTime.now();
-    int age = now.year - birthDate.year;
-
-    // if birthday hasn't happened yet this year, subtract 1
-    final hadBirthdayThisYear =
-        (now.month > birthDate.month) ||
-        (now.month == birthDate.month && now.day >= birthDate.day);
-
-    if (!hadBirthdayThisYear) age--;
-
-    // sanity check (optional)
-    if (age < 0 || age > 80) return null;
-
-    return age;
-  }
-
-  Widget _buildSectionTitle(String title) {
+  // --- SQUAD LIST ---
+  Widget _buildSquadList() {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10, top: 5),
-      child: Text(
-        title.toUpperCase(),
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey[500],
-          letterSpacing: 1.2,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
+              color: Colors.white.withOpacity(0.05),
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
             ),
-            child: Icon(icon, size: 18, color: AppColors.primary),
+            child: Row(
+              children: [
+                const Icon(Icons.local_activity, color: Colors.blueAccent, size: 20),
+                const SizedBox(width: 10),
+                const Expanded(child: Text("Open to Trials & Recruiting Players", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
+                Icon(Icons.chevron_right, color: Colors.white.withOpacity(0.5)),
+              ],
+            ),
           ),
+          const SizedBox(height: 25),
+          const Text("Squad", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+
+          ...List.generate(4, (index) => _buildSquadTile("Adebiyi Adebayo", "CAM • 22 • Nigeria")),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSquadTile(String name, String details) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      child: Row(
+        children: [
+          const CircleAvatar(radius: 20, backgroundColor: Colors.grey, child: Icon(Icons.person, color: Colors.white)),
           const SizedBox(width: 15),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value.isEmpty ? '-' : value,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
+                Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                Text(details, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
               ],
             ),
           ),
+          const Text("Starter", style: TextStyle(color: Colors.blueAccent, fontSize: 12, fontWeight: FontWeight.bold)),
         ],
       ),
     );
+  }
+
+  // --- HELPERS ---
+  int? _calculateAge(DateTime? dob) {
+    if (dob == null) return null;
+    final now = DateTime.now();
+    int age = now.year - dob.year;
+    if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) age--;
+    return age;
+  }
+
+  String _footballAgeRangeLabel(DateTime? dob) {
+    final age = _calculateAge(dob);
+    if (age == null) return 'Not listed';
+    if (age < 18) return 'U18';
+    if (age < 21) return 'U21';
+    if (age < 30) return 'U30';
+    if (age < 35) return 'U34';
+    return '35+';
   }
 
   String _formatDate(String? dateStr) {
@@ -857,199 +661,179 @@ class _OthersProfileState extends State<OthersProfileScreen> {
     }
   }
 
-
-
-  /// 🧩 Stats Box
-  Widget _buildStat(String label, String value, String type) => InkWell(
-    onTap: () {
-      // Navigate to the new RelationshipScreen
-      Get.to(
-        () => RelationshipScreen(title: label, type: type, targetId: targetId),
-      );
-    },
-    child: Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: Dimensions.font22,
-            fontWeight: FontWeight.w600,
-          ),
+  // --- FULL BOTTOM SHEET ---
+  void _showProfileDetails(BuildContext context, UserModel user) {
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1F2937),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
         ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: Dimensions.font14,
-            fontWeight: FontWeight.w400,
-            color: AppColors.black.withOpacity(0.7),
-          ),
-        ),
-      ],
-    ),
-  );
-
-
-
-  /// 🔖 Info Tag
-  Widget _buildInfoTag(String text) => Container(
-    padding: EdgeInsets.symmetric(
-      horizontal: Dimensions.width10,
-      vertical: Dimensions.height5,
-    ),
-    margin: EdgeInsets.only(right: Dimensions.width20),
-    decoration: BoxDecoration(
-      color: AppColors.grey2,
-      borderRadius: BorderRadius.circular(Dimensions.radius10),
-    ),
-    child: Text(
-      text,
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: Dimensions.font13,
-        fontWeight: FontWeight.w500,
-        color: AppColors.black,
-      ),
-    ),
-  );
-}
-
-class _OthersProfileShimmer extends StatelessWidget {
-  const _OthersProfileShimmer();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(vertical: Dimensions.height10 * 5),
+        padding: const EdgeInsets.fromLTRB(20, 15, 20, 30),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                Dimensions.width15,
-                Dimensions.height30,
-                Dimensions.width15,
-                0,
-              ),
-              child: Row(
-                children: [
-                  const BackButton(color: Colors.black),
-                  Expanded(
-                    child: Center(
-                      child: Shimmer.fromColors(
-                        baseColor: Colors.grey.shade300,
-                        highlightColor: Colors.grey.shade100,
-                        child: Container(
-                          width: 110,
-                          height: 110,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      _buildShimmerCircle(),
-                      SizedBox(width: Dimensions.width10),
-                      _buildShimmerCircle(),
-                    ],
-                  ),
-                ],
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
-            SizedBox(height: Dimensions.height20),
-            _buildShimmerLine(width: 150, height: 18),
-            SizedBox(height: Dimensions.height10),
-            _buildShimmerLine(width: 100, height: 12),
-            SizedBox(height: Dimensions.height20),
+            const SizedBox(height: 25),
+
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildShimmerStat(),
-                SizedBox(width: Dimensions.width30),
-                _buildShimmerStat(),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blueAccent.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.person_pin_circle_outlined, color: Colors.blueAccent, size: 20),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'About this Account',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
               ],
             ),
-            SizedBox(height: Dimensions.height20),
-            _buildShimmerLine(width: 240, height: 12),
-            const SizedBox(height: 8),
-            _buildShimmerLine(width: 200, height: 12),
-            SizedBox(height: Dimensions.height20),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: Dimensions.width40),
-              child: Row(
-                children: [
-                  Expanded(child: _buildShimmerButton()),
-                  SizedBox(width: Dimensions.width20),
-                  Expanded(child: _buildShimmerButton(light: true)),
-                ],
+            const SizedBox(height: 25),
+
+            Flexible(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle('General Information'),
+                    _buildDetailRow(Icons.person_outline, 'Full Name', user.name),
+                    _buildDetailRow(Icons.alternate_email, 'Username', '@${user.username}'),
+                    if (user.country.isNotEmpty) _buildDetailRow(Icons.flag_outlined, 'Country', user.country),
+                    if (user.state.isNotEmpty) _buildDetailRow(Icons.location_city, 'State/Region', user.state),
+                    _buildDetailRow(Icons.calendar_today, 'Joined', _formatDate(user.createdAt.toString())),
+
+                    const SizedBox(height: 15),
+
+                    if (user.role == 'player' && user.playerDetails != null) ...[
+                      _buildSectionTitle('Player Details'),
+                      _buildDetailRow(Icons.sports_soccer, 'Position', user.playerDetails?.position ?? '-'),
+                      _buildDetailRow(Icons.shield_outlined, 'Current Club', user.playerDetails?.currentClub ?? '-'),
+                      _buildDetailRow(Icons.straighten, 'Height', '${user.playerDetails?.height ?? '-'} cm'),
+                      _buildDetailRow(Icons.fitness_center, 'Weight', '${user.playerDetails?.weight ?? '-'} kg'),
+                      _buildDetailRow(Icons.do_not_step, 'Preferred Foot', user.playerDetails?.preferredFoot.capitalizeFirst ?? '-'),
+                      _buildDetailRow(Icons.cake, 'Age Range', _footballAgeRangeLabel(user.playerDetails?.dob)),
+                    ],
+
+                    if (user.role == 'club' && user.clubDetails != null) ...[
+                      _buildSectionTitle('Club Details'),
+                      _buildDetailRow(Icons.shield, 'Club Name', user.clubDetails?.clubName ?? user.name),
+                      _buildDetailRow(Icons.category, 'Type', user.clubDetails?.clubType.capitalizeFirst ?? '-'),
+                      _buildDetailRow(Icons.person, 'Manager', user.clubDetails?.manager ?? '-'),
+                      _buildDetailRow(Icons.history, 'Founded', user.clubDetails?.yearFounded ?? '-'),
+                    ],
+
+                    if (user.role == 'agent' && user.agentDetails != null) ...[
+                      _buildSectionTitle('Agent Profile'),
+                      _buildDetailRow(Icons.business_center, 'Agency', user.agentDetails?.agencyName ?? '-'),
+                      _buildDetailRow(Icons.verified_user, 'Registration ID', user.agentDetails?.registrationId ?? 'Not Listed'),
+                      _buildDetailRow(Icons.work_history, 'Experience', user.agentDetails?.experience ?? '-'),
+                    ],
+                  ],
+                ),
               ),
             ),
-            SizedBox(height: Dimensions.height30),
-            const PostGridShimmer(),
           ],
         ),
       ),
+      isScrollControlled: true,
     );
   }
 
-  static Widget _buildShimmerCircle() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-        ),
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 15, top: 10),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white.withOpacity(0.5), letterSpacing: 1.2),
       ),
     );
   }
 
-  static Widget _buildShimmerLine({
-    required double width,
-    required double height,
-  }) {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
-      child: Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(height / 2),
-        ),
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, size: 20, color: Colors.blueAccent),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.5), fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Text(value.isEmpty ? '-' : value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  static Widget _buildShimmerStat() {
-    return Column(
-      children: [
-        _buildShimmerLine(width: 36, height: 16),
-        const SizedBox(height: 8),
-        _buildShimmerLine(width: 70, height: 12),
-      ],
+  // --- STRICTLY TYPED MOCK DATA ---
+  UserModel _getMockUser() {
+    return UserModel(
+        id: 'mock',
+        name: 'Loading Name',
+        username: 'loading',
+        email: '',
+        role: 'player',
+        number: '',
+        country: 'Country',
+        state: 'State',
+        profilePicture: '',
+        tokenBalance: '0',
+        followers: 12500,
+        following: 800,
+        blocked: 0,
+        bookmarks: 0,
+        posts: 0,
+        bio: 'I am a dedicated football scout with a strong eye for identifying raw talent, tactical intelligence, and long-term player potential...',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        playerDetails: PlayerDetails(
+          dob: DateTime.now().subtract(const Duration(days: 365 * 22)),
+          position: 'CAM',
+          currentClub: '',
+          preferredFoot: 'Right',
+          height: 180,
+          weight: 75,
+        )
     );
   }
 
-  static Widget _buildShimmerButton({bool light = false}) {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
-      child: Container(
-        height: 44,
-        decoration: BoxDecoration(
-          color: light ? Colors.grey.shade200 : Colors.white,
-          borderRadius: BorderRadius.circular(Dimensions.radius10),
-        ),
-      ),
-    );
+  List<PersonalPostModel> _getMockPosts() {
+    return List.generate(3, (index) => PersonalPostModel(
+      id: 'mock_$index',
+      type: 'video',
+      createdAt: DateTime.now(),
+      mediaUrl: '',
+      thumbnail: '',
+    ));
   }
 }
 

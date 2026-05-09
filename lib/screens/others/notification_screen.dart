@@ -11,6 +11,8 @@ import '../../utils/dimensions.dart';
 import '../../widgets/custom_appbar.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
+import '../../widgets/snackbars.dart';
+
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
 
@@ -157,16 +159,22 @@ class _NotificationScreenState extends State<NotificationScreen> {
       message: notification.message ?? "",
       onTap: () {
         notificationController.markSingleNotificationAsRead(notification.id);
-        Get.toNamed(
-          AppRoutes.othersProfileScreen,
-          arguments: {'targetId': notification.url},
-        );
+
+        String? target = notification.userId;
+
+        if (target != null && target.trim().isNotEmpty) {
+          Get.toNamed(
+            AppRoutes.othersProfileScreen,
+            arguments: {'targetId': target.trim()},
+          );
+        } else {
+          CustomSnackBar.showToast(message: 'Can not view profile at this time, try again later.');
+        }
       },
     );
   }
 
-  // --- THE MASTER LAYOUT ---
-  // Used by both real data AND Skeletonizer to guarantee a pixel-perfect shimmer
+
   Widget _buildNotificationLayout({
     required Color typeColor,
     required IconData typeIcon,

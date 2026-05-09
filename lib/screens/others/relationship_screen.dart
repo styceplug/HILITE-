@@ -7,7 +7,7 @@ import '../../routes/routes.dart';
 import '../../utils/colors.dart';
 import '../../utils/dimensions.dart';
 import '../../widgets/custom_appbar.dart';
-import '../../widgets/profile_avatar.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class RelationshipScreen extends StatefulWidget {
   final String title;
@@ -35,7 +35,8 @@ class _RelationshipScreenState extends State<RelationshipScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       userController.getRelationshipUsers(widget.type, targetId: widget.targetId);
       _searchController.clear();
-    });}
+    });
+  }
 
   @override
   void dispose() {
@@ -46,47 +47,43 @@ class _RelationshipScreenState extends State<RelationshipScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF030A1B), // Premium Dark Background
       appBar: CustomAppbar(
+        backgroundColor: const Color(0xFF030A1B),
         title: widget.title,
-        leadingIcon: const BackButton(color: Colors.black),
-        // Optional: Add a refresh action or count
+        leadingIcon: const BackButton(color: Colors.white),
       ),
       body: GetBuilder<UserController>(
         builder: (controller) {
 
 
-          // 2️⃣ Empty State
-          if (controller.relationshipList.isEmpty) {
-            return _buildEmptyState();
-          }
-
-          // 3️⃣ Content
+          bool isInitialLoad = controller.relationshipList.isEmpty && _searchController.text.isEmpty;
           return Column(
             children: [
-              // Search Bar Area
+              // --- Search Bar Area ---
               Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: Dimensions.width20,
                   vertical: Dimensions.height10,
                 ),
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: Dimensions.width15),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: Colors.white.withOpacity(0.05), // Glassmorphism search
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
                   ),
                   child: TextField(
                     controller: _searchController,
+                    style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       hintText: 'Search ${widget.title.toLowerCase()}',
                       hintStyle: TextStyle(
-                          color: Colors.grey[500],
+                          color: Colors.white.withOpacity(0.4),
                           fontSize: Dimensions.font14
                       ),
                       border: InputBorder.none,
-                      icon: Icon(Icons.search, color: Colors.grey[500]),
-                      contentPadding: EdgeInsets.symmetric(vertical: 14),
+                      prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.5)),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onChanged: (val) {
                       controller.searchRelationship(val);
@@ -95,19 +92,25 @@ class _RelationshipScreenState extends State<RelationshipScreen> {
                 ),
               ),
 
-              // The List
+              // --- List Area ---
               Expanded(
-                child: controller.filteredRelationshipList.isEmpty
-                    ? _buildNoSearchResults() // New UI for "No match found"
-                    : ListView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
-                  // ✅ USE FILTERED LIST
-                  itemCount: controller.filteredRelationshipList.length,
-                  itemBuilder: (context, index) {
-                    UserModel user = controller.filteredRelationshipList[index];
-                    return _buildUserTile(user);
-                  },
+                child: Skeletonizer(
+                  enabled: isInitialLoad,
+                  child: isInitialLoad
+                      ? _buildSkeletonList() // Shimmering loading state
+                      : controller.relationshipList.isEmpty && _searchController.text.isEmpty
+                      ? _buildEmptyState()
+                      : controller.filteredRelationshipList.isEmpty
+                      ? _buildNoSearchResults()
+                      : ListView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.symmetric(horizontal: Dimensions.width20, vertical: Dimensions.height10),
+                    itemCount: controller.filteredRelationshipList.length,
+                    itemBuilder: (context, index) {
+                      UserModel user = controller.filteredRelationshipList[index];
+                      return _buildUserTile(user);
+                    },
+                  ),
                 ),
               ),
             ],
@@ -117,32 +120,92 @@ class _RelationshipScreenState extends State<RelationshipScreen> {
     );
   }
 
+  // --- SKELETONIZER LOADER ---
+  Widget _buildSkeletonList() {
+    return ListView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.symmetric(horizontal: Dimensions.width20, vertical: Dimensions.height10),
+      itemCount: 8, // Dummy count for shimmer
+      itemBuilder: (context, index) {
+        return Container(
+          padding: EdgeInsets.only(bottom: Dimensions.height20),
+          child: Row(
+            children: [
+              Container(
+                height: Dimensions.height10 * 5,
+                width: Dimensions.height10 * 5,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.grey[800],
+                ),
+              ),
+              SizedBox(width: Dimensions.width15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      height: 16,
+                      width: Dimensions.screenWidth * 0.4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[800],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      height: 12,
+                      width: Dimensions.screenWidth * 0.25,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[800],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                height: 24,
+                width: 60,
+                decoration: BoxDecoration(
+                  color: Colors.grey[800],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              )
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: EdgeInsets.all(25),
+            padding: const EdgeInsets.all(25),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.grey[50],
+              color: Colors.white.withOpacity(0.05),
             ),
-            child: Icon(Icons.people_outline, size: 50, color: Colors.grey[400]),
+            child: Icon(Icons.people_outline, size: 50, color: Colors.white.withOpacity(0.2)),
           ),
           SizedBox(height: Dimensions.height20),
           Text(
             "No ${widget.title.toLowerCase()} yet",
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: Colors.white,
             ),
           ),
-          SizedBox(height: 5),
+          const SizedBox(height: 5),
           Text(
             "When users join here, they'll show up.",
-            style: TextStyle(color: Colors.grey[500]),
+            style: TextStyle(color: Colors.white.withOpacity(0.5)),
           ),
         ],
       ),
@@ -154,13 +217,13 @@ class _RelationshipScreenState extends State<RelationshipScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search_off, size: 50, color: Colors.grey[300]),
-          SizedBox(height: 10),
+          Icon(Icons.search_off, size: 50, color: Colors.white.withOpacity(0.2)),
+          const SizedBox(height: 10),
           Text(
             "No users found",
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey[500],
+              color: Colors.white.withOpacity(0.5),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -171,8 +234,7 @@ class _RelationshipScreenState extends State<RelationshipScreen> {
 
   Widget _buildUserTile(UserModel user) {
     return Container(
-      // Removed fixed height to allow dynamic sizing if text wraps
-      padding: EdgeInsets.only(bottom: Dimensions.height20),
+      padding: EdgeInsets.only(bottom: Dimensions.height15),
       child: InkWell(
         onTap: () {
           Get.toNamed(
@@ -180,53 +242,58 @@ class _RelationshipScreenState extends State<RelationshipScreen> {
             arguments: {'targetId': user.id},
           );
         },
+        highlightColor: Colors.white.withOpacity(0.05),
+        splashColor: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        child: Row(
-          children: [
-            // 1. The New Avatar Widget
-            ListItemAvatar(
-              imageUrl: user.profilePicture,
-              size: Dimensions.height10 * 5,
-            ),
-
-            SizedBox(width: Dimensions.width15),
-
-            // 2. Info (Wrapped in Expanded to prevent overflow)
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    user.name.capitalizeFirst ?? "User",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '@${user.username}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4.0), // Touch target padding
+          child: Row(
+            children: [
+              // 1. The Avatar Widget
+              ListItemAvatar(
+                imageUrl: user.profilePicture,
+                size: Dimensions.height10 * 5,
               ),
-            ),
 
-            SizedBox(width: Dimensions.width10),
+              SizedBox(width: Dimensions.width15),
 
-            // 3. Trailing Action
-            _buildRoleBadge(user.role),
-          ],
+              // 2. Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      user.name.capitalizeFirst ?? "User",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '@${user.username}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.5),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(width: Dimensions.width10),
+
+              // 3. Trailing Action
+              _buildRoleBadge(user.role),
+            ],
+          ),
         ),
       ),
     );
@@ -238,20 +305,20 @@ class _RelationshipScreenState extends State<RelationshipScreen> {
 
     switch (role.toLowerCase()) {
       case 'player':
-        badgeColor = Colors.blue.withOpacity(0.1);
-        textColor = Colors.blue;
+        badgeColor = const Color(0xFF2563EB).withOpacity(0.15); // Primary Blue
+        textColor = const Color(0xFF60A5FA); // Lighter blue for dark mode readability
         break;
       case 'club':
-        badgeColor = Colors.orange.withOpacity(0.1);
-        textColor = Colors.orange;
+        badgeColor = Colors.orange.withOpacity(0.15);
+        textColor = Colors.orangeAccent;
         break;
       case 'agent':
-        badgeColor = Colors.purple.withOpacity(0.1);
-        textColor = Colors.purple;
+        badgeColor = Colors.purple.withOpacity(0.15);
+        textColor = Colors.purpleAccent;
         break;
       default: // fan
-        badgeColor = Colors.grey.withOpacity(0.1);
-        textColor = Colors.grey[700]!;
+        badgeColor = Colors.white.withOpacity(0.1);
+        textColor = Colors.white70;
     }
 
     return Container(
@@ -259,13 +326,15 @@ class _RelationshipScreenState extends State<RelationshipScreen> {
       decoration: BoxDecoration(
         color: badgeColor,
         borderRadius: BorderRadius.circular(20), // Pill shape
+        border: Border.all(color: textColor.withOpacity(0.3)), // Subtle glow border
       ),
       child: Text(
         role.capitalizeFirst ?? '',
         style: TextStyle(
-          fontSize: 12,
+          fontSize: 11,
           color: textColor,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
         ),
       ),
     );

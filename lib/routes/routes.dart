@@ -18,6 +18,7 @@ import 'package:hilite/screens/others/my_competitions_screen.dart' hide Competit
 import 'package:hilite/screens/others/notification_screen.dart';
 import 'package:hilite/screens/others/others_profile.dart';
 import 'package:hilite/screens/others/recommended_accounts.dart';
+import 'package:hilite/screens/others/relationship_screen.dart';
 import 'package:hilite/screens/others/trials_screen.dart';
 import 'package:hilite/screens/posting/post_detail_screen.dart';
 import 'package:hilite/screens/posting/upload_content.dart';
@@ -71,6 +72,7 @@ class AppRoutes {
   static const String homeScreen = '/home-screen';
   static const String othersProfileScreen = '/others-profile-screen';
   static const String settingsScreen = '/settings-screen';
+  static const String relationshipScreen = '/relationship-screen';
   static const String uploadContent = '/upload-content';
   static const String referralScreen = '/referral-screen';
   static const String postDetailScreen = '/post-detail-screen';
@@ -325,6 +327,13 @@ class AppRoutes {
       name: settingsScreen,
       page: () {
         return const SettingsScreen();
+      },
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: relationshipScreen,
+      page: () {
+        return const RelationshipScreen(title: '', type: '');
       },
       transition: Transition.fadeIn,
     ),

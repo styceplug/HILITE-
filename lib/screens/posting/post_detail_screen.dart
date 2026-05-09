@@ -3,7 +3,11 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/post_controller.dart';
+import 'package:hilite/utils/dimensions.dart';
 import 'package:hilite/widgets/custom_appbar.dart';
+import 'package:hilite/widgets/custom_button.dart';
+import 'package:hilite/widgets/custom_textfield.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../utils/colors.dart';
@@ -17,7 +21,8 @@ class PostDetailsScreen extends StatefulWidget {
 
 class _PostDetailsScreenState extends State<PostDetailsScreen> {
   final PostController postController = Get.find<PostController>();
-  late TextEditingController _descController;
+  TextEditingController _descController = TextEditingController();
+  TextEditingController tagController = TextEditingController();
   VideoPlayerController? _videoController;
 
   late XFile file;
@@ -41,13 +46,13 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
 
   void _initVideoPreview() {
     _videoController =
-        VideoPlayerController.file(File(file.path))
-          ..initialize().then((_) {
-            if (mounted) setState(() {});
-          })
-          ..setLooping(true)
-          ..setVolume(0)
-          ..play();
+    VideoPlayerController.file(File(file.path))
+      ..initialize().then((_) {
+        if (mounted) setState(() {});
+      })
+      ..setLooping(true)
+      ..setVolume(0)
+      ..play();
   }
 
   @override
@@ -84,47 +89,43 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     return GestureDetector(
       onTap:
           () =>
-              FocusScope.of(
-                context,
-              ).unfocus(), // Dismiss keyboard on tap outside
+          FocusScope.of(
+            context,
+          ).unfocus(),
       child: Scaffold(
-        backgroundColor: Colors.white,
         appBar: CustomAppbar(
-          title: 'New Post',
+          title: 'Upload new post',
           leadingIcon: BackButton(
-            color: Colors.black,
+            color: Colors.white,
             onPressed: () => Get.back(),
           ),
-          actionIcon: _buildShareButton(),
+          // actionIcon: _buildShareButton(),
         ),
         body: Column(
           children: [
-            // Linear Progress bar at the top if uploading
             Obx(
-              () =>
-                  postController.isLoading.value
-                      ? const LinearProgressIndicator(
-                        minHeight: 2,
-                        color: Colors.blue,
-                      )
-                      : const Divider(height: 1, thickness: 0.5),
+                  () =>
+              postController.isLoading.value
+                  ? const LinearProgressIndicator(
+                minHeight: 2,
+                color: Colors.blue,
+              )
+                  : Divider(
+                height: 1,
+                thickness: 0.5,
+                color: Colors.white.withOpacity(0.1),
+              ),
             ),
 
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildMediaPreview(),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildCaptionField()),
-                      ],
-                    ),
-                    const Divider(height: 40),
-                    // You can add "Location", "Tag People", etc. here later
+                    _buildMediaPreview(),
+                    SizedBox(height: Dimensions.height50),
+
+                    _buildCaptionField(),
                   ],
                 ),
               ),
@@ -137,8 +138,8 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
 
   Widget _buildMediaPreview() {
     return Container(
-      width: 80,
-      height: 110,
+      width: Dimensions.screenWidth,
+      height: Dimensions.screenHeight / 2.5,
       decoration: BoxDecoration(
         color: Colors.black,
         borderRadius: BorderRadius.circular(12),
@@ -153,16 +154,27 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child:
-            isVideo
-                ? (_videoController?.value.isInitialized ?? false
-                    ? AspectRatio(
-                      aspectRatio: _videoController!.value.aspectRatio,
-                      child: VideoPlayer(_videoController!),
-                    )
-                    : const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ))
-                : Image.file(File(file.path), fit: BoxFit.cover),
+        isVideo
+            ? (_videoController?.value.isInitialized ?? false
+            ? SizedBox.expand(
+          child: FittedBox(
+            fit: BoxFit.fitWidth,
+            child: SizedBox(
+              width: _videoController!.value.size.width,
+              height: _videoController!.value.size.height,
+              child: VideoPlayer(_videoController!),
+            ),
+          ),
+        )
+            : const Center(
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ))
+            : Image.file(
+          File(file.path),
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover, // Updated to match the video behavior
+        ),
       ),
     );
   }
@@ -171,23 +183,104 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        TextField(
+        CustomTextField(
           controller: _descController,
-          maxLines: 8,
-          minLines: 1,
-          maxLength: _maxCaptionLength,
+          hintText: 'Add a caption...',
+          maxLines: 1,
+          prefixIcon: Iconsax.hashtag,
           onChanged: (val) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: 'Write a caption...',
-            hintStyle: TextStyle(color: Colors.grey[400]),
-            border: InputBorder.none,
-            counterText: "", // Hide default counter to use custom one
-          ),
         ),
         Text(
           "${_descController.text.length}/$_maxCaptionLength",
           style: TextStyle(color: Colors.grey[400], fontSize: 12),
         ),
+
+        SizedBox(height: Dimensions.height10),
+        CustomTextField(
+          controller: tagController,
+          maxLines: 1,
+          prefixIcon: Iconsax.tag_right,
+          onChanged: (val) => setState(() {}),
+          hintText: 'Add Tags',
+        ),
+        SizedBox(height: Dimensions.height10),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: Dimensions.width5,
+                vertical: Dimensions.height5,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(Dimensions.radius5),
+                color: AppColors.white.withOpacity(0.1),
+              ),
+              child: Text(
+                '#Speed',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textColor,
+                ),
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: Dimensions.width5,
+                vertical: Dimensions.height5,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(Dimensions.radius5),
+                color: AppColors.white.withOpacity(0.1),
+              ),
+              child: Text(
+                '#Dribbling',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textColor,
+                ),
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: Dimensions.width5,
+                vertical: Dimensions.height5,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(Dimensions.radius5),
+                color: AppColors.white.withOpacity(0.1),
+              ),
+              child: Text(
+                '#Finishing',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textColor,
+                ),
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: Dimensions.width5,
+                vertical: Dimensions.height5,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(Dimensions.radius5),
+                color: AppColors.white.withOpacity(0.1),
+              ),
+              child: Text(
+                '#Goal',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: Dimensions.height30),
+        _buildShareButton()
+
       ],
     );
   }
@@ -196,25 +289,14 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     return Obx(() {
       bool isLoading = postController.isLoading.value;
 
-      return Padding(
+      return Container(
+        width: Dimensions.screenWidth,
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
-        child: TextButton(
-          onPressed: isLoading ? null : _uploadPost,
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.primary,
-            disabledForegroundColor: Colors.grey,
-          ),
-          child:
-              isLoading
-                  ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                  : const Text(
-                    'Share',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
+        child: CustomButton(
+            onPressed: isLoading ? null : _uploadPost,
+            backgroundColor: AppColors.buttonColor,
+            isLoading:isLoading,
+            text:'Post'
         ),
       );
     });

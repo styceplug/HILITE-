@@ -2,124 +2,163 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
+
+import '../../utils/colors.dart';
+import '../../utils/dimensions.dart';
+import '../../widgets/custom_appbar.dart';
+import '../../widgets/snackbars.dart';
+
 class ReferralScreen extends StatelessWidget {
+  // You can easily swap this out to read from userController.user.value?.referralCode
   final String referralCode = "HILITE-9F3KD";
+
+  const ReferralScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Referral Program"),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 1,
-        foregroundColor: Colors.black,
+      backgroundColor: const Color(0xFF030A1B), // Premium Dark Background
+      appBar: CustomAppbar(
+        backgroundColor: const Color(0xFF030A1B),
+        centerTitle: false,
+        customTitle: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Referral Program',
+            style: TextStyle(
+              fontSize: Dimensions.font20,
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        leadingIcon: const BackButton(color: Colors.white),
       ),
 
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.symmetric(horizontal: Dimensions.width20, vertical: Dimensions.height20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
 
-            // Top Illustration Box
+            // --- Top Illustration Box ---
             Container(
               height: 180,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Color(0xfff2f2f2),
+                color: Colors.white.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withOpacity(0.05)),
               ),
               child: Center(
-                child: Icon(
-                  Icons.card_giftcard,
-                  size: 80,
-                  color: Colors.black54,
+                child: Container(
+                  padding: const EdgeInsets.all(25),
+                  decoration: BoxDecoration(
+                    color: AppColors.buttonColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Iconsax.gift, // Sleeker premium icon
+                    size: 70,
+                    color: AppColors.buttonColor,
+                  ),
                 ),
               ),
             ),
 
-            SizedBox(height: 30),
+            SizedBox(height: Dimensions.height30),
 
-            // Your Referral Code
+            // --- Your Referral Code ---
             Text(
               "Your Referral Code",
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey,
+                color: Colors.white.withOpacity(0.6),
               ),
             ),
 
-            SizedBox(height: 6),
+            SizedBox(height: Dimensions.height10),
 
             Container(
-              padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                color: Color(0xfff5f5f5),
+                color: Colors.white.withOpacity(0.05),
+                border: Border.all(color: AppColors.buttonColor.withOpacity(0.3)), // Subtle blue border
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     referralCode,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 24,
-                      letterSpacing: 1.5,
+                      letterSpacing: 2.0,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black,
+                      color: Colors.white,
                     ),
                   ),
                   InkWell(
                     onTap: () {
                       Clipboard.setData(ClipboardData(text: referralCode));
-                      Get.snackbar("Copied", "Referral code copied!",
-                          snackPosition: SnackPosition.BOTTOM);
+                      CustomSnackBar.showToast(message: 'Referral code copied!'); // Assuming you have a custom toast
                     },
-                    child: Icon(Icons.copy, size: 22),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.buttonColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Iconsax.copy, size: 22, color: AppColors.buttonColor),
+                    ),
                   ),
                 ],
               ),
             ),
 
-            SizedBox(height: 20),
+            SizedBox(height: Dimensions.height20),
 
-            // Copy & Share Buttons
+            // --- Copy & Share Buttons ---
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: referralCode));
-                      Get.snackbar("Copied", "Referral code copied!",
-                          snackPosition: SnackPosition.BOTTOM);
+                      CustomSnackBar.showToast(message: 'Referral code copied!');
                     },
-                    icon: Icon(Icons.copy),
-                    label: Text("Copy Code"),
+                    icon: const Icon(Iconsax.copy, size: 18),
+                    label: const Text("Copy Code", style: TextStyle(fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: AppColors.buttonColor,
                       foregroundColor: Colors.white,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 15),
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
                       // implement share logic
                     },
-                    icon: Icon(Icons.share, color: Colors.black),
-                    label: Text(
+                    icon: const Icon(Iconsax.share, color: Colors.white, size: 18),
+                    label: const Text(
                       "Share",
-                      style: TextStyle(color: Colors.black),
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                     ),
                     style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 14),
-                      side: BorderSide(color: Colors.black),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: BorderSide(color: Colors.white.withOpacity(0.2)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -129,21 +168,22 @@ class ReferralScreen extends StatelessWidget {
               ],
             ),
 
-            SizedBox(height: 30),
+            SizedBox(height: Dimensions.height40),
 
-            // How It Works
-            Align(
+            // --- How It Works ---
+            const Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 "How It Works",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
+                  color: Colors.white,
                 ),
               ),
             ),
 
-            SizedBox(height: 12),
+            SizedBox(height: Dimensions.height15),
 
             _buildStep(
               "Invite your friends",
@@ -158,54 +198,59 @@ class ReferralScreen extends StatelessWidget {
               "You and your friend both receive bonuses.",
             ),
 
-            SizedBox(height: 30),
+            SizedBox(height: Dimensions.height30),
 
-            // Reward Breakdown
+            // --- Reward Breakdown ---
             Container(
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                color: Color(0xfff5f5f5),
+                color: Colors.white.withOpacity(0.05),
+                border: Border.all(color: Colors.white.withOpacity(0.05)),
               ),
               child: Column(
                 children: [
-                  Text(
+                  const Text(
                     "Reward Breakdown",
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
+                      color: Colors.white,
                     ),
                   ),
-                  SizedBox(height: 12),
+                  SizedBox(height: Dimensions.height15),
+                  Divider(color: Colors.white.withOpacity(0.1), height: 1),
+                  SizedBox(height: Dimensions.height10),
                   _rewardRow("You earn", "₦500 credit"),
                   _rewardRow("Friend earns", "₦500 credit"),
                 ],
               ),
             ),
 
-            SizedBox(height: 40),
+            SizedBox(height: Dimensions.height40),
 
-            // Main Invite Button
+            // --- Main Invite Button ---
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.white, // High contrast button for dark mode
+                  foregroundColor: const Color(0xFF030A1B),
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: Text(
+                child: const Text(
                   "Invite Friends",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
 
-            SizedBox(height: 40),
+            SizedBox(height: Dimensions.height40),
           ],
         ),
       ),
@@ -214,29 +259,39 @@ class ReferralScreen extends StatelessWidget {
 
   Widget _buildStep(String title, String subtitle) {
     return Container(
-      margin: EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.check_circle, size: 20, color: Colors.black),
-          SizedBox(width: 10),
+          Container(
+            margin: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppColors.success.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Iconsax.tick_circle, size: 18, color: AppColors.success),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   subtitle,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey,
+                    color: Colors.white.withOpacity(0.6),
+                    height: 1.4,
                   ),
                 ),
               ],
@@ -253,12 +308,16 @@ class ReferralScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: TextStyle(fontSize: 15)),
+          Text(
+              title,
+              style: TextStyle(fontSize: 15, color: Colors.white.withOpacity(0.8))
+          ),
           Text(
             value,
             style: TextStyle(
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.bold,
               fontSize: 15,
+              color: AppColors.success, // Makes the money value pop!
             ),
           )
         ],

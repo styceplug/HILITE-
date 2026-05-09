@@ -83,7 +83,7 @@ Future<void> init() async {
   Get.lazyPut(() => GlobalLoaderController());
   Get.lazyPut(() => WalletController(walletRepo: Get.find()), fenix: true);
   Get.lazyPut(() => PostController(postRepo: Get.find()));
-  Get.lazyPut(() => NotificationController(notificationRepo: Get.find()));
+  Get.lazyPut(() => NotificationController(notificationRepo: Get.find()), fenix: true);
   Get.lazyPut(() => TrialController(trialRepo: Get.find()), fenix: true);
   Get.lazyPut(
     () => CompetitionController(competitionRepo: Get.find()),

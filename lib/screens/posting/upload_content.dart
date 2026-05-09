@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/routes/routes.dart';
 import 'package:hilite/screens/posting/video_trim_screen.dart';
+import 'package:hilite/utils/dimensions.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -185,7 +186,7 @@ class _UploadContentState extends State<UploadContent> {
                 child: CircularProgressIndicator(color: Colors.white),
               ),
 
-            // 🎛️ Top Controls
+
             Positioned(
               top: 16,
               left: 16,
@@ -210,9 +211,8 @@ class _UploadContentState extends State<UploadContent> {
               ),
             ),
 
-            // 🔴 Capture Button + Gallery
             Positioned(
-              bottom: 40,
+              bottom: Dimensions.height150,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

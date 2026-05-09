@@ -257,28 +257,34 @@ class UserController extends GetxController {
 
     Response response;
 
+    // 1. Normalize the string to prevent case-sensitive bugs
+    String safeType = type.trim().toLowerCase();
+
     // 2. Determine which API call to make
     if (targetId != null && targetId.isNotEmpty) {
       // 🅰️ External Profile (Viewing someone else's followers)
-      if (type == 'followers') {
-        response = await userRepo.getExternalRelationshipAccounts(
-          targetId,
-          followers: true,
-        );
-      } else {
+      if (safeType == 'following') {
         response = await userRepo.getExternalRelationshipAccounts(
           targetId,
           following: true,
         );
+      } else {
+        // Safest fallback for external is followers
+        response = await userRepo.getExternalRelationshipAccounts(
+          targetId,
+          followers: true,
+        );
       }
     } else {
       // 🅱️ Personal Profile (Viewing my own followers)
-      if (type == 'followers') {
-        response = await userRepo.getRelationshipAccounts(followers: true);
-      } else if (type == 'following') {
+      if (safeType == 'following') {
         response = await userRepo.getRelationshipAccounts(following: true);
-      } else {
+      } else if (safeType == 'blocked') {
+        // ONLY fetch blocked users if explicitly requested!
         response = await userRepo.getRelationshipAccounts(blocked: true);
+      } else {
+        // Safest fallback is followers, NO MORE ACCIDENTAL BLOCKED LISTS!
+        response = await userRepo.getRelationshipAccounts(followers: true);
       }
     }
 

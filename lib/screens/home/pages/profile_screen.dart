@@ -6,6 +6,7 @@ import 'package:hilite/controllers/notification_controller.dart';
 import 'package:hilite/controllers/post_controller.dart';
 import 'package:hilite/models/user_model.dart';
 import 'package:hilite/routes/routes.dart';
+import 'package:hilite/screens/others/relationship_screen.dart';
 import 'package:hilite/utils/app_constants.dart';
 import 'package:hilite/utils/colors.dart';
 import 'package:hilite/utils/dimensions.dart';
@@ -21,7 +22,6 @@ import '../../../utils/others.dart';
 import '../../../widgets/post_grid_shimmer.dart';
 import '../../../widgets/profile_avatar.dart';
 import '../../../widgets/reels_video_item.dart';
-import '../../others/bookmarks_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -34,7 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserController userController = Get.find<UserController>();
   PostController postController = Get.find<PostController>();
   NotificationController notificationController =
-      Get.find<NotificationController>();
+  Get.find<NotificationController>();
 
   int _selectedTabIndex = 0;
 
@@ -60,11 +60,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
-        final bool isProRole = (user.role == 'club' || user.role == 'agent');
-        final List<String> profileTabs =
-            isProRole
-                ? ['Squad', 'Highlights', 'Saved', 'Info']
-                : ['Highlights', 'Saved'];
+        // --- NEW ROLE-BASED TAB LOGIC ---
+        List<String> profileTabs;
+        switch (user.role?.toLowerCase()) {
+          case 'club':
+            profileTabs = ['Squad', 'Highlights', 'Saved', 'Info'];
+            break;
+          case 'player':
+            profileTabs = ['Highlights', 'Saved', 'Info'];
+            break;
+          case 'agent':
+          case 'fan':
+          default:
+            profileTabs = ['Highlights', 'Saved'];
+            break;
+        }
+
 
         if (_selectedTabIndex >= profileTabs.length) {
           _selectedTabIndex = 0;
@@ -78,12 +89,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             postController.getBookmarks();
             CustomSnackBar.showToast(message: 'Refreshed');
           },
-          child: SizedBox(
+
+
+        child: SizedBox(
             height: Dimensions.screenHeight,
             width: Dimensions.screenWidth,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.symmetric(vertical: Dimensions.height50),
+              padding: EdgeInsets.fromLTRB(0, Dimensions.height50,0, Dimensions.height150),
               child: Column(
                 children: [
                   SizedBox(height: Dimensions.height20),
@@ -98,12 +111,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Obx(() {
-                          final count =
-                              notificationController.unreadCount.value;
+                          final count = notificationController.unreadCount.value;
                           return InkWell(
-                            onTap:
-                                () =>
-                                    Get.toNamed(AppRoutes.notificationsScreen),
+                            onTap: () => Get.toNamed(AppRoutes.notificationsScreen),
                             child: Stack(
                               children: [
                                 Icon(
@@ -194,7 +204,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       vertical: Dimensions.height10,
                     ),
                     child: Text(
-                      user.bio ?? 'No Bio Yet',
+                      user.bio?.capitalizeFirst ?? 'No Bio Yet',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: Dimensions.font14,
@@ -217,8 +227,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         CustomButton(
                           text: 'Edit Page',
                           icon: Iconsax.edit,
-                          onPressed:
-                              () => Get.toNamed(AppRoutes.editProfileScreen),
+                          onPressed: () => Get.toNamed(AppRoutes.editProfileScreen),
                           padding: EdgeInsets.symmetric(
                             horizontal: Dimensions.width30,
                             vertical: Dimensions.height15,
@@ -232,7 +241,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Expanded(
                           child: CustomButton(
                             onPressed: () {
-                              // Get.toNamed(AppRoutes.uploadContent);
+                              Get.toNamed(AppRoutes.othersProfileScreen, arguments: {'targetId': user.id});
                             },
                             text: 'Preview Page',
                             icon: Icons.visibility,
@@ -257,45 +266,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         const Spacer(),
-                        Text(
-                          user.followers.toSocialString(),
-                          style: TextStyle(
-                            fontSize: Dimensions.font17,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.white,
-                          ),
-                        ),
-                        SizedBox(width: Dimensions.width5),
-                        Text(
-                          'Followers',
-                          style: TextStyle(
-                            fontSize: Dimensions.font17,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.white.withOpacity(0.8),
-                          ),
-                        ),
-                        const Spacer(),
 
+                        // FOLLOWERS BLOCK
+                        InkWell(
+                          onTap: () {
+                            Get.to(() => RelationshipScreen(
+                              title: 'Followers',
+                              type: 'followers',
+                              targetId: user.id, // Pass the user's ID
+                            ));
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            child: Row(
+                              children: [
+                                Text(
+                                  user.followers.toSocialString(),
+                                  style: TextStyle(
+                                    fontSize: Dimensions.font17,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(width: Dimensions.width5),
+                                Text(
+                                  'Followers',
+                                  style: TextStyle(
+                                    fontSize: Dimensions.font17,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white.withOpacity(0.8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const Spacer(),
                         _divider(),
                         const Spacer(),
 
-                        Text(
-                          user.following.toSocialString(),
-                          style: TextStyle(
-                            fontSize: Dimensions.font17,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.white,
+                        // FOLLOWING BLOCK
+                        InkWell(
+                          onTap: () {
+                            Get.to(() => RelationshipScreen(
+                              title: 'Following',
+                              type: 'following',
+                              targetId: user.id, // Pass the user's ID
+                            ));
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            child: Row(
+                              children: [
+                                Text(
+                                  user.following.toSocialString(),
+                                  style: TextStyle(
+                                    fontSize: Dimensions.font17,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(width: Dimensions.width5),
+                                Text(
+                                  'Following',
+                                  style: TextStyle(
+                                    fontSize: Dimensions.font17,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white.withOpacity(0.8),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        SizedBox(width: Dimensions.width5),
-                        Text(
-                          'Following',
-                          style: TextStyle(
-                            fontSize: Dimensions.font17,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.white.withOpacity(0.8),
-                          ),
-                        ),
+
                         const Spacer(),
                       ],
                     ),
@@ -355,11 +402,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: TextStyle(
                         fontSize: Dimensions.font14,
                         fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w400,
+                        isSelected ? FontWeight.w600 : FontWeight.w400,
                         color:
-                            isSelected
-                                ? AppColors.white
-                                : AppColors.white.withOpacity(0.5),
+                        isSelected
+                            ? AppColors.white
+                            : AppColors.white.withOpacity(0.5),
                       ),
                     ),
                   ),
@@ -382,20 +429,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSelectedTabContent(
-    UserController controller,
-    String currentTab,
-  ) {
+      UserController controller,
+      String currentTab,
+      ) {
     if (currentTab == 'Highlights') {
       if (controller.isFirstLoad &&
           controller.postCache.values.every((l) => l.isEmpty)) {
-        // --- CALLED NEW SKELETONIZER LOADER HERE ---
         return _buildSkeletonGrid();
       }
       return _buildContentGrid(controller);
-    }else if (currentTab == 'Saved') {
+    } else if (currentTab == 'Saved') {
       return GetBuilder<PostController>(
         builder: (postCtrl) {
-          if (postCtrl.bookmarkList.isEmpty) {
+          final savedPosts = postCtrl.bookmarkList;
+
+          if (savedPosts.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -404,14 +452,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Icon(
                     Iconsax.save_2,
                     size: Dimensions.iconSize30 * 4,
-                    color: AppColors.textColor.withOpacity(0.1),
+                    color: Colors.white.withOpacity(0.1),
                   ),
                   SizedBox(height: Dimensions.height10),
-                  const Text(
+                  Text(
                     'No saved items yet.',
                     style: TextStyle(
                       color: Colors.white70,
-                      fontSize: 16,
+                      fontSize: Dimensions.font18,
                     ),
                   ),
                 ],
@@ -419,6 +467,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
 
+          // If bookmarks exist, render them!
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -427,34 +476,216 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisCount: 3,
               crossAxisSpacing: 2,
               mainAxisSpacing: 2,
-              childAspectRatio: 3 / 4, // Match highlights aspect ratio
+              childAspectRatio: 3 / 4,
             ),
-            itemCount: postCtrl.bookmarkList.length,
+            itemCount: savedPosts.length,
             itemBuilder: (context, index) {
-              final post = postCtrl.bookmarkList[index];
+              final post = savedPosts[index];
               return GestureDetector(
                 onTap: () {
-                  Get.to(() => BookmarkPlayerScreen(
-                    posts: postCtrl.bookmarkList,
-                    initialIndex: index,
-                  ));
+                  Get.toNamed(AppRoutes.postDetailScreen, arguments: post.id);
                 },
-                child: _buildBookmarkTileItem(post), // New builder for PostModel
+                child: _buildTileItem(post, post.type ?? 'image'),
               );
             },
           );
         },
       );
-    } else if (currentTab == 'Squad' || currentTab == 'Info') {
+    } else if (currentTab == 'Info') {
+      // --- ROUTE TO NEW INFO TAB ---
+      if (controller.user.value != null) {
+        return _buildInfoTab(controller.user.value!);
+      }
+      return const SizedBox.shrink();
+    } else if (currentTab == 'Squad') {
       return Center(
-        child: Text(
-          'No $currentTab data yet.',
-          style: const TextStyle(color: Colors.white70),
+        child: Column(
+          children: [
+            SizedBox(height: Dimensions.height30),
+            Icon(Iconsax.people, size: Dimensions.iconSize30 * 4, color: Colors.white.withOpacity(0.1)),
+            SizedBox(height: Dimensions.height10),
+            Text(
+              'No squad data yet.',
+              style: const TextStyle(color: Colors.white70),
+            ),
+          ],
         ),
       );
     }
 
     return const SizedBox.shrink();
+  }
+
+  // --- NEW: INFO TAB LAYOUT ---
+  Widget _buildInfoTab(UserModel user) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // --- About Section ---
+        if (user.bio != null && user.bio!.isNotEmpty) ...[
+          Text(
+            "About Me",
+            style: TextStyle(
+              fontSize: Dimensions.font18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(height: Dimensions.height10),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(Dimensions.width15),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.05)),
+            ),
+            child: Text(
+              user.bio!,
+              style: TextStyle(
+                fontSize: Dimensions.font14,
+                color: Colors.white.withOpacity(0.8),
+                height: 1.5,
+              ),
+            ),
+          ),
+          SizedBox(height: Dimensions.height20),
+        ],
+
+        // --- Details Section ---
+        Text(
+          user.role == 'club' ? "Club Details" : "Player Details",
+          style: TextStyle(
+            fontSize: Dimensions.font18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        SizedBox(height: Dimensions.height10),
+
+        // Grid for Stats
+        GridView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 2.5, // Controls the height of the stat cards
+          ),
+          children: [
+            // --- PLAYER STATS ---
+            if (user.role == 'player') ...[
+              _buildStatCard(
+                  icon: Iconsax.user_tag,
+                  label: "Position",
+                  value: user.playerDetails?.position?.toUpperCase() ?? "N/A"
+              ),
+              _buildStatCard(
+                  icon: Icons.height,
+                  label: "Height",
+                  value: user.playerDetails?.height != null ? "${user.playerDetails!.height} cm" : "N/A"
+              ),
+              _buildStatCard(
+                  icon: Icons.monitor_weight_outlined,
+                  label: "Weight",
+                  value: user.playerDetails?.weight != null ? "${user.playerDetails!.weight} kg" : "N/A"
+              ),
+              _buildStatCard(
+                  icon: Icons.sports_soccer,
+                  label: "Strong Foot",
+                  value: user.playerDetails?.preferredFoot?.capitalizeFirst ?? "N/A"
+              ),
+              _buildStatCard(
+                  icon: Iconsax.building_3,
+                  label: "Current Club",
+                  value: user.playerDetails?.currentClub ?? "Free Agent"
+              ),
+            ],
+
+            // --- CLUB STATS ---
+            if (user.role == 'club') ...[
+              _buildStatCard(
+                  icon: Iconsax.user_square,
+                  label: "Manager",
+                  value: user.clubDetails?.manager ?? "N/A"
+              ),
+              _buildStatCard(
+                  icon: Iconsax.category,
+                  label: "Club Type",
+                  value: user.clubDetails?.clubType?.capitalizeFirst ?? "N/A"
+              ),
+              _buildStatCard(
+                  icon: Iconsax.calendar_1,
+                  label: "Founded",
+                  value: user.clubDetails?.yearFounded ?? "N/A"
+              ),
+            ],
+
+            // Common location stat
+            if (user.country != null || user.state != null)
+              _buildStatCard(
+                  icon: Iconsax.location,
+                  label: "Location",
+                  value: "${user.state ?? ''}, ${user.country ?? ''}".trim().replaceAll(RegExp(r'^,|,$'), '')
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Helper widget for the sleek stat cards
+  Widget _buildStatCard({required IconData icon, required String label, required String value}) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: Dimensions.width10, vertical: Dimensions.height10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.buttonColor.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppColors.buttonColor, size: 16),
+          ),
+          SizedBox(width: Dimensions.width10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.5),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // --- NEW: SKELETONIZER GRID BUILDER ---
@@ -486,57 +717,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         },
       ),
-    );
-  }
-
-  Widget _buildBookmarkTileItem(PostModel post) {
-    Widget tileContent;
-
-    if (post.type == 'video') {
-      tileContent = Stack(
-        fit: StackFit.expand,
-        children: [
-          Container(color: AppColors.black),
-          if (post.video?.thumbnailUrl != null && post.video!.thumbnailUrl!.isNotEmpty)
-            Image.network(post.video!.thumbnailUrl!, fit: BoxFit.cover),
-          const Center(
-            child: Icon(
-              Icons.play_circle_outline_rounded,
-              color: Colors.white70,
-              size: 30,
-            ),
-          ),
-        ],
-      );
-    } else if (post.type == 'image') {
-      tileContent = Image.network(
-        post.image?.url ?? '',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
-          color: AppColors.grey2.withOpacity(0.2),
-          child: const Icon(Icons.broken_image, color: Colors.grey),
-        ),
-      );
-    } else {
-      tileContent = Container(
-        padding: const EdgeInsets.all(8),
-        color: AppColors.grey2.withOpacity(0.2),
-        child: Center(
-          child: Text(
-            post.text ?? '',
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 10, color: Colors.white),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    }
-
-    // Apply the exact same rounded corners as the Highlights tab
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: tileContent,
     );
   }
 
@@ -590,17 +770,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onTap: () {
             if (postType == 'video') {
               final videoOnlyList =
-                  allPosts.where((p) => p.type == 'video').toList();
+              allPosts.where((p) => p.type == 'video').toList();
               final converted =
-                  videoOnlyList.map((p) => personalToPostModel(p)).toList();
+              videoOnlyList.map((p) => personalToPostModel(p)).toList();
               final videoIndex = videoOnlyList.indexOf(post);
 
               if (videoIndex != -1) {
                 Get.to(
-                  () => ProfileReelsPlayer(
-                    videos: converted,
-                    initialIndex: videoIndex,
-                  ),
+                      () =>
+                      ProfileReelsPlayer(
+                        videos: converted,
+                        initialIndex: videoIndex,
+                      ),
                 );
               }
             } else {
@@ -640,21 +821,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildTileItem(PersonalPostModel post, String type) {
+  Widget _buildTileItem(dynamic post, String type) {
     Widget tileContent;
 
+    String? mediaUrl;
+    String? thumbnail;
+    String? displayDuration;
+
+    // Helper to format raw seconds (e.g. 6.7802) into "0:07"
+    String formatVideoDuration(double rawSeconds) {
+      int totalSeconds = rawSeconds.round(); // Rounds 6.78 to 7
+      int minutes = totalSeconds ~/ 60;
+      int seconds = totalSeconds % 60;
+      return '$minutes:${seconds.toString().padLeft(2, '0')}';
+    }
+
+    // --- SMART PARSING LOGIC ---
+    if (post is PersonalPostModel) {
+      mediaUrl = post.mediaUrl;
+      thumbnail = post.thumbnail;
+      if (post.duration != null) {
+        displayDuration = formatVideoDuration(post.duration!);
+      }
+    } else if (post is PostModel) {
+      if (type == 'video') {
+        mediaUrl = post.video?.url;
+        thumbnail = post.video?.thumbnailUrl;
+        if (post.video?.duration != null) {
+          displayDuration = formatVideoDuration(post.video!.duration!);
+        }
+      } else {
+        mediaUrl = post.image?.url;
+      }
+    }
+
+    // --- UI RENDER LOGIC ---
     if (type == 'image') {
-      if (post.mediaUrl == null || post.mediaUrl!.isEmpty) {
+      if (mediaUrl == null || mediaUrl.isEmpty) {
         tileContent = Container(
-          color: AppColors.grey2.withOpacity(0.2),
-          child: const Icon(Icons.broken_image, color: Colors.grey),
+          color: Colors.white.withOpacity(0.05),
+          child: Icon(Icons.broken_image, color: Colors.white.withOpacity(0.2)),
         );
       } else {
         tileContent = Container(
           decoration: BoxDecoration(
-            color: AppColors.grey2.withOpacity(0.2),
+            color: Colors.white.withOpacity(0.05),
             image: DecorationImage(
-              image: NetworkImage(post.mediaUrl!),
+              image: NetworkImage(mediaUrl),
               fit: BoxFit.cover,
             ),
           ),
@@ -665,21 +878,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
       tileContent = Stack(
         fit: StackFit.expand,
         children: [
-          Container(color: AppColors.black),
+          Container(color: Colors.black),
 
-          if (post.thumbnail != null && post.thumbnail!.isNotEmpty)
-            Image.network(post.thumbnail!, fit: BoxFit.cover),
+          if (thumbnail != null && thumbnail.isNotEmpty)
+            Image.network(thumbnail, fit: BoxFit.cover),
 
-          const Center(
+          Center(
             child: Icon(
               Icons.play_circle_outline_rounded,
-              color: Colors.white70,
+              color: Colors.white.withOpacity(0.8),
               size: 30,
             ),
           ),
 
           // Duration Badge
-          if (post.duration != null)
+          if (displayDuration != null)
             Positioned(
               bottom: 6,
               right: 6,
@@ -690,7 +903,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  post.duration!.toString(),
+                  displayDuration,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
@@ -709,11 +922,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _divider() => Container(
-    width: 0.5,
-    height: Dimensions.height20,
-    color: AppColors.white.withOpacity(0.3),
-  );
+  Widget _divider() =>
+      Container(
+        width: 0.5,
+        height: Dimensions.height20,
+        color: AppColors.white.withOpacity(0.3),
+      );
 }
 
 extension SocialFormat on num {
@@ -766,8 +980,14 @@ class ProfileImageViewer extends StatelessWidget {
               child: Image.network(
                 imageUrl,
                 // 3. Force image to take full screen dimensions
-                width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.height,
+                width: MediaQuery
+                    .of(context)
+                    .size
+                    .width,
+                height: MediaQuery
+                    .of(context)
+                    .size
+                    .height,
 
                 // 4. Choose your fit:
                 // BoxFit.contain = Shows FULL image (may have black bars)
@@ -782,7 +1002,7 @@ class ProfileImageViewer extends StatelessWidget {
                 },
                 errorBuilder:
                     (context, error, stackTrace) =>
-                        const Icon(Icons.error, color: Colors.white, size: 50),
+                const Icon(Icons.error, color: Colors.white, size: 50),
               ),
             ),
           ),

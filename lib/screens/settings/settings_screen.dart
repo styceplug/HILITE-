@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/auth_controller.dart';
@@ -26,31 +27,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF030A1B), // Premium Dark Background
       appBar: CustomAppbar(
         title: "Settings & Privacy",
         centerTitle: false,
-        leadingIcon: Icon(Iconsax.setting),
+        backgroundColor: const Color(0xFF030A1B),
+        leadingIcon: const Icon(Iconsax.setting, color: Colors.white),
       ),
       body: Container(
-        // height: Dimensions.screenHeight,
         width: Dimensions.screenWidth,
         padding: EdgeInsets.symmetric(
           horizontal: Dimensions.width20,
         ),
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Account section
-              Text(
-                "Account",
-                style: TextStyle(
-                  fontSize: Dimensions.font14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.grey4,
-                ),
-              ),
               SizedBox(height: Dimensions.height10),
+
+              // --- ACCOUNT SECTION ---
+              _buildSectionHeader("Account"),
+              SizedBox(height: Dimensions.height10),
+
+              // Only showing Edit Profile for players based on your logic
+              // (Though you might want to open this to agents/clubs too!)
               if(userController.user.value?.role == 'player')
                 settingTile(
                   icon: Iconsax.user,
@@ -78,9 +79,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Get.toNamed(AppRoutes.referralScreen);
                 },
               ),
-              settingTile(icon: Iconsax.wallet, title: 'Wallet', onTap: () {
-                Get.toNamed(AppRoutes.walletScreen);
-              }),
+              settingTile(
+                  icon: Iconsax.wallet,
+                  title: 'Wallet',
+                  onTap: () {
+                    Get.toNamed(AppRoutes.walletScreen);
+                  }
+              ),
               settingTile(
                 icon: Iconsax.bookmark,
                 title: "Bookmarked Posts",
@@ -88,9 +93,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Get.toNamed(AppRoutes.bookmarksScreen);
                 },
               ),
+
+              // Club specific settings
               if(userController.user.value?.role == 'club')...[
                 settingTile(
-                  icon: Icons.text_fields,
+                  icon: Icons.sports_soccer, // Swapped to a more relevant icon
                   title: "My Trials",
                   onTap: () {
                     Get.toNamed(AppRoutes.myTrialsScreen);
@@ -105,18 +112,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
 
-
               SizedBox(height: Dimensions.height30),
 
-              // Preferences section
-              Text(
-                "Preferences",
-                style: TextStyle(
-                  fontSize: Dimensions.font14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.grey4,
-                ),
-              ),
+              // --- PREFERENCES SECTION ---
+              _buildSectionHeader("Preferences"),
               SizedBox(height: Dimensions.height10),
 
               switchTile(
@@ -128,15 +127,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               SizedBox(height: Dimensions.height30),
 
-              // Support section
-              Text(
-                "Support",
-                style: TextStyle(
-                  fontSize: Dimensions.font14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.grey4,
-                ),
-              ),
+              // --- SUPPORT SECTION ---
+              _buildSectionHeader("Support"),
               SizedBox(height: Dimensions.height10),
 
               settingTile(
@@ -155,21 +147,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () {},
               ),
 
-              SizedBox(height: Dimensions.height30,),
+              SizedBox(height: Dimensions.height40),
 
-              // Logout
+              // --- LOGOUT BUTTON ---
               CustomButton(
                 text: "Log Out",
                 onPressed: () {
                   authController.logout();
                   Get.offAllNamed(AppRoutes.loginScreen);
                 },
-                backgroundColor: AppColors.error,
-                borderRadius: BorderRadius.circular(Dimensions.radius10),
+                // Deep red for dark theme consistency
+                backgroundColor: const Color(0xFFDC2626),
+                borderRadius: BorderRadius.circular(12),
               ),
               SizedBox(height: Dimensions.height50),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // Helper for consistent section headers
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: EdgeInsets.only(left: Dimensions.width10, bottom: 4),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: Dimensions.font13,
+          fontWeight: FontWeight.w700,
+          color: Colors.white.withOpacity(0.5),
+          letterSpacing: 1.2, // Gives it that premium OS feel
         ),
       ),
     );
@@ -189,22 +198,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         margin: EdgeInsets.only(bottom: Dimensions.height10),
         decoration: BoxDecoration(
-          color: AppColors.grey2.withOpacity(0.4),
-          borderRadius: BorderRadius.circular(Dimensions.radius10),
+          color: Colors.white.withOpacity(0.05), // Dark theme glassmorphism
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
         ),
         child: Row(
           children: [
-            Icon(icon, color: AppColors.primary),
-            SizedBox(width: Dimensions.width10),
+            Icon(icon, color: Colors.white.withOpacity(0.8), size: 22),
+            SizedBox(width: Dimensions.width15),
             Text(
               title,
               style: TextStyle(
-                fontSize: Dimensions.font14,
+                fontSize: Dimensions.font15,
                 fontWeight: FontWeight.w500,
+                color: Colors.white,
               ),
             ),
             const Spacer(),
-            Icon(Iconsax.arrow_right_3, color: AppColors.grey4),
+            Icon(Iconsax.arrow_right_3, color: Colors.white.withOpacity(0.3), size: 18),
           ],
         ),
       ),
@@ -219,30 +230,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }) {
     return Container(
       padding: EdgeInsets.symmetric(
-        vertical: Dimensions.height15,
+        vertical: Dimensions.height10, // Slightly reduced vertical padding to accommodate switch height
         horizontal: Dimensions.width15,
       ),
       margin: EdgeInsets.only(bottom: Dimensions.height10),
       decoration: BoxDecoration(
-        color: AppColors.grey2.withOpacity(0.4),
-        borderRadius: BorderRadius.circular(Dimensions.radius10),
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.primary),
-          SizedBox(width: Dimensions.width10),
+          Icon(icon, color: Colors.white.withOpacity(0.8), size: 22),
+          SizedBox(width: Dimensions.width15),
           Text(
             title,
             style: TextStyle(
-              fontSize: Dimensions.font14,
+              fontSize: Dimensions.font15,
               fontWeight: FontWeight.w500,
+              color: Colors.white,
             ),
           ),
           const Spacer(),
-          Switch(
+          CupertinoSwitch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.primary,
+            activeColor: AppColors.buttonColor,
+            trackColor: Colors.white.withOpacity(0.1),
           ),
         ],
       ),
