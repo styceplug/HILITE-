@@ -8,20 +8,11 @@ import '../../controllers/user_controller.dart';
 import '../../models/trial_model.dart';
 import '../../routes/routes.dart';
 import '../../utils/colors.dart';
-import '../../widgets/custom_button.dart';
-
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:intl/intl.dart';
-
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:intl/intl.dart';
-
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+
+
+
 class TrialDetailScreen extends StatelessWidget {
   TrialDetailScreen({super.key});
 
@@ -46,27 +37,29 @@ class TrialDetailScreen extends StatelessWidget {
           final realTrial = controller.currentTrialDetails.value;
 
           // Smart Loading Logic:
-          // If trial is null AND processing is true, it's the initial fetch -> Show Skeleton
-          // If trial is null AND processing is false, the fetch failed -> Show Error
           final bool isInitialLoad = realTrial == null && controller.isProcessing.value;
 
           if (realTrial == null && !controller.isProcessing.value) {
             return _buildErrorState();
           }
 
-          // If we are loading, feed the UI a dummy trial so Skeletonizer can draw the shapes
+          // Feed the UI a dummy trial so Skeletonizer can draw the shapes while loading
           final trial = realTrial ?? _getMockTrial();
 
-          // Role Logic
-          bool isPlayer = userController.user.value?.role == 'player';
+          // User & Role Logic
+          final currentUserId = userController.user.value?.id;
+          final bool isPlayer = userController.user.value?.role == 'player';
           final bool isFree = trial.registrationFee == 0;
 
-          // Wrap the entire layout in Skeletonizer
+          // --- FIX: Check if current user is already registered ---
+          final bool isAlreadyRegistered = trial.registeredPlayers?.any((player) => player.id == currentUserId) ?? false;
+
           return Skeletonizer(
             enabled: isInitialLoad,
             child: Stack(
               children: [
                 CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
                   slivers: [
                     // 1. Collapsing Header Image
                     _buildSliverAppBar(trial),
@@ -91,28 +84,36 @@ class TrialDetailScreen extends StatelessWidget {
                             SizedBox(height: Dimensions.height10),
 
                             // Host Profile Row
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 14,
-                                  backgroundColor: Colors.white.withOpacity(0.1),
-                                  backgroundImage: trial.creator?.profilePicture != null
-                                      ? NetworkImage(trial.creator!.profilePicture!)
-                                      : null,
-                                  child: trial.creator?.profilePicture == null
-                                      ? Icon(Iconsax.building_3, size: 14, color: AppColors.buttonColor)
-                                      : null,
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  "Hosted by ${trial.creator?.name ?? 'Unknown Club'}",
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.6),
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: Dimensions.font14,
+                            InkWell(
+                              onTap: isInitialLoad ? null : () {
+                                if (trial.creator?.id != null) {
+                                  Get.toNamed(AppRoutes.othersProfileScreen, arguments: {'targetId': trial.creator!.id});
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 14,
+                                    backgroundColor: Colors.white.withOpacity(0.1),
+                                    backgroundImage: trial.creator?.profilePicture != null && trial.creator!.profilePicture!.isNotEmpty
+                                        ? NetworkImage(trial.creator!.profilePicture!)
+                                        : null,
+                                    child: trial.creator?.profilePicture == null || trial.creator!.profilePicture!.isEmpty
+                                        ? const Icon(Iconsax.building_3, size: 14, color: Colors.blueAccent)
+                                        : null,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    "Hosted by ${trial.creator?.clubName ?? trial.creator?.name  ?? 'Unknown'}",
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.6),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: Dimensions.font14,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
 
                             SizedBox(height: Dimensions.height20),
@@ -125,10 +126,10 @@ class TrialDetailScreen extends StatelessWidget {
                             SizedBox(height: Dimensions.height20),
 
                             // Description Section
-                            Text(
+                            const Text(
                               "About this Trial",
                               style: TextStyle(
-                                fontSize: Dimensions.font18,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
@@ -137,7 +138,7 @@ class TrialDetailScreen extends StatelessWidget {
                             Text(
                               trial.description ?? 'No description provided for this event.',
                               style: TextStyle(
-                                fontSize: Dimensions.font15,
+                                fontSize: 15,
                                 height: 1.6,
                                 color: Colors.white.withOpacity(0.7),
                               ),
@@ -149,17 +150,17 @@ class TrialDetailScreen extends StatelessWidget {
                       ),
                     ),
 
-                    // 3. Registered Players List (Visible to Club/Creator)
+                    // 3. Registered Players List
                     if (trial.registeredPlayers != null && trial.registeredPlayers!.isNotEmpty) ...[
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
                           child: Row(
                             children: [
-                              Text(
+                              const Text(
                                 "Registered Talent",
                                 style: TextStyle(
-                                  fontSize: Dimensions.font18,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
@@ -168,13 +169,13 @@ class TrialDetailScreen extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: AppColors.buttonColor.withOpacity(0.2),
+                                  color: Colors.blueAccent.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
                                   "${trial.registeredPlayers!.length}",
-                                  style: TextStyle(
-                                    color: AppColors.buttonColor,
+                                  style: const TextStyle(
+                                    color: Colors.blueAccent,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
                                   ),
@@ -198,13 +199,13 @@ class TrialDetailScreen extends StatelessWidget {
                                   border: Border.all(color: Colors.white.withOpacity(0.05)),
                                 ),
                                 child: ListTile(
-                                  contentPadding: EdgeInsets.symmetric(horizontal: Dimensions.width15, vertical: 4),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 4),
                                   leading: CircleAvatar(
-                                    backgroundImage: player.profilePicture != null
+                                    backgroundImage: player.profilePicture != null && player.profilePicture!.isNotEmpty
                                         ? NetworkImage(player.profilePicture!)
                                         : null,
                                     backgroundColor: Colors.white.withOpacity(0.1),
-                                    child: player.profilePicture == null
+                                    child: player.profilePicture == null || player.profilePicture!.isEmpty
                                         ? Text(
                                         player.name.isNotEmpty ? player.name[0].toUpperCase() : '?',
                                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
@@ -277,18 +278,22 @@ class TrialDetailScreen extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: Dimensions.font22,
                                     fontWeight: FontWeight.bold,
-                                    color: isFree ? AppColors.success : Colors.white,
+                                    color: isFree ? Colors.greenAccent : Colors.white,
                                   ),
                                 ),
                               ],
                             ),
                             const Spacer(),
+
+                            // --- REGISTRATION BUTTON WITH SAFETY DISABLE ---
                             ElevatedButton(
-                              onPressed: isInitialLoad || controller.isProcessing.value
+                              onPressed: isInitialLoad || controller.isProcessing.value || isAlreadyRegistered
                                   ? null
                                   : () => controller.registerForTrial(trial.id),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.buttonColor,
+                                backgroundColor: isAlreadyRegistered ? Colors.white.withOpacity(0.1) : Colors.blueAccent,
+                                disabledBackgroundColor: Colors.white.withOpacity(0.1),
+                                disabledForegroundColor: Colors.white.withOpacity(0.5),
                                 foregroundColor: Colors.white,
                                 padding: EdgeInsets.symmetric(
                                   horizontal: Dimensions.width30,
@@ -297,12 +302,15 @@ class TrialDetailScreen extends StatelessWidget {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 elevation: 0,
                               ),
-                              child: controller.isProcessing.value && !isInitialLoad
+                              child: controller.isProcessing.value && !isInitialLoad && !isAlreadyRegistered
                                   ? const SizedBox(
                                   height: 20, width: 20,
                                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
                               )
-                                  : const Text("Register Now", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  : Text(
+                                  isAlreadyRegistered ? "Registered" : "Register Now",
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                              ),
                             ),
                           ],
                         ),
@@ -375,6 +383,12 @@ class TrialDetailScreen extends StatelessWidget {
     String formattedDate = DateFormat('EEE, d MMM').format(trial.date);
     String formattedTime = DateFormat('h:mm a').format(trial.date);
 
+    // Safely cast and capitalize pure Dart-style to avoid dynamic extension crashes
+    String typeStr = trial.type?.toString() ?? '';
+    String displayType = typeStr.isNotEmpty
+        ? '${typeStr[0].toUpperCase()}${typeStr.substring(1)}'
+        : '';
+
     return Wrap(
       spacing: 10,
       runSpacing: 10,
@@ -383,7 +397,7 @@ class TrialDetailScreen extends StatelessWidget {
         _buildDetailChip(Iconsax.clock, formattedTime),
         _buildDetailChip(Iconsax.location, trial.location),
         _buildDetailChip(Iconsax.profile_2user, trial.ageGroup.toUpperCase()),
-        _buildDetailChip(Iconsax.category, trial.type ?? ''),
+        _buildDetailChip(Iconsax.category, displayType), // <-- FIXED HERE
       ],
     );
   }
@@ -403,7 +417,7 @@ class TrialDetailScreen extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             label,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 13),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
           ),
         ],
       ),
@@ -420,7 +434,7 @@ class TrialDetailScreen extends StatelessWidget {
           const Text("Failed to load trial details", style: TextStyle(color: Colors.white)),
           TextButton(
             onPressed: () => Get.back(),
-            child: Text("Go Back", style: TextStyle(color: AppColors.buttonColor)),
+            child: const Text("Go Back", style: TextStyle(color: Colors.blueAccent)),
           )
         ],
       ),

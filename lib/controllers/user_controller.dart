@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:hilite/helpers/global_loader_controller.dart';
 import 'package:hilite/widgets/snackbars.dart';
@@ -69,6 +70,56 @@ class UserController extends GetxController {
   bool _hasInitialized = false;
   String? _activeOthersProfileId;
   int _othersProfileRequestToken = 0;
+
+  String? _referralCode;
+  String? get referralCode => _referralCode;
+
+  List<dynamic> _referredUsers = [];
+  List<dynamic> get referredUsers => _referredUsers;
+
+  bool _isLoadingReferrals = false;
+  bool get isLoadingReferrals => _isLoadingReferrals;
+
+
+  Future<void> fetchOrGenerateReferralCode() async {
+    _isLoadingReferrals = true;
+    update();
+
+    try {
+      // Attempt to generate/fetch the code
+      Response response = await userRepo.generateReferralCode();
+
+      if (response.statusCode == 200 && response.body['code'] == '00') {
+        _referralCode = response.body['data'];
+      } else if (response.statusCode == 400 && response.body['code'] == '01') {
+        // "Code already exists" usually means we should just read it from the user model if available,
+        // OR your backend needs a separate GET endpoint for just the code.
+        // Assuming your backend returns it in the user profile if it already exists:
+        _referralCode = user.value?.referralCode ?? "CODE_EXISTS_ERROR";
+      } else {
+        _referralCode = "ERROR_GENERATING";
+      }
+
+      await getReferredUsers();
+
+    } catch (e) {
+      debugPrint('Error generating referral code: $e');
+    } finally {
+      _isLoadingReferrals = false;
+      update();
+    }
+  }
+
+  Future<void> getReferredUsers() async {
+    try {
+      Response response = await userRepo.getReferredUsers();
+      if (response.statusCode == 200 && response.body['code'] == '00') {
+        _referredUsers = response.body['data'] ?? [];
+      }
+    } catch (e) {
+      debugPrint('Error fetching referred users: $e');
+    }
+  }
 
   bool isCurrentUser(String? targetId) {
     final currentUserId = user.value?.id;

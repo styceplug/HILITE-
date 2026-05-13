@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:get/get.dart';
+import 'package:hilite/widgets/country_state_dropdown.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../utils/app_constants.dart';
 import '../../../utils/colors.dart';
@@ -10,7 +11,6 @@ import '../../../widgets/custom_appbar.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_textfield.dart';
 import '../../../widgets/snackbars.dart';
-
 
 class ClubProfileForm extends StatefulWidget {
   const ClubProfileForm({Key? key}) : super(key: key);
@@ -23,6 +23,8 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
   final formKey = GlobalKey<FormState>();
 
   String? selectedClubType;
+  String? selectedCountry;
+  String? selectedState;
   bool isPasswordVisible = false;
   bool termsPolicy = false;
   Timer? debounceTimer;
@@ -42,7 +44,6 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
     {"title": "Academy", "image": "acad-club"},
     {"title": "College Team", "image": "coll-club"},
     {"title": "Youth Club", "image": "youth-club"},
-
   ];
 
   @override
@@ -76,13 +77,15 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
     "role": "club",
     "clubName": clubNameController.text.trim(),
     "clubType": selectedClubType?.toLowerCase(),
+    "country": selectedCountry,
+    "state": selectedState,
   };
 
   void _openFullScreenClubPicker() {
     FocusScope.of(context).unfocus();
 
     Get.to(
-          () => Scaffold(
+      () => Scaffold(
         appBar: CustomAppbar(
           title: 'Select Club Type',
           titleColor: AppColors.textColor,
@@ -109,7 +112,8 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
                   color: AppColors.white.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(Dimensions.radius10),
                   border: Border.all(
-                    color: isSelected ? AppColors.buttonColor : Colors.transparent,
+                    color:
+                        isSelected ? AppColors.buttonColor : Colors.transparent,
                     width: 1.5,
                   ),
                 ),
@@ -117,7 +121,7 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
                   children: [
                     Image.asset(
                       AppConstants.getPngAsset(item['image']!),
-                      height: Dimensions.iconSize30*0.8,
+                      height: Dimensions.iconSize30 * 0.8,
                     ),
                     SizedBox(width: Dimensions.width15),
                     Text(
@@ -125,7 +129,8 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
                       style: TextStyle(
                         color: AppColors.white,
                         fontSize: Dimensions.font18,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w400,
                         fontFamily: 'Poppins',
                       ),
                     ),
@@ -232,6 +237,18 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
                         image: 'jersey',
                       ),
                     ),
+                    SizedBox(height: Dimensions.height20),
+                    CountryState(
+                      selectedCountry: selectedCountry,
+                      selectedState: selectedState,
+                      onCountryChanged: (country) {
+                        setState(() {
+                          selectedCountry = country;
+                          selectedState = null;
+                        });
+                      },
+                      onStateChanged: (state) => setState(() => selectedState = state),
+                    ),
 
                     SizedBox(height: Dimensions.height20),
                     InkWell(
@@ -254,6 +271,7 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
                         ],
                       ),
                     ),
+
                     SizedBox(height: Dimensions.height20),
                     Text(
                       'By signing up, you agree to our Terms of Service and Privacy Policy',
@@ -269,11 +287,15 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
                       backgroundColor: AppColors.buttonColor,
                       onPressed: () {
                         if (!termsPolicy) {
-                          CustomSnackBar.failure(message: 'You must confirm you are 13 or older.');
+                          CustomSnackBar.failure(
+                            message: 'You must confirm you are 13 or older.',
+                          );
                           return;
                         }
                         if (selectedClubType == null) {
-                          CustomSnackBar.failure(message: 'Please select a Club Type.');
+                          CustomSnackBar.failure(
+                            message: 'Please select a Club Type.',
+                          );
                           return;
                         }
                         if (formKey.currentState!.validate()) {
@@ -292,7 +314,11 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
     );
   }
 
-  Widget _buildPickerContainer({required String title, required String value, required String image}) {
+  Widget _buildPickerContainer({
+    required String title,
+    required String value,
+    required String image,
+  }) {
     return Container(
       width: Dimensions.screenWidth,
       padding: EdgeInsets.symmetric(
@@ -314,16 +340,21 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
           Text(
             value.isEmpty ? title : value,
             style: TextStyle(
-              color: value.isEmpty
-                  ? AppColors.textColor.withOpacity(0.5)
-                  : AppColors.textColor,
+              color:
+                  value.isEmpty
+                      ? AppColors.textColor.withOpacity(0.5)
+                      : AppColors.textColor,
               fontSize: Dimensions.font18,
               fontWeight: FontWeight.w500,
               fontFamily: 'Poppins',
             ),
           ),
           const Spacer(),
-          Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textColor, size: Dimensions.iconSize16),
+          Icon(
+            Icons.arrow_forward_ios_rounded,
+            color: AppColors.textColor,
+            size: Dimensions.iconSize16,
+          ),
         ],
       ),
     );

@@ -5,6 +5,7 @@ import 'package:hilite/controllers/auth_controller.dart';
 import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/routes/routes.dart';
 import 'package:hilite/widgets/custom_appbar.dart';
+import 'package:hilite/widgets/snackbars.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../utils/colors.dart';
 import '../../utils/dimensions.dart';
@@ -70,7 +71,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               settingTile(
                 icon: Iconsax.profile_tick,
                 title: "Verify Account",
-                onTap: () {},
+                onTap: () {
+                  CustomSnackBar.showToast(message: 'Verification not available to you yet');
+                },
               ),
               settingTile(
                 icon: Iconsax.link,
