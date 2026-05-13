@@ -287,6 +287,7 @@ class PostController extends GetxController {
     required String description,
     required String text,
     required bool isPublic,
+    required List<String> tags,
   }) async {
     final uploadService = Get.find<UploadService>();
 
@@ -330,6 +331,7 @@ class PostController extends GetxController {
       text: text,
       isPublic: isPublic,
       thumbnailPath: thumbnailPath,
+      tags: tags,
     );
   }
 
@@ -341,50 +343,8 @@ class PostController extends GetxController {
     required String text,
     required bool isPublic,
     String? thumbnailPath,
+    required List<String> tags,
   }) async {
-    try {
-      final response =
-          isVideo
-              ? await postRepo.uploadVideoPost(
-                videoFile: file,
-                title: title,
-                description: description,
-                text: text,
-                isPublic: isPublic,
-                thumbnailPath: thumbnailPath,
-              )
-              : await postRepo.uploadImagePost(
-                imageFile: file,
-                title: title,
-                description: description,
-                text: text,
-                isPublic: isPublic,
-              );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        // Refresh the feed so the new post appears
-        await loadRecommendedPosts(isVideo ? 'video' : 'image');
-      }
-      // UploadService already set success/failure state — pill handles UI
-    } catch (e) {
-      debugPrint('Background upload error: $e');
-      // UploadService already set failure state — pill shows the error strip
-    }
-  }
-  /* Future<void> uploadMediaPost({
-    required XFile file,
-    required bool isVideo,
-    required String title,
-    required String description,
-    required String text, // Use text field for main text content
-    required bool isPublic,
-  }) async {
-    if (isLoading.value) return; // Prevent double-tap upload
-
-    // Simple validation (can be more complex)
-
-    isLoading.value = true;
-
     try {
       final response = isVideo
           ? await postRepo.uploadVideoPost(
@@ -393,6 +353,8 @@ class PostController extends GetxController {
         description: description,
         text: text,
         isPublic: isPublic,
+        thumbnailPath: thumbnailPath,
+        tags: tags, // <-- Add this!
       )
           : await postRepo.uploadImagePost(
         imageFile: file,
@@ -400,35 +362,17 @@ class PostController extends GetxController {
         description: description,
         text: text,
         isPublic: isPublic,
+        tags: tags, // <-- Add this!
       );
 
-      if (response.statusCode == 201) {
-        // Post successful!
-        CustomSnackBar.success(message: 'Post uploaded successfully!');
-
-        // Navigate back to the main feed/home screen
-        Get.offAllNamed(AppRoutes.homeScreen);
-        AppController appController = Get.find<AppController>();
-        appController.changeCurrentAppPage(0);
-
-        ;
-
-
-      } else {
-        // Handle upload failure error
-        String message = response.body?['message'] ?? 'Upload failed. Server error.';
-        // CustomSnackBar.failure(message: message);
-        print('Upload Failed: $message');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await loadRecommendedPosts(isVideo ? 'video' : 'image');
       }
-
     } catch (e) {
-      // Handle network or exception error
-      // CustomSnackBar.failure(message: 'Network error during upload.');
-      print('Upload Exception: $e');
-    } finally {
-      isLoading.value = false;
+      debugPrint('Background upload error: $e');
     }
-  }*/
+  }
+
 
   Future<bool> submitComment(
     String postId,

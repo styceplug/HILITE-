@@ -16,6 +16,7 @@ class PostModel {
   final List<dynamic> comments;
   final bool isLiked;
   final bool isBookmarked;
+  final List<String> tags;
 
   PostModel({
     required this.id,
@@ -29,6 +30,7 @@ class PostModel {
     this.comments = const [],
     this.isLiked = false,
     this.isBookmarked = false,
+    this.tags = const [],
   });
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
@@ -68,6 +70,7 @@ class PostModel {
       comments: data['comments'] ?? [],
       isLiked: data['isLiked'] ?? false,
       isBookmarked: data['isBookmarked'] ?? false,
+      tags: data['tags'] != null ? List<String>.from(data['tags']) : [],
     );
   }
 
