@@ -31,6 +31,8 @@ class AppConstants {
   static const String GET_RECOMMENDED_ACCOUNTS = '/v1/recommendation/users';
   static const String SEARCH_ACCOUNTS = '/v1/search/global';
   static const String GET_RECOMMENDED_POSTS = '/v1/recommendation/posts';
+  static const String GET_REFERRAL_CODE = '/v1/user/referral/generate';
+  static const String GET_MY_REFERRALS = '/v1/user/referral/personal';
 
 
   static String GET_SINGLE_POST(String postId) => '/v1/post/retrieve/$postId';

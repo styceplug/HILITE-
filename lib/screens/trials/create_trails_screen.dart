@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/utils/colors.dart';
 import 'package:hilite/utils/dimensions.dart';
+import 'package:hilite/widgets/custom_appbar.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../controllers/trial_controller.dart';
@@ -88,15 +89,15 @@ class _CreateTrialScreenState extends State<CreateTrialScreen> {
       }
     } else if (_selectedDate == null) {
       // Show snackbar or alert if date is missing
-      // CustomSnackBar.failure(message: 'Please select a trial date.');
-      Get.snackbar('Error', 'Please select a trial date.', snackPosition: SnackPosition.BOTTOM);
+      CustomSnackBar.failure(message: 'Please select a trial date.');
+      // Get.snackbar('Error', 'Please select a trial date.', snackPosition: SnackPosition.BOTTOM);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create New Trial')),
+      appBar: CustomAppbar(title:'Create New Trial',leadingIcon: BackButton(color: Colors.white, onPressed: () => Get.back(),)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -177,7 +178,6 @@ class _CreateTrialScreenState extends State<CreateTrialScreen> {
                 ),
               ),
 
-              // Trial Type Dropdown
               DropdownButtonFormField<String>(
                 value: _trialType,
                 decoration: const InputDecoration(labelText: 'Trial Type *'),
@@ -188,7 +188,7 @@ class _CreateTrialScreenState extends State<CreateTrialScreen> {
                 onChanged: (value) {
                   if (value != null) setState(() => _trialType = value);
                 },
-                validator: _requiredValidator, // Ensure a type is selected (though dropdown usually guarantees this)
+                validator: _requiredValidator,
               ),
               const SizedBox(height: 30),
 

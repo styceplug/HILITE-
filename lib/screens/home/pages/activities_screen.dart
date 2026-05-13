@@ -68,7 +68,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
   Widget build(BuildContext context) {
     super.build(context);
 
-    final bool isClub = userController.user.value?.role == 'club';
+    final bool isClub = userController.user.value?.role == 'club' || userController.user.value?.role == 'agent';
+
 
     return Scaffold(
       appBar: CustomAppbar(
