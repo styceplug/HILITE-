@@ -22,6 +22,17 @@ class UserRepo {
 
   static const String USER_KEY = "user_data";
 
+
+
+
+  Future<Response> generateReferralCode()async{
+    return await apiClient.postData(AppConstants.GET_REFERRAL_CODE, {});
+  }
+
+  Future<Response> getReferredUsers()async{
+    return await apiClient.getData(AppConstants.GET_MY_REFERRALS);
+  }
+
   Future<Response> getExternalRelationshipAccounts(
     String targetId, {
     bool followers = false,

@@ -24,6 +24,7 @@ class UserModel {
   final int blocked;
   final int bookmarks;
   final int posts;
+  final String? referralCode;
   final DateTime createdAt;
   final DateTime updatedAt;
   bool isFollowed;
@@ -50,6 +51,7 @@ class UserModel {
     required this.blocked,
     required this.bookmarks,
     required this.posts,
+    this.referralCode,
     required this.createdAt,
     required this.updatedAt,
     this.isFollowed = false,
@@ -122,6 +124,7 @@ class UserModel {
       bookmarks:
           bookmarksJson is List ? bookmarksJson.length : (bookmarksJson ?? 0),
       posts: json['posts'] ?? 0,
+      referralCode: json['referralCode'],
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updatedAt'] ?? '') ?? DateTime.now(),
       isFollowed: json['isFollowing'] ?? json['isFollowed'] ?? followed,
@@ -150,6 +153,7 @@ class UserModel {
       'blocked': blocked,
       'bookmarks': bookmarks,
       'posts': posts,
+      'referralCode': referralCode,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'isFollowed': isFollowed,
@@ -184,6 +188,7 @@ class UserModel {
     int? blocked,
     int? bookmarks,
     int? posts,
+    String? referralCode,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isFollowed,
@@ -210,6 +215,7 @@ class UserModel {
       blocked: blocked ?? this.blocked,
       bookmarks: bookmarks ?? this.bookmarks,
       posts: posts ?? this.posts,
+      referralCode: referralCode ?? this.referralCode,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isFollowed: isFollowed ?? this.isFollowed,
