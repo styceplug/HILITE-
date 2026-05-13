@@ -33,6 +33,7 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
   final formKey = GlobalKey<FormState>();
 
   String? selectedCountry;
+  String? selectedState;
   String? selectedRole;
   String? selectedExperience;
   bool isPasswordVisible = false;
@@ -90,6 +91,8 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
     "agencyName": agencyNameController.text.trim(),
     "experience": selectedExperience?.toLowerCase(),
     "roleType": selectedRole?.toLowerCase(),
+    "country": selectedCountry,
+    "state": selectedState,
   };
 
   // --- REUSABLE FULL SCREEN PICKER ---
@@ -325,6 +328,22 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
                         value: selectedExperience ?? '',
                         image: 'logo3', // Changed image to differentiate
                       ),
+                    ),
+                    SizedBox(height: Dimensions.height20),
+                    CountryState(
+                      selectedCountry: selectedCountry,
+                      selectedState: selectedState,
+                      onCountryChanged: (country) {
+                        setState(() {
+                          selectedCountry = country;
+                          selectedState = null;
+                        });
+                      },
+                      onStateChanged: (state) {
+                        setState(() {
+                          selectedState = state;
+                        });
+                      },
                     ),
                     SizedBox(height: Dimensions.height20),
 

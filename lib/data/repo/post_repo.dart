@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:http_parser/http_parser.dart'; // REQUIRED for MediaType
 import 'package:camera/camera.dart';
@@ -46,73 +49,30 @@ class PostRepo {
     );
   }
 
-  /*http.MultipartRequest _buildBaseRequest({
-    required String uri,
-    required XFile file,
-    required String fileFieldName, // 'image' or 'video'
+
+  Map<String, String> _baseFields({
     required String text,
     required String title,
     required String description,
     required bool isPublic,
-    required MediaType mediaType, // <--- 1. ADD THIS PARAMETER
+    required List<String> tags,
   }) {
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse(apiClient.baseUrl! + uri),
-    );
-
-    // Add fields
-    request.fields.addAll({
+    final Map<String, String> fields = {
       'text': text,
       'title': title,
       'description': description,
       'imageTitle': title,
       'imageDescription': description,
       'isPublic': isPublic.toString(),
-    });
+    };
 
-    // 2. Add File with EXPLICIT ContentType
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        fileFieldName,
-        File(file.path).readAsBytesSync(),
-        filename: file.name,
-        contentType: mediaType, // <--- CRITICAL FIX
-      ),
-    );
-
-    return request;
-  }*/
-
-  /*  // 4. UPLOAD IMAGE POST
-  Future<Response> uploadImagePost({
-    required XFile imageFile,
-    required String text,
-    required String title,
-    required String description,
-    required bool isPublic,
-  }) async {
-    // Default to jpeg, or detect
-    MediaType contentType = MediaType('image', 'jpeg');
-    if (imageFile.path.endsWith('.png')) {
-      contentType = MediaType('image', 'png');
+    if (tags.isNotEmpty) {
+      fields['tags'] = tags.join(',');
     }
 
-    final request = _buildBaseRequest(
-      uri: AppConstants.UPLOAD_IMAGE_POST,
-      file: imageFile,
-      fileFieldName: 'image',
-      text: text,
-      title: title,
-      description: description,
-      isPublic: isPublic,
-      mediaType: contentType,
-    );
+    debugPrint('🚀 [API LAYER] PREPARED FIELDS: $fields');
 
-    return await apiClient.postMultipartData(
-      AppConstants.UPLOAD_IMAGE_POST,
-      request,
-    );
+    return fields;
   }
 
   Future<Response> uploadVideoPost({
@@ -121,55 +81,8 @@ class PostRepo {
     required String title,
     required String description,
     required bool isPublic,
-  }) async {
-    // Determine mime type (Basic logic)
-    // You can also use lookupMimeType(videoFile.path) from package:mime
-    MediaType contentType = MediaType('video', 'mp4');
-
-    if (videoFile.path.endsWith('.mov')) {
-      contentType = MediaType('video', 'quicktime');
-    } else if (videoFile.path.endsWith('.avi')) {
-      contentType = MediaType('video', 'x-msvideo');
-    }
-
-    final request = _buildBaseRequest(
-      uri: AppConstants.UPLOAD_VIDEO_POST,
-      file: videoFile,
-      fileFieldName: 'video',
-      text: text,
-      title: title,
-      description: description,
-      isPublic: isPublic,
-      mediaType: contentType, // Pass it here
-    );
-
-    return await apiClient.postMultipartData(
-      AppConstants.UPLOAD_VIDEO_POST,
-      request,
-    );
-  }*/
-
-  Map<String, String> _baseFields({
-    required String text,
-    required String title,
-    required String description,
-    required bool isPublic,
-  }) => {
-    'text': text,
-    'title': title,
-    'description': description,
-    'imageTitle': title, // mirrors _buildBaseRequest
-    'imageDescription': description, // mirrors _buildBaseRequest
-    'isPublic': isPublic.toString(),
-  };
-
-  Future<Response> uploadVideoPost({
-    required XFile videoFile,
-    required String text,
-    required String title,
-    required String description,
-    required bool isPublic,
-    String? thumbnailPath, // optional — pass a generated thumbnail file path
+    required List<String> tags, // Required parameter
+    String? thumbnailPath,
   }) async {
     MediaType contentType = MediaType('video', 'mp4');
     if (videoFile.path.endsWith('.mov')) {
@@ -184,21 +97,23 @@ class PostRepo {
       final body = await uploadService.uploadWithProgress(
         uri: '${apiClient.appBaseUrl}${AppConstants.UPLOAD_VIDEO_POST}',
         filePath: videoFile.path,
-        fileName:
-            videoFile.name, // ← mirrors filename: file.name from fromBytes
+        fileName: videoFile.name,
         fileFieldName: 'video',
         mediaType: contentType,
+        // Pass tags INTO _baseFields
         fields: _baseFields(
           text: text,
           title: title,
           description: description,
           isPublic: isPublic,
+          tags: tags,
         ),
         headers: apiClient.mainHeaders,
         thumbnailPath: thumbnailPath,
       );
 
-      // Wrap in a GetConnect Response so PostController is untouched
+      print('This is it: ${body}');
+
       return Response(statusCode: 201, body: body);
     } catch (e) {
       return Response(statusCode: 1, statusText: e.toString());
@@ -211,6 +126,7 @@ class PostRepo {
     required String title,
     required String description,
     required bool isPublic,
+    required List<String> tags, // Added required parameter
   }) async {
     MediaType contentType = MediaType('image', 'jpeg');
     if (imageFile.path.endsWith('.png')) {
@@ -223,19 +139,21 @@ class PostRepo {
       final body = await uploadService.uploadWithProgress(
         uri: '${apiClient.appBaseUrl}${AppConstants.UPLOAD_IMAGE_POST}',
         filePath: imageFile.path,
-        fileName:
-            imageFile.name, // ← mirrors filename: file.name from fromBytes
+        fileName: imageFile.name,
         fileFieldName: 'image',
         mediaType: contentType,
+        // Pass tags INTO _baseFields
         fields: _baseFields(
           text: text,
           title: title,
           description: description,
           isPublic: isPublic,
+          tags: tags,
         ),
         headers: apiClient.mainHeaders,
-        // Images don't need a thumbnail preview in the pill
       );
+
+      print('Response Body: $body');
 
       return Response(statusCode: 201, body: body);
     } catch (e) {

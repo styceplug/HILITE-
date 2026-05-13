@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/post_controller.dart';
 import 'package:hilite/controllers/user_controller.dart';
+import 'package:hilite/models/user_model.dart';
 import 'package:hilite/routes/routes.dart';
 import 'package:hilite/utils/dimensions.dart';
 import 'package:iconsax/iconsax.dart';
@@ -16,11 +17,13 @@ import 'gift_bottom_modal.dart';
 class ReelsInteractionOverlay extends StatelessWidget {
   final PostModel post;
   final PostController controller;
+  final UserModel? authorProfile;
 
   const ReelsInteractionOverlay({
     Key? key,
     required this.post,
     required this.controller,
+    this.authorProfile,
   }) : super(key: key);
 
   @override
@@ -54,6 +57,7 @@ class ReelsInteractionOverlay extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 1. Username
                     InkWell(
                       onTap: () async {
                         final authorId = post.author?.id;
@@ -67,33 +71,29 @@ class ReelsInteractionOverlay extends StatelessWidget {
                             AppRoutes.othersProfileScreen,
                             arguments: {'targetId': authorId},
                           );
-                        } else {
-                          print('This is your profile');
                         }
-
                       },
                       child: Text(
                         post.author?.username.capitalizeFirst ?? '',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: Dimensions.font22,
+                          fontSize: Dimensions.font20,
+                          shadows: const [
+                            Shadow(color: Colors.black45, blurRadius: 4),
+                          ],
                         ),
                       ),
                     ),
-
                     SizedBox(height: Dimensions.height5),
 
+                    // 2. Description
                     Builder(
                       builder: (context) {
                         String? descriptionText;
-
-                        // A. Prioritize the main post 'text' field if it exists
                         if (post.text != null && post.text!.isNotEmpty) {
                           descriptionText = post.text;
-                        }
-                        // B. If no main 'text', check the content-specific description
-                        else if (post.type == 'video' &&
+                        } else if (post.type == 'video' &&
                             post.video?.description != null) {
                           descriptionText = post.video!.description;
                         } else if (post.type == 'image' &&
@@ -101,29 +101,81 @@ class ReelsInteractionOverlay extends StatelessWidget {
                           descriptionText = post.image!.description;
                         }
 
-                        // 3. Display the description if found
                         if (descriptionText != null &&
                             descriptionText.isNotEmpty) {
                           return Text(
                             descriptionText,
-                            maxLines: 3,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: Dimensions.font16,
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: Dimensions.font14,
+                              height: 1.3,
                             ),
                           );
                         }
-
-                        // Return an empty SizedBox if no text is available
                         return const SizedBox.shrink();
                       },
                     ),
+
+                    // 3. Tags (If they exist)
+                    if (post.tags != null && post.tags.isNotEmpty) ...[
+                      SizedBox(height: Dimensions.height10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children:
+                            post.tags
+                                .map(
+                                  (tag) => Text(
+                                    '#$tag',
+                                    style: const TextStyle(
+                                      color:
+                                          Colors.white, // Or Colors.blueAccent
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                      ),
+                    ],
+
+                    // 4. Creator Info Pill (If authorProfile is provided)
+                    if (authorProfile != null) ...[
+                      SizedBox(height: Dimensions.height10),
+                      Row(
+                        children: [
+                          Icon(
+                            Iconsax.info_circle,
+                            size: 14,
+                            color: Colors.white.withOpacity(0.7),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _buildCreatorInfo(authorProfile!),
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.7),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: Dimensions.height10 * 8),
+                    ],
+
                     SizedBox(height: Dimensions.height150),
+
+
+
                   ],
                 ),
               ),
-
               // RIGHT SIDE: Interaction Buttons
               Column(
                 mainAxisSize: MainAxisSize.min,
@@ -140,9 +192,9 @@ class ReelsInteractionOverlay extends StatelessWidget {
                   Obx(() {
                     final currentPost =
                         controller.posts.firstWhereOrNull(
-                          (p) => p.id == post.id,
+                              (p) => p.id == post.id,
                         ) ??
-                        post;
+                            post;
                     final bool isLiked = currentPost.isLiked;
 
                     return GestureDetector(
@@ -152,9 +204,9 @@ class ReelsInteractionOverlay extends StatelessWidget {
                         // Filled vs. Outline
                         label: "${currentPost.likes.length}",
                         color:
-                            isLiked
-                                ? Colors.red
-                                : Colors.white, // Change color if liked
+                        isLiked
+                            ? Colors.red
+                            : Colors.white, // Change color if liked
                       ),
                     );
                   }),
@@ -165,9 +217,9 @@ class ReelsInteractionOverlay extends StatelessWidget {
                     // Find the updated post model from the observable list.
                     final currentPost =
                         controller.posts.firstWhereOrNull(
-                          (p) => p.id == post.id,
+                              (p) => p.id == post.id,
                         ) ??
-                        post;
+                            post;
 
                     return GestureDetector(
                       onTap: () {
@@ -189,10 +241,11 @@ class ReelsInteractionOverlay extends StatelessWidget {
                       onTap: () => controller.toggleBookmark(post.id),
                       child: _InteractionIcon(
                         icon:
-                            isBookmarked
-                                ? Icons.bookmark
-                                : Icons.bookmark_border,
-                        color: isBookmarked ? AppColors.white : Colors.white,
+                        isBookmarked
+                            ? Icons.bookmark
+                            : Icons.bookmark_border,
+                        color:
+                        isBookmarked ? AppColors.white : Colors.white,
                         label: 'Save',
                       ),
                     );
@@ -201,7 +254,8 @@ class ReelsInteractionOverlay extends StatelessWidget {
                   GestureDetector(
                     onTap: () {
                       controller.pauseAll();
-                      final link = "https://api.hiliteapp.net/post/${post.id}";
+                      final link =
+                          "https://api.hiliteapp.net/post/${post.id}";
 
                       Share.share(
                         'Check out this video on Hilite! $link',
@@ -240,9 +294,46 @@ class ReelsInteractionOverlay extends StatelessWidget {
       ),
     );
   }
+
+  String _buildCreatorInfo(UserModel user) {
+    if (user.role.toLowerCase() == 'player' && user.playerDetails != null) {
+      final p = user.playerDetails!;
+      final age = _calculateAge(p.dob);
+      final ageStr = age != null ? '$age yrs' : '';
+      final foot =
+          p.preferredFoot.isNotEmpty
+              ? '${p.preferredFoot.capitalizeFirst} Foot'
+              : '';
+      final pos = p.position.isNotEmpty ? p.position.toUpperCase() : '';
+
+      // Combines available details into "CAM • 22 yrs • Right Foot"
+      return [pos, ageStr, foot].where((s) => s.isNotEmpty).join(' • ');
+    } else if (user.role.toLowerCase() == 'club' && user.clubDetails != null) {
+      final c = user.clubDetails!;
+      return [
+        c.clubType.capitalizeFirst,
+        c.yearFounded.isNotEmpty ? 'Est. ${c.yearFounded}' : '',
+      ].where((s) => s != null && s.isNotEmpty).join(' • ');
+    } else if (user.role.toLowerCase() == 'agent' &&
+        user.agentDetails != null) {
+      return [
+        user.agentDetails!.agencyName,
+        '${user.agentDetails!.experience} Exp',
+      ].where((s) => s.isNotEmpty).join(' • ');
+    }
+    return user.role.capitalizeFirst ?? 'Fan';
+  }
+
+  int? _calculateAge(DateTime? dob) {
+    if (dob == null) return null;
+    final now = DateTime.now();
+    int age = now.year - dob.year;
+    if (now.month < dob.month || (now.month == dob.month && now.day < dob.day))
+      age--;
+    return age;
+  }
 }
 
-// Helper Widgets for clean code
 class _InteractionIcon extends StatelessWidget {
   final IconData icon;
   final String label;
