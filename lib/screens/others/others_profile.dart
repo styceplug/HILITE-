@@ -66,6 +66,9 @@ class _OthersProfileState extends State<OthersProfileScreen> {
           final isFollowing = user.isFollowed;
           final isFollowBusy = controller.isFollowActionInProgress(user.id);
 
+
+          final bool isOwnProfile = controller.user.value?.id == user.id;
+
           var club = user.clubDetails;
 
           // Determine Tabs by Role
@@ -193,7 +196,8 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: isLoadingProfile || isFollowBusy ? null : () {
+                              // --- FIX: Disabled if Own Profile ---
+                              onPressed: isLoadingProfile || isFollowBusy || isOwnProfile ? null : () {
                                 if (!isFollowing) {
                                   userController.followUser(user.id);
                                 } else {
@@ -206,6 +210,8 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                               label: Text(isFollowing ? 'Unfollow' : 'Follow', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: isFollowing ? Colors.white.withOpacity(0.05) : const Color(0xFF1E293B),
+                                disabledBackgroundColor: Colors.white.withOpacity(0.05),
+                                disabledForegroundColor: Colors.white.withOpacity(0.3),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -215,8 +221,8 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                           const SizedBox(width: 15),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: isLoadingProfile ? null : () async {
-                                // Chat logic
+                              // --- FIX: Disabled if Own Profile ---
+                              onPressed: isLoadingProfile || isOwnProfile ? null : () async {
                                 try {
                                   final chatRepo = Get.find<ChatRepo>();
                                   final response = await chatRepo.getOrCreateChat(user.id);
@@ -243,6 +249,8 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                               label: const Text('Message', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blueAccent,
+                                disabledBackgroundColor: Colors.white.withOpacity(0.05),
+                                disabledForegroundColor: Colors.white.withOpacity(0.3),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

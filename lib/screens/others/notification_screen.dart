@@ -160,7 +160,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       onTap: () {
         notificationController.markSingleNotificationAsRead(notification.id);
 
-        String? target = notification.userId;
+        String? target = notification.url;
 
         if (target != null && target.trim().isNotEmpty) {
           Get.toNamed(

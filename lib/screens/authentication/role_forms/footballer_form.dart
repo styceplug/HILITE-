@@ -90,8 +90,8 @@ class _FootballerFormState extends State<FootballerForm> {
       "email": emailController.text.trim(),
       "password": passwordController.text.trim(),
       "role": "player",
-      // "country": selectedCountry,
-      // "state": selectedState,
+      "country": selectedCountry,
+      "state": selectedState,
       // "dob": dobController.text,
       // "number": contactController.text,
       "position": positionController.text,
@@ -102,8 +102,6 @@ class _FootballerFormState extends State<FootballerForm> {
       // "bio": bioController.text,
     };
   }
-
-
 
   /// Bottom modal picker
   void _showBottomPicker({
@@ -142,7 +140,7 @@ class _FootballerFormState extends State<FootballerForm> {
       decoration: BoxDecoration(
         border: Border.all(color: AppColors.textColor.withOpacity(0.4)),
         borderRadius: BorderRadius.circular(Dimensions.radius10),
-        color: AppColors.white.withOpacity(0.1)
+        color: AppColors.white.withOpacity(0.1),
       ),
       child: Row(
         children: [
@@ -164,7 +162,7 @@ class _FootballerFormState extends State<FootballerForm> {
             ),
           ),
           Spacer(),
-          Icon(Icons.arrow_drop_down,color: AppColors.textColor,)
+          Icon(Icons.arrow_drop_down, color: AppColors.textColor),
         ],
       ),
     );
@@ -377,6 +375,22 @@ class _FootballerFormState extends State<FootballerForm> {
                       ),
                     ),
                     SizedBox(height: Dimensions.height20),
+                    CountryState(
+                      selectedCountry: selectedCountry,
+                      selectedState: selectedState,
+                      onCountryChanged: (country) {
+                        setState(() {
+                          selectedCountry = country;
+                          selectedState = null;
+                        });
+                      },
+                      onStateChanged: (state) {
+                        setState(() {
+                          selectedState = state;
+                        });
+                      },
+                    ),
+                    SizedBox(height: Dimensions.height20),
 
                     CustomTextField(
                       hintText: 'Password',
@@ -396,6 +410,7 @@ class _FootballerFormState extends State<FootballerForm> {
                       ),
                     ),
 
+
                     SizedBox(height: Dimensions.height20),
                     InkWell(
                       onTap: () {
@@ -405,11 +420,9 @@ class _FootballerFormState extends State<FootballerForm> {
                       child: Row(
                         children: [
                           Icon(
-                            termsPolicy
-                                ? Icons.toggle_on
-                                : Icons.toggle_off,
+                            termsPolicy ? Icons.toggle_on : Icons.toggle_off,
                             color: AppColors.buttonColor,
-                            size: Dimensions.iconSize30*2,
+                            size: Dimensions.iconSize30 * 2,
                           ),
                           SizedBox(width: Dimensions.width5),
                           Text(
@@ -433,13 +446,13 @@ class _FootballerFormState extends State<FootballerForm> {
                     ),
                     SizedBox(height: Dimensions.height20),
 
-
-
                     CustomButton(
                       text: "Submit Player Profile",
                       onPressed: () {
                         if (!termsPolicy) {
-                          CustomSnackBar.failure(message: "You must confirm you are 13 or older.");
+                          CustomSnackBar.failure(
+                            message: "You must confirm you are 13 or older.",
+                          );
                           return;
                         }
                         if (formKey.currentState!.validate()) {
@@ -458,11 +471,6 @@ class _FootballerFormState extends State<FootballerForm> {
     );
   }
 }
-
-
-
-
-
 
 //DOB
 
