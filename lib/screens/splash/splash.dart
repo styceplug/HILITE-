@@ -16,7 +16,6 @@ class Splash extends StatefulWidget {
 }
 
 class _SplashState extends State<Splash> {
-
   AppController appController = Get.find<AppController>();
 
   @override
@@ -34,44 +33,42 @@ class _SplashState extends State<Splash> {
         height: Dimensions.screenHeight,
         width: Dimensions.screenWidth,
         padding: EdgeInsets.only(bottom: Dimensions.height70),
-        decoration: const BoxDecoration(
-          gradient: AppColors.blueWhiteGradient,
-        ),
+        decoration: const BoxDecoration(color: Color(0XFF030A1B)),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Spacer(),
+              // Spacer(),
               Container(
-                height: Dimensions.height100 * 3.5,
-                width: Dimensions.width100 * 3.5,
+                height: Dimensions.height100 * 3,
+                width: Dimensions.width100 * 3,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   image: DecorationImage(
-                    image: AssetImage(AppConstants.getPngAsset('logo2')),
+                    image: AssetImage(AppConstants.getPngAsset('logo4')),
                     fit: BoxFit.fitHeight,
                   ),
                 ),
               ),
-              Text(
-                'From Street to Stadium',
-                style: TextStyle(
-                  fontSize: Dimensions.font22,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary
-                  // foreground: Paint()
-                  //   ..shader = const LinearGradient(
-                  //     colors: [Color(0xFF0094FF), Color(0xFF003366)],
-                  //     begin: Alignment.topCenter,
-                  //     end: Alignment.bottomCenter,
-                  //   ).createShader(Rect.fromLTWH(0.0, 0.0, 200.0, 70.0)),
-                ),
-              ),
-              Spacer(),
-              BouncingDotsIndicator(
-                color: AppColors.primary,
-              ),
 
+              // Text(
+              //   'From Street to Stadium',
+              //   style: TextStyle(
+              //     fontSize: Dimensions.font22,
+              //     fontWeight: FontWeight.w700,
+              //     color: AppColors.primary
+              //     // foreground: Paint()
+              //     //   ..shader = const LinearGradient(
+              //     //     colors: [Color(0xFF0094FF), Color(0xFF003366)],
+              //     //     begin: Alignment.topCenter,
+              //     //     end: Alignment.bottomCenter,
+              //     //   ).createShader(Rect.fromLTWH(0.0, 0.0, 200.0, 70.0)),
+              //   ),
+              // ),
+              // Spacer(),
+              // BouncingDotsIndicator(
+              //   color: AppColors.primary,
+              // ),
             ],
           ),
         ),

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:hilite/helpers/global_loader_controller.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,7 +16,7 @@ class TrialController extends GetxController {
   RxBool isLoadingTrials = false.obs;
   GlobalLoaderController loaderController = Get.find<GlobalLoaderController>();
   RxList<TrialModel> myTrials = <TrialModel>[].obs;
-
+  var joinedTrialList = <TrialModel>[].obs;
   RxBool isProcessing = false.obs;
   Rx<TrialModel?> currentTrialDetails = Rx<TrialModel?>(null);
 
@@ -23,6 +24,22 @@ class TrialController extends GetxController {
   void onInit() {
     super.onInit();
     fetchTrials();
+  }
+
+
+  Future<void> fetchJoinedTrials() async {
+    isLoadingTrials.value = true;
+    try {
+      Response response = await trialRepo.getRegisteredTrials();
+      if (response.statusCode == 200 && response.body['code'] == '00') {
+        List<dynamic> rawList = response.body['data'] ?? [];
+        joinedTrialList.value = rawList.map((e) => TrialModel.fromJson(e)).toList();
+      }
+    } catch (e) {
+      debugPrint("Error fetching joined trials: $e");
+    } finally {
+      isLoadingTrials.value = false;
+    }
   }
 
   Future<void> getMyTrials() async {

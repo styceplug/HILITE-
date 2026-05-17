@@ -98,7 +98,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               // Club specific settings
-              if(userController.user.value?.role == 'club')...[
+              if(userController.user.value?.role == 'club' || userController.user.value?.role == 'agent')...[
                 settingTile(
                   icon: Icons.sports_soccer, // Swapped to a more relevant icon
                   title: "My Trials",
