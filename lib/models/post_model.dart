@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:hilite/models/user_model.dart';
 
 
 const String defaultAvatar =
     "https://ui-avatars.com/api/?background=444&color=fff&name=User";
 
+
 class PostModel {
   final String id;
   final String type;
   final String? text;
-  final Author? author;
+  final UserModel? author; 
   final String? authorId;
   final ContentDetails? video;
   final ContentDetails? image;
@@ -43,16 +45,12 @@ class PostModel {
       data = Map<String, dynamic>.from(json['post']);
     }
 
-    // debugPrint('🧩 Parsing PostModel: ${data['_id']}');
-    // debugPrint('   authorPic(raw): ${data['author'] is Map ? data['author']['profilePicture'] : null}');
-    // debugPrint('   videoUrl(raw): ${data['video']?['url']}');
-    // debugPrint('   thumb(raw): ${data['video']?['thumbnailUrl']}');
-
-    Author? parsedAuthor;
+    UserModel? parsedAuthor;
     String? parsedAuthorId;
 
     if (data['author'] is Map<String, dynamic>) {
-      parsedAuthor = Author.fromJson(data['author']);
+      // --- NOW PARSING AS USER MODEL ---
+      parsedAuthor = UserModel.fromJson(data['author']);
       parsedAuthorId = parsedAuthor.id;
     } else if (data['author'] is String) {
       parsedAuthorId = data['author'];
@@ -73,9 +71,6 @@ class PostModel {
       tags: data['tags'] != null ? List<String>.from(data['tags']) : [],
     );
   }
-
-
-
 }
 
 class Author {

@@ -7,11 +7,8 @@ import '../models/user_model.dart';
 PostModel personalToPostModel(PersonalPostModel personal, {UserModel? authorProfile}) {
   final me = Get.find<UserController>().user.value;
 
-  final author = Author(
-    id: authorProfile?.id ?? me?.id ?? '',
-    username: authorProfile?.username ?? me?.username ?? 'Unknown',
-    profilePicture: authorProfile?.profilePicture ?? me?.profilePicture ?? '',
-  );
+  // We just use the provided profile, or fallback to the logged-in user!
+  final UserModel? finalAuthor = authorProfile ?? me;
 
   final videoContent = ContentDetails(
     url: personal.mediaUrl,
@@ -25,9 +22,10 @@ PostModel personalToPostModel(PersonalPostModel personal, {UserModel? authorProf
     id: personal.id ?? '',
     type: personal.type ?? 'video',
     text: personal.text,
-    author: author,
+    author: finalAuthor,         // <-- Successfully passing the UserModel
+    authorId: finalAuthor?.id,   // Keep the authorId synced
     video: (personal.type == 'video') ? videoContent : null,
-    image: null, // if you want images too, map image here
+    image: null,
     likes: [],
     comments: [],
     isLiked: false,

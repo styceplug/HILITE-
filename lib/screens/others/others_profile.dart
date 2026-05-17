@@ -5,6 +5,7 @@ import 'package:hilite/screens/home/pages/profile_screen.dart';
 import 'package:hilite/screens/others/relationship_screen.dart';
 import 'package:hilite/utils/colors.dart';
 import 'package:hilite/utils/dimensions.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../data/repo/chat_repo.dart';
 import '../../models/message_model.dart';
@@ -190,28 +191,20 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                     const SizedBox(height: 20),
 
                     // --- 6. Action Buttons ---
+                    // --- 6. Action Buttons ---
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Row(
+                      child: isOwnProfile
+                      // 🅰️ IF IT IS MY OWN PROFILE -> Show Edit & Share
+                          ? Row(
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              // --- FIX: Disabled if Own Profile ---
-                              onPressed: isLoadingProfile || isFollowBusy || isOwnProfile ? null : () {
-                                if (!isFollowing) {
-                                  userController.followUser(user.id);
-                                } else {
-                                  userController.unfollowUser(user.id);
-                                }
-                              },
-                              icon: isFollowBusy
-                                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                  : Icon(Icons.person_add_alt_1, color: isFollowing ? Colors.white : Colors.white, size: 18),
-                              label: Text(isFollowing ? 'Unfollow' : 'Follow', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
+                              onPressed: isLoadingProfile ? null : () => Get.toNamed(AppRoutes.editProfileScreen), // Ensure you have this route!
+                              icon: const Icon(Icons.edit, color: Colors.white, size: 18),
+                              label: const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: isFollowing ? Colors.white.withOpacity(0.05) : const Color(0xFF1E293B),
-                                disabledBackgroundColor: Colors.white.withOpacity(0.05),
-                                disabledForegroundColor: Colors.white.withOpacity(0.3),
+                                backgroundColor: Colors.white.withOpacity(0.1),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -221,8 +214,50 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                           const SizedBox(width: 15),
                           Expanded(
                             child: ElevatedButton.icon(
-                              // --- FIX: Disabled if Own Profile ---
-                              onPressed: isLoadingProfile || isOwnProfile ? null : () async {
+                              onPressed: isLoadingProfile ? null : () {
+                                final link = "https://hiliteapp.net/profile/${user.id}";
+                                Share.share('Check out my profile on Hilite! $link');
+                              },
+                              icon: const Icon(Icons.share, color: Colors.white, size: 18),
+                              label: const Text('Share Profile', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white.withOpacity(0.1),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                      // 🅱️ IF IT IS SOMEONE ELSE'S PROFILE -> Show Follow & Message
+                          : Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: isLoadingProfile || isFollowBusy ? null : () {
+                                if (!isFollowing) {
+                                  userController.followUser(user.id);
+                                } else {
+                                  userController.unfollowUser(user.id);
+                                }
+                              },
+                              icon: isFollowBusy
+                                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                  : Icon(isFollowing ? Icons.person_remove : Icons.person_add_alt_1, color: Colors.white, size: 18),
+                              label: Text(isFollowing ? 'Unfollow' : 'Follow', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isFollowing ? Colors.white.withOpacity(0.05) : const Color(0xFF1E293B),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: isLoadingProfile ? null : () async {
                                 try {
                                   final chatRepo = Get.find<ChatRepo>();
                                   final response = await chatRepo.getOrCreateChat(user.id);
@@ -249,8 +284,6 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                               label: const Text('Message', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blueAccent,
-                                disabledBackgroundColor: Colors.white.withOpacity(0.05),
-                                disabledForegroundColor: Colors.white.withOpacity(0.3),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
