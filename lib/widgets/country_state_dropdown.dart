@@ -195,8 +195,7 @@ class _SearchableBottomSheetState extends State<SearchableBottomSheet> {
                   ),
                   onTap: () {
                     widget.onSelect(item);
-                    Get.back(); // Close bottom sheet
-                  },
+                    Navigator.pop(context);                  },
                 );
               },
             ),

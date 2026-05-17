@@ -1,3 +1,5 @@
+
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/auth_controller.dart';
@@ -23,37 +25,62 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final UserController userController = Get.find<UserController>();
   final AuthController authController = Get.find<AuthController>();
 
-  // common
+  // Common
   late TextEditingController nameController;
   late TextEditingController usernameController;
   late TextEditingController numberController;
   late TextEditingController bioController;
 
-  // player
-  late TextEditingController positionController; // selected via bottom sheet
-  late TextEditingController preferredFootController; // bottom sheet
-  late TextEditingController currentClubController; // text input
+  // Location State
+  String? selectedCountry;
+  String? selectedState;
+
+  // Player
+  List<String> selectedPositions = []; // Holds the full display strings
+  late TextEditingController preferredFootController;
+  late TextEditingController currentClubController;
   late TextEditingController heightController;
   late TextEditingController weightController;
 
-  // agent
+  // Agent
   late TextEditingController agencyNameController;
   late TextEditingController registrationIdController;
   late TextEditingController experienceController;
 
-  // club
+  // Club
   late TextEditingController clubNameController;
   late TextEditingController managerController;
-  late TextEditingController clubTypeController; // bottom sheet
+  late TextEditingController clubTypeController;
   late TextEditingController yearFoundedController;
 
-  String? selectedCountry;
-  String? selectedState;
-
-  // pick lists
   final List<String> positions = [
-    'GK', 'RB', 'LB', 'CB', 'CDM', 'CM', 'CAM', 'RW', 'LW', 'ST'
+    "GK — Goalkeeper",
+    "CB — Center Back",
+    "SW — Sweeper",
+    "RB — Right Back",
+    "LB — Left Back",
+    "RWB — Right Wing Back",
+    "LWB — Left Wing Back",
+    "CDM — Defensive Midfielder",
+    "CM — Central Midfielder",
+    "CAM — Attacking Midfielder",
+    "RM — Right Midfielder",
+    "LM — Left Midfielder",
+    "RW — Right Winger",
+    "LW — Left Winger",
+    "CF — Center Forward",
+    "ST — Striker",
+    "SS — Second Striker",
+    "WF — Wide Forward",
+    "IF — Inside Forward",
+    "WB — Wing Back",
+    "MF — Midfielder",
+    "DF — Defender",
+    "FW — Forward",
+    "RF — Right Forward",
+    "LF — Left Forward",
   ];
+
   final List<String> feet = ['Left', 'Right', 'Both'];
   final List<String> clubTypes = ['Academy', 'Amateur', 'Professional'];
 
@@ -62,7 +89,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     final user = userController.user.value;
 
-    // initialize controllers with existing values (if user is null, use empty)
     nameController = TextEditingController(text: user?.name ?? '');
     usernameController = TextEditingController(text: user?.username ?? '');
     numberController = TextEditingController(text: user?.number ?? '');
@@ -71,49 +97,80 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     selectedCountry = user?.country;
     selectedState = user?.state;
 
-    positionController = TextEditingController(text: user?.playerDetails?.position ?? '');
-    preferredFootController = TextEditingController(text: user?.playerDetails?.preferredFoot ?? '');
-    currentClubController = TextEditingController(text: user?.playerDetails?.currentClub ?? '');
-    heightController = TextEditingController(text: user?.playerDetails?.height?.toString() ?? '');
-    weightController = TextEditingController(text: user?.playerDetails?.weight?.toString() ?? '');
+    // --- REVERSE MAP POSITIONS ---
+    // Backend returns "GK, ST". We map it back to ["GK — Goalkeeper", "ST — Striker"] for the UI.
+    String rawPos = user?.playerDetails?.position ?? '';
+    if (rawPos.isNotEmpty) {
+      List<String> savedAbbrs = rawPos.split(',').map((e) => e.trim()).toList();
+      selectedPositions =
+          positions.where((p) {
+            String abbr = p.split('—')[0].trim();
+            return savedAbbrs.contains(abbr);
+          }).toList();
+    }
 
-    agencyNameController = TextEditingController(text: user?.agentDetails?.agencyName ?? '');
-    registrationIdController = TextEditingController(text: user?.agentDetails?.registrationId ?? '');
-    experienceController = TextEditingController(text: user?.agentDetails?.experience ?? '');
+    preferredFootController = TextEditingController(
+      text: user?.playerDetails?.preferredFoot ?? '',
+    );
+    currentClubController = TextEditingController(
+      text: user?.playerDetails?.currentClub ?? '',
+    );
+    heightController = TextEditingController(
+      text: user?.playerDetails?.height?.toString() ?? '',
+    );
+    weightController = TextEditingController(
+      text: user?.playerDetails?.weight?.toString() ?? '',
+    );
 
-    clubNameController = TextEditingController(text: user?.clubDetails?.clubName ?? '');
-    managerController = TextEditingController(text: user?.clubDetails?.manager ?? '');
-    clubTypeController = TextEditingController(text: user?.clubDetails?.clubType ?? '');
-    yearFoundedController = TextEditingController(text: user?.clubDetails?.yearFounded ?? '');
+    agencyNameController = TextEditingController(
+      text: user?.agentDetails?.agencyName ?? '',
+    );
+    registrationIdController = TextEditingController(
+      text: user?.agentDetails?.registrationId ?? '',
+    );
+    experienceController = TextEditingController(
+      text: user?.agentDetails?.experience ?? '',
+    );
+
+    clubNameController = TextEditingController(
+      text: user?.clubDetails?.clubName ?? '',
+    );
+    managerController = TextEditingController(
+      text: user?.clubDetails?.manager ?? '',
+    );
+    clubTypeController = TextEditingController(
+      text: user?.clubDetails?.clubType ?? '',
+    );
+    yearFoundedController = TextEditingController(
+      text: user?.clubDetails?.yearFounded ?? '',
+    );
   }
 
   @override
   void dispose() {
-    // dispose controllers
     nameController.dispose();
     usernameController.dispose();
     numberController.dispose();
     bioController.dispose();
-
-    positionController.dispose();
     preferredFootController.dispose();
     currentClubController.dispose();
     heightController.dispose();
     weightController.dispose();
-
     agencyNameController.dispose();
     registrationIdController.dispose();
     experienceController.dispose();
-
     clubNameController.dispose();
     managerController.dispose();
     clubTypeController.dispose();
     yearFoundedController.dispose();
-
     super.dispose();
   }
 
-  /// Build a minimal flat body that only includes changed fields.
+
+
+
+
+
   Map<String, dynamic> _buildBody() {
     final user = userController.user.value;
     if (user == null) return {};
@@ -121,159 +178,112 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final Map<String, dynamic> data = {};
 
     void addIfChanged(String key, dynamic newValue, dynamic oldValue) {
-      final bool isValueEmpty = newValue == null || (newValue is String && newValue.trim().isEmpty);
-      if (!isValueEmpty && newValue != oldValue) {
+      if (newValue == null) return;
+
+      // If it's a string, trim it for safe comparison
+      if (newValue is String) {
+        final cleanNew = newValue.trim();
+        final cleanOld = oldValue?.toString().trim() ?? '';
+
+        if (cleanNew.isNotEmpty && cleanNew != cleanOld) {
+          data[key] = cleanNew;
+        }
+      } else if (newValue != oldValue) {
         data[key] = newValue;
       }
     }
 
-    // common
-    addIfChanged('name', nameController.text.trim(), user.name);
-    addIfChanged('username', usernameController.text.trim(), user.username);
-    addIfChanged('number', numberController.text.trim(), user.number);
-    addIfChanged('bio', bioController.text.trim(), user.bio);
+    // Common
+    addIfChanged('name', nameController.text, user.name);
+    addIfChanged('username', usernameController.text, user.username);
+    addIfChanged('number', numberController.text, user.number);
+    addIfChanged('bio', bioController.text, user.bio);
+
+    // --- LOCATION FIX ---
     addIfChanged('country', selectedCountry, user.country);
     addIfChanged('state', selectedState, user.state);
 
-    // role-specific: player (flat keys)
+    // Player
     if (user.role == 'player') {
-      addIfChanged('position', positionController.text.trim(), user.playerDetails?.position);
-      addIfChanged('currentClub', currentClubController.text.trim(), user.playerDetails?.currentClub);
-      addIfChanged('preferredFoot', preferredFootController.text.trim(), user.playerDetails?.preferredFoot);
+      List<String> abbrs =
+          selectedPositions.map((p) => p.split('—')[0].trim()).toList();
+      String finalPositions = abbrs.join(', '); // "GK, ST"
 
-      final int? h = int.tryParse(heightController.text.replaceAll(RegExp(r'[^0-9]'), ''));
-      final int? w = int.tryParse(weightController.text.replaceAll(RegExp(r'[^0-9]'), ''));
+      addIfChanged('position', finalPositions, user.playerDetails?.position);
+      addIfChanged(
+        'currentClub',
+        currentClubController.text,
+        user.playerDetails?.currentClub,
+      );
+      addIfChanged(
+        'preferredFoot',
+        preferredFootController.text,
+        user.playerDetails?.preferredFoot,
+      );
 
+      final int? h = int.tryParse(
+        heightController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+      );
+      final int? w = int.tryParse(
+        weightController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+      );
       addIfChanged('height', h, user.playerDetails?.height);
       addIfChanged('weight', w, user.playerDetails?.weight);
     }
 
-    // agent
+    // Agent
     if (user.role == 'agent') {
-      addIfChanged('agencyName', agencyNameController.text.trim(), user.agentDetails?.agencyName);
-      addIfChanged('registrationId', registrationIdController.text.trim(), user.agentDetails?.registrationId);
-      addIfChanged('experience', experienceController.text.trim(), user.agentDetails?.experience);
+      addIfChanged(
+        'agencyName',
+        agencyNameController.text,
+        user.agentDetails?.agencyName,
+      );
+      addIfChanged(
+        'registrationId',
+        registrationIdController.text,
+        user.agentDetails?.registrationId,
+      );
+      addIfChanged(
+        'experience',
+        experienceController.text,
+        user.agentDetails?.experience,
+      );
     }
 
-    // club
+    // Club
     if (user.role == 'club') {
-      addIfChanged('clubName', clubNameController.text.trim(), user.clubDetails?.clubName);
-      addIfChanged('manager', managerController.text.trim(), user.clubDetails?.manager);
-      addIfChanged('clubType', clubTypeController.text.trim(), user.clubDetails?.clubType);
-      addIfChanged('yearFounded', yearFoundedController.text.trim(), user.clubDetails?.yearFounded);
+      addIfChanged(
+        'clubName',
+        clubNameController.text,
+        user.clubDetails?.clubName,
+      );
+      addIfChanged(
+        'manager',
+        managerController.text,
+        user.clubDetails?.manager,
+      );
+      addIfChanged(
+        'clubType',
+        clubTypeController.text,
+        user.clubDetails?.clubType,
+      );
+      addIfChanged(
+        'yearFounded',
+        yearFoundedController.text,
+        user.clubDetails?.yearFounded,
+      );
     }
+
+    // DEBUG PRINT TO VERIFY
+    debugPrint("🚀 PAYLOAD BEING SENT TO BACKEND: $data");
 
     return data;
-  }
-
-  void _showBottomPicker({
-    required String title,
-    required String currentValue,
-    required List<String> options,
-    required Function(String) onSelected,
-  }) {
-    // Hide keyboard if it's open
-    FocusScope.of(context).unfocus();
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1F2937), // Dark theme bottom sheet
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => _buildBottomPicker(
-        title: title,
-        currentValue: currentValue,
-        options: options,
-        onSelected: (value) {
-          onSelected(value);
-          Navigator.pop(context);
-        },
-      ),
-    );
-  }
-
-  Widget _buildPickerContainer({required String title, required String value}) {
-    return Container(
-      width: Dimensions.screenWidth,
-      padding: EdgeInsets.symmetric(
-        horizontal: Dimensions.width15,
-        vertical: Dimensions.height15,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05), // Sleek translucent dark field
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            value.isEmpty ? title : value,
-            style: TextStyle(
-              color: value.isEmpty ? Colors.white.withOpacity(0.4) : Colors.white,
-              fontSize: Dimensions.font15,
-              fontWeight: value.isEmpty ? FontWeight.normal : FontWeight.w500,
-            ),
-          ),
-          Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white.withOpacity(0.5)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomPicker({
-    required String title,
-    required String currentValue,
-    required List<String> options,
-    required Function(String) onSelected,
-  }) {
-    return SafeArea(
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: Dimensions.width20, vertical: Dimensions.height20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 15, left: 5),
-              child: Text(
-                  title,
-                  style: TextStyle(
-                      fontSize: Dimensions.font20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white
-                  )
-              ),
-            ),
-            ...options.map((opt) {
-              bool isSelected = currentValue == opt;
-              return ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                title: Text(
-                    opt,
-                    style: TextStyle(
-                      color: isSelected ? AppColors.buttonColor : Colors.white,
-                      fontSize: 16,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    )
-                ),
-                trailing: isSelected ? Icon(Icons.check_circle_rounded, color: AppColors.buttonColor) : null,
-                onTap: () => onSelected(opt),
-              );
-            }).toList(),
-            SizedBox(height: Dimensions.height10),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF030A1B), // Premium Dark Background
+      backgroundColor: const Color(0xFF030A1B),
       appBar: CustomAppbar(
         backgroundColor: const Color(0xFF030A1B),
         title: 'Edit Profile',
@@ -282,143 +292,457 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       body: Obx(() {
         final user = userController.user.value;
         if (user == null) {
-          return const Center(child: CircularProgressIndicator(color: Colors.white));
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.blueAccent),
+          );
         }
 
         return SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: Dimensions.width20, vertical: Dimensions.height20),
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(20),
           child: Form(
             key: formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Basic info
-                Text(
-                    'Basic Information',
-                    style: TextStyle(fontSize: Dimensions.font18, fontWeight: FontWeight.bold, color: Colors.white)
+                _buildSectionHeader("Basic Information"),
+                CustomTextField(
+                  labelText: 'Full name',
+                  controller: nameController,
                 ),
-                SizedBox(height: Dimensions.height15),
-                CustomTextField(labelText: 'Full name', controller: nameController),
-                SizedBox(height: Dimensions.height15),
-                CustomTextField(labelText: 'Username', controller: usernameController),
-                SizedBox(height: Dimensions.height15),
-                CustomTextField(labelText: 'Bio', controller: bioController, keyboardType: TextInputType.text, maxLines: 3),
-                SizedBox(height: Dimensions.height20),
+                const SizedBox(height: 15),
+                CustomTextField(
+                  labelText: 'Username',
+                  controller: usernameController,
+                ),
+                const SizedBox(height: 15),
+                CustomTextField(
+                  labelText: 'Bio',
+                  controller: bioController,
+                  maxLines: 3,
+                ),
+
+                const SizedBox(height: 25),
+                //
+                _buildSectionHeader("Location"),
+                // --- COUNTRY STATE WIDGET INJECTED HERE ---
+                CountryState(
+                  selectedCountry: selectedCountry,
+                  selectedState: selectedState,
+                  onCountryChanged: (c) => setState(() => selectedCountry = c),
+                  onStateChanged: (s) => setState(() => selectedState = s),
+                ),
+                const SizedBox(height: 20),
 
                 Divider(color: Colors.white.withOpacity(0.1), thickness: 1),
-                SizedBox(height: Dimensions.height20),
+                const SizedBox(height: 20),
 
-                // Role-specific blocks
+                // --- PLAYER DETAILS ---
                 if (user.role == 'player') ...[
-                  Text(
-                      'Player Details',
-                      style: TextStyle(fontSize: Dimensions.font18, fontWeight: FontWeight.bold, color: Colors.white)
-                  ),
-                  SizedBox(height: Dimensions.height15),
+                  _buildSectionHeader("Player Details"),
 
-                  // position (picker)
+                  // MULTI-SELECT POSITIONS
                   GestureDetector(
-                    onTap: () => _showBottomPicker(
-                        title: 'Select Position',
-                        currentValue: positionController.text,
-                        options: positions,
-                        onSelected: (v) => setState(() => positionController.text = v)
+                    onTap: _showMultiPositionPicker,
+                    child: _buildPickerContainer(
+                      title: 'Position(s)',
+                      value:
+                          selectedPositions.isEmpty
+                              ? ''
+                              : selectedPositions
+                                  .map((p) => p.split('—')[0].trim())
+                                  .join(', '),
                     ),
-                    child: _buildPickerContainer(title: 'Position', value: positionController.text),
                   ),
-                  SizedBox(height: Dimensions.height15),
+                  const SizedBox(height: 15),
 
-                  // current club (text input)
-                  CustomTextField(labelText: 'Current club (type name)', controller: currentClubController),
-                  SizedBox(height: Dimensions.height15),
+                  CustomTextField(
+                    labelText: 'Current club (Optional)',
+                    controller: currentClubController,
+                  ),
+                  const SizedBox(height: 15),
 
-                  // preferred foot (picker)
                   GestureDetector(
-                    onTap: () => _showBottomPicker(
-                        title: 'Preferred foot',
-                        currentValue: preferredFootController.text,
-                        options: feet,
-                        onSelected: (v) => setState(() => preferredFootController.text = v)
+                    onTap:
+                        () => _showSinglePicker(
+                          title: 'Preferred foot',
+                          currentValue: preferredFootController.text,
+                          options: feet,
+                          onSelected:
+                              (v) => setState(
+                                () => preferredFootController.text = v,
+                              ),
+                        ),
+                    child: _buildPickerContainer(
+                      title: 'Preferred foot',
+                      value: preferredFootController.text.capitalizeFirst ?? '',
                     ),
-                    child: _buildPickerContainer(title: 'Preferred foot', value: preferredFootController.text),
                   ),
-                  SizedBox(height: Dimensions.height15),
+                  const SizedBox(height: 15),
 
-                  // height & weight
                   Row(
                     children: [
-                      Expanded(child: CustomTextField(labelText: 'Height (cm)', controller: heightController, keyboardType: TextInputType.number)),
+                      Expanded(
+                        child: CustomTextField(
+                          labelText: 'Height (cm)',
+                          controller: heightController,
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
                       const SizedBox(width: 15),
-                      Expanded(child: CustomTextField(labelText: 'Weight (kg)', controller: weightController, keyboardType: TextInputType.number)),
+                      Expanded(
+                        child: CustomTextField(
+                          labelText: 'Weight (kg)',
+                          controller: weightController,
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
                     ],
                   ),
-                  SizedBox(height: Dimensions.height30),
+                  const SizedBox(height: 30),
                 ],
 
+                // --- AGENT DETAILS ---
                 if (user.role == 'agent') ...[
-                  Text(
-                      'Agent Details',
-                      style: TextStyle(fontSize: Dimensions.font18, fontWeight: FontWeight.bold, color: Colors.white)
+                  _buildSectionHeader("Agent Details"),
+                  CustomTextField(
+                    labelText: 'Agency name',
+                    controller: agencyNameController,
                   ),
-                  SizedBox(height: Dimensions.height15),
-                  CustomTextField(labelText: 'Agency name', controller: agencyNameController),
-                  SizedBox(height: Dimensions.height15),
-                  CustomTextField(labelText: 'Registration ID', controller: registrationIdController),
-                  SizedBox(height: Dimensions.height15),
-                  CustomTextField(labelText: 'Experience / Summary', controller: experienceController, maxLines: 3),
-                  SizedBox(height: Dimensions.height30),
+                  const SizedBox(height: 15),
+                  CustomTextField(
+                    labelText: 'Registration ID',
+                    controller: registrationIdController,
+                  ),
+                  const SizedBox(height: 15),
+                  CustomTextField(
+                    labelText: 'Experience / Summary',
+                    controller: experienceController,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 30),
                 ],
 
+                // --- CLUB DETAILS ---
                 if (user.role == 'club') ...[
-                  Text(
-                      'Club Details',
-                      style: TextStyle(fontSize: Dimensions.font18, fontWeight: FontWeight.bold, color: Colors.white)
+                  _buildSectionHeader("Club Details"),
+                  CustomTextField(
+                    labelText: 'Club name',
+                    controller: clubNameController,
                   ),
-                  SizedBox(height: Dimensions.height15),
-                  CustomTextField(labelText: 'Club name', controller: clubNameController),
-                  SizedBox(height: Dimensions.height15),
-                  CustomTextField(labelText: 'Manager', controller: managerController),
-                  SizedBox(height: Dimensions.height15),
-
-                  // club type (picker)
+                  const SizedBox(height: 15),
+                  CustomTextField(
+                    labelText: 'Manager',
+                    controller: managerController,
+                  ),
+                  const SizedBox(height: 15),
                   GestureDetector(
-                    onTap: () => _showBottomPicker(
-                        title: 'Club type',
-                        currentValue: clubTypeController.text,
-                        options: clubTypes,
-                        onSelected: (v) => setState(() => clubTypeController.text = v)
+                    onTap:
+                        () => _showSinglePicker(
+                          title: 'Club type',
+                          currentValue: clubTypeController.text,
+                          options: clubTypes,
+                          onSelected:
+                              (v) =>
+                                  setState(() => clubTypeController.text = v),
+                        ),
+                    child: _buildPickerContainer(
+                      title: 'Club type',
+                      value: clubTypeController.text,
                     ),
-                    child: _buildPickerContainer(title: 'Club type', value: clubTypeController.text),
                   ),
-                  SizedBox(height: Dimensions.height15),
-
-                  CustomTextField(labelText: 'Year founded', controller: yearFoundedController, keyboardType: TextInputType.number),
-                  SizedBox(height: Dimensions.height30),
+                  const SizedBox(height: 15),
+                  CustomTextField(
+                    labelText: 'Year founded',
+                    controller: yearFoundedController,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 30),
                 ],
 
-                // For all roles show Save button
-                CustomButton(
-                  text: 'Save changes',
-                  backgroundColor: AppColors.buttonColor,
-                  onPressed: () {
-                    if (formKey.currentState!.validate()) {
-                      final body = _buildBody();
-                      if (body.isEmpty) {
-                        // nothing changed
-                        Get.back();
-                        CustomSnackBar.showToast(message: 'No changes to save');
-                        return;
+                // --- SAVE BUTTON ---
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (formKey.currentState!.validate()) {
+                        final body = _buildBody();
+                        if (body.isEmpty) {
+                          Get.back();
+                          CustomSnackBar.showToast(
+                            message: 'No changes to save',
+                          );
+                          return;
+                        }
+                        authController.updateUserProfile(body);
                       }
-                      authController.updateUserProfile(body);
-                    }
-                  },
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Save Changes',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
                 ),
-                SizedBox(height: Dimensions.height50), // Extra padding for bottom navigation breathing room
+                const SizedBox(height: 50),
               ],
             ),
           ),
         );
       }),
+    );
+  }
+
+  // ===========================================================================
+  // UI HELPERS & BOTTOM SHEETS
+  // ===========================================================================
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 15),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPickerContainer({required String title, required String value}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              value.isEmpty ? title : value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color:
+                    value.isEmpty
+                        ? Colors.white.withOpacity(0.4)
+                        : Colors.white,
+                fontSize: 15,
+              ),
+            ),
+          ),
+          Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: Colors.white.withOpacity(0.5),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- MULTI-SELECT POSITIONS BOTTOM SHEET ---
+  void _showMultiPositionPicker() {
+    FocusScope.of(context).unfocus();
+    List<String> tempSelected = List.from(selectedPositions);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "Select Positions",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setState(
+                              () => selectedPositions = List.from(tempSelected),
+                            );
+                            Navigator.pop(context);
+                          },
+                          child: const Text(
+                            "Done",
+                            style: TextStyle(
+                              color: Colors.blueAccent,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: positions.length,
+                      itemBuilder: (context, index) {
+                        final pos = positions[index];
+                        final isSelected = tempSelected.contains(pos);
+                        return ListTile(
+                          onTap: () {
+                            setModalState(() {
+                              isSelected
+                                  ? tempSelected.remove(pos)
+                                  : tempSelected.add(pos);
+                            });
+                          },
+                          leading: Icon(
+                            isSelected
+                                ? Icons.check_box
+                                : Icons.check_box_outline_blank,
+                            color:
+                                isSelected
+                                    ? Colors.blueAccent
+                                    : Colors.white.withOpacity(0.4),
+                          ),
+                          title: Text(
+                            pos,
+                            style: TextStyle(
+                              color:
+                                  isSelected
+                                      ? Colors.white
+                                      : Colors.white.withOpacity(0.7),
+                              fontWeight:
+                                  isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // --- SINGLE SELECT BOTTOM SHEET (Feet, Club Types) ---
+  void _showSinglePicker({
+    required String title,
+    required String currentValue,
+    required List<String> options,
+    required Function(String) onSelected,
+  }) {
+    FocusScope.of(context).unfocus();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1F2937),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder:
+          (context) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  ...options.map((opt) {
+                    bool isSelected =
+                        currentValue.toLowerCase() == opt.toLowerCase();
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                      ),
+                      title: Text(
+                        opt,
+                        style: TextStyle(
+                          color: isSelected ? Colors.blueAccent : Colors.white,
+                          fontSize: 16,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      trailing:
+                          isSelected
+                              ? const Icon(
+                                Icons.check_circle_rounded,
+                                color: Colors.blueAccent,
+                              )
+                              : null,
+                      onTap: () {
+                        onSelected(opt);
+                        Navigator.pop(context);
+                      },
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+          ),
     );
   }
 }
