@@ -79,6 +79,8 @@ class AppConstants {
   //trials
   static const String POST_TRIAL = '/v1/trial';
   static const String GET_TRIALS = '/v1/trial';
+  static const String GET_JOINED_TRIALS = '/v1/trial/registered';
+  static const String GET_JOINED_COMPETITIONS = '/v1/competition/registered';
 
   static String GET_SINGLE_TRIALS(String trialId) => '/v1/trial/$trialId';
 

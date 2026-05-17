@@ -296,7 +296,7 @@ class AuthController extends GetxController implements GetxService {
         print('${userController.user.value?.bio} at Stage 3');
 
         update();
-        Get.back();
+        Get.close(1);
         CustomSnackBar.success(message: 'Profile updated successfully');
       } else {
         CustomSnackBar.failure(

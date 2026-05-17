@@ -60,7 +60,10 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       trialController.fetchTrials();
+      trialController.fetchJoinedTrials();
       compController.getCompetitions();
+      compController.fetchJoinedCompetitions();
+
     });
   }
 
@@ -176,6 +179,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
       onRefresh: () async {
         await trialController.fetchTrials();
         await compController.getCompetitions();
+        await trialController.fetchJoinedTrials();
+        await compController.fetchJoinedCompetitions();
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -465,22 +470,75 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
 
   // --- 4. JOINED TAB ---
   Widget _buildJoinedTab() {
-    bool hasJoinedActivities = false;
+    return GetBuilder<CompetitionController>(
+      builder: (compCtrl) {
+        return Obx(() {
+          final isTrialLoading = trialController.isLoadingTrials.value;
+          final isCompLoading = compCtrl.isLoading;
 
-    if (!hasJoinedActivities) {
-      return _buildEmptyState(
-        icon: CupertinoIcons.checkmark_seal,
-        title: "No joined activities",
-        subtitle:
-            "Trials or competitions you participate in will show up here.",
-      );
-    }
+          if (isTrialLoading || isCompLoading) {
+            return _buildSkeletonList();
+          }
 
-    return const Center(
-      child: Text(
-        "Your joined activities list...",
-        style: TextStyle(color: Colors.white),
-      ),
+          final joinedTrials = trialController.joinedTrialList;
+          final joinedComps = compCtrl.joinedCompetitionList;
+
+          if (joinedTrials.isEmpty && joinedComps.isEmpty) {
+            return _buildEmptyState(
+              icon: CupertinoIcons.checkmark_seal,
+              title: "No joined activities",
+              subtitle: "Trials or competitions you register for will show up here.",
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (joinedTrials.isNotEmpty) ...[
+                const Text(
+                  "Joined Trials",
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: Dimensions.height15),
+                ...joinedTrials.map(
+                      (trial) => Padding(
+                    padding: EdgeInsets.only(bottom: Dimensions.height15),
+                    child: TrialCard(
+                      trial: trial,
+                      onTap: () {
+                        if (trial.id.isNotEmpty) Get.toNamed(AppRoutes.trialDetailScreen, arguments: trial.id);
+                      },
+                    ),
+                  ),
+                ),
+                SizedBox(height: Dimensions.height20),
+              ],
+
+              if (joinedComps.isNotEmpty) ...[
+                const Text(
+                  "Joined Competitions",
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: Dimensions.height15),
+                ...joinedComps.map(
+                      (comp) => Padding(
+                    padding: EdgeInsets.only(bottom: Dimensions.height15),
+                    child: CompetitionCard(
+                      competition: comp,
+                      onTap: () {
+                        if (comp.sId != null && comp.sId!.isNotEmpty) {
+                          Get.to(() => CompetitionDetailsScreen(competitionId: comp.sId!));
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ],
+              SizedBox(height: Dimensions.height150),
+            ],
+          );
+        });
+      },
     );
   }
 
