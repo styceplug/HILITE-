@@ -12,59 +12,25 @@ import '../../models/user_model.dart';
 import '../../utils/colors.dart';
 import '../../utils/dimensions.dart';
 import '../../widgets/reels_video_item.dart';
-import '../home/pages/profile_screen.dart';
+
 
 class RecommendedAccountsScreen extends StatefulWidget {
   const RecommendedAccountsScreen({super.key});
 
   @override
-  State<RecommendedAccountsScreen> createState() =>
-      _RecommendedAccountsScreenState();
+  State<RecommendedAccountsScreen> createState() => _RecommendedAccountsScreenState();
 }
 
 class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
   final UserController userController = Get.find<UserController>();
   final TextEditingController searchController = TextEditingController();
 
-  static const List<String> _nigerianStates = [
-    'Abia',
-    'Adamawa',
-    'Akwa Ibom',
-    'Anambra',
-    'Bauchi',
-    'Bayelsa',
-    'Benue',
-    'Borno',
-    'Cross River',
-    'Delta',
-    'Ebonyi',
-    'Edo',
-    'Ekiti',
-    'Enugu',
-    'FCT',
-    'Gombe',
-    'Imo',
-    'Jigawa',
-    'Kaduna',
-    'Kano',
-    'Katsina',
-    'Kebbi',
-    'Kogi',
-    'Kwara',
-    'Lagos',
-    'Nasarawa',
-    'Niger',
-    'Ogun',
-    'Ondo',
-    'Osun',
-    'Oyo',
-    'Plateau',
-    'Rivers',
-    'Sokoto',
-    'Taraba',
-    'Yobe',
-    'Zamfara',
-  ];
+  // --- FILTER STATES ---
+  String _selectedPosition = '';
+  String _selectedLocation = '';
+  String _selectedAvailability = '';
+  String _selectedFoot = '';
+  String _selectedExperience = '';
 
   @override
   void initState() {
@@ -72,12 +38,6 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (userController.recommendedUsers.isEmpty) {
         userController.getRecommendedUsers();
-      } else {
-        if (userController.filteredUsers.isEmpty) {
-          userController.filteredUsers.assignAll(
-            userController.recommendedUsers,
-          );
-        }
       }
     });
   }
@@ -91,65 +51,51 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3, // Accounts, Images, Videos
+      length: 3, // For You, By Position, Recently Added
       child: Scaffold(
-        backgroundColor: AppColors.bgColor,
+        backgroundColor: const Color(0xFF030A1B), // Premium Dark Background
         appBar: CustomAppbar(
-          title: 'Search Hilite',
-          leadingIcon: const BackButton(),
+          backgroundColor: const Color(0xFF030A1B),
+          title: 'Discover',
+          leadingIcon: const BackButton(color: Colors.white),
         ),
         body: Column(
           children: [
-            // --- Search & Filters ---
-            _buildSearchHeader(),
+            // --- 1. Search Bar & Filter Icon Row ---
+            _buildSearchAndFilterRow(),
 
-            // --- Tab Bar (Only visible when searching) ---
-            Obx(
-              () =>
-                  userController.searchQuery.value.isNotEmpty
-                      ? Container(
-                        color: Colors.white,
-                        child: TabBar(
-                          labelColor: AppColors.primary,
-                          unselectedLabelColor: Colors.grey,
-                          indicatorColor: AppColors.primary,
-                          tabs: const [
-                            Tab(text: 'Accounts'),
-                            Tab(text: 'Images'),
-                            Tab(text: 'Videos'),
-                          ],
-                        ),
-                      )
-                      : const SizedBox.shrink(),
+            // --- 2. Tab Bar ---
+            Container(
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.05), width: 1)),
+              ),
+              child: TabBar(
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white.withOpacity(0.5),
+                indicatorColor: Colors.blueAccent,
+                indicatorWeight: 3,
+                dividerColor: Colors.transparent,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+                tabs: const [
+                  Tab(text: 'For You'),
+                  Tab(text: 'By Position'),
+                  Tab(text: 'Recently Added'),
+                ],
+              ),
             ),
 
-            // --- Results ---
+            // --- 3. Tab Views ---
             Expanded(
-              child: Obx(() {
-                // Show Loading State
-                if (userController.isSearching.value) {
-                  return Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  );
-                }
-
-                // Discovery Mode (No search term)
-                if (userController.searchQuery.value.isEmpty) {
-                  return RefreshIndicator(
-                    onRefresh: () => userController.getRecommendedUsers(),
-                    child: _buildUserList(userController.filteredUsers),
-                  );
-                }
-
-                // Global Search Mode
-                return TabBarView(
-                  children: [
-                    _buildUserList(userController.searchUsers),
-                    _buildImageGrid(userController.searchImages),
-                    _buildVideoGrid(userController.searchVideos),
-                  ],
-                );
-              }),
+              child: TabBarView(
+                children: [
+                  _buildForYouTab(),
+                  _buildPlaceholderTab("Videos sorted by position will appear here"),
+                  _buildPlaceholderTab("Freshly uploaded videos will appear here"),
+                ],
+              ),
             ),
           ],
         ),
@@ -157,128 +103,171 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
     );
   }
 
-  Widget _buildUserList(List<UserModel> users) {
-    final visibleUsers =
-        users
-            .where((candidate) => !userController.isCurrentUser(candidate.id))
-            .toList();
+  // ===========================================================================
+  // UI COMPONENTS
+  // ===========================================================================
 
-    if (visibleUsers.isEmpty)
-      return _buildEmptyState(
-        icon: Icons.person,
-        title: "No users found",
-        message: "",
-      );
-    return ListView.builder(
-      padding: EdgeInsets.all(Dimensions.width20),
-      itemCount: visibleUsers.length,
-      itemBuilder: (context, index) => _buildAccountCard(visibleUsers[index]),
-    );
-  }
-
-  Widget _buildImageGrid(List<dynamic> images) {
-    if (images.isEmpty)
-      return _buildEmptyState(
-        icon: Icons.image_search,
-        title: 'Not Found',
-        message: 'Search Query did not return any image',
-      );
-
-    return GridView.builder(
-      padding: const EdgeInsets.all(2),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 2,
-        mainAxisSpacing: 2,
-      ),
-      itemCount: images.length,
-      itemBuilder: (context, index) {
-        final PostModel post =
-            images[index] as PostModel; // ✅ Cast to PostModel
-        final img = post.image?.url ?? ''; // ✅ Access property directly
-
-        return InkWell(
-          onTap: () {
-            Get.to(() => ProfileImageViewer(imageUrl: img));
-          },
-          child: Image.network(
-            img,
-            fit: BoxFit.cover,
-            errorBuilder:
-                (_, __, ___) => Container(
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.image, color: Colors.grey),
+  Widget _buildSearchAndFilterRow() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(15, 10, 15, 15),
+      child: Row(
+        children: [
+          // Search Field
+          Expanded(
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
+              ),
+              child: TextField(
+                controller: searchController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Search talents, highlights...',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 14),
+                  prefixIcon: Icon(Iconsax.search_normal, color: Colors.white.withOpacity(0.5), size: 20),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 ),
+                onChanged: (value) => userController.onSearchChanged(value),
+              ),
+            ),
           ),
-        );
-      },
+          const SizedBox(width: 12),
+
+          // Filter Button
+          InkWell(
+            onTap: _showFilterModal,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              height: 48,
+              width: 48,
+              decoration: BoxDecoration(
+                color: Colors.blueAccent.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blueAccent.withOpacity(0.5)),
+              ),
+              child: const Icon(Iconsax.setting_4, color: Colors.blueAccent, size: 22),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildVideoGrid(List<dynamic> videos) {
-    if (videos.isEmpty)
-      return _buildEmptyState(
-        icon: Icons.videocam_outlined,
-        title: "No videos",
-        message: "Try searching for highlights",
-      );
+  // --- FOR YOU TAB (HORIZONTAL CAROUSELS) ---
+  Widget _buildForYouTab() {
+    return Obx(() {
+      if (userController.isSearching.value) {
+        return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
+      }
 
-    return GridView.builder(
-      padding: EdgeInsets.all(Dimensions.width10),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 0.75,
-      ),
-      itemCount: videos.length,
-      itemBuilder:
-          (context, index) => InkWell(
-            onTap: () {
-              List<PostModel> searchPosts =
-                  videos.map((e) => e as PostModel).toList();
-              print('tapped');
-              Get.to(
-                () => ProfileReelsPlayer(
-                  videos: searchPosts,
-                  initialIndex: index,
-                  authorProfile: userController.othersProfile.value,
+      // Mock Lists (Replace these with your actual controller lists: forYouVideos, trendingVideos, featuredVideos)
+      final List<dynamic> forYouVideos = userController.searchVideos.isNotEmpty ? userController.searchVideos : [];
+      final List<dynamic> trendingVideos = userController.searchVideos.isNotEmpty ? userController.searchVideos.reversed.toList() : [];
+      final List<dynamic> featuredVideos = userController.searchVideos.isNotEmpty ? userController.searchVideos : [];
+
+      if (forYouVideos.isEmpty) {
+        return _buildEmptyState(Icons.video_library, "No videos found", "Start following users to see videos here.");
+      }
+
+      return RefreshIndicator(
+        color: Colors.blueAccent,
+        backgroundColor: const Color(0xFF1F2937),
+        onRefresh: () async {
+          // Add your refresh logic here
+        },
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHorizontalVideoSection("For You", forYouVideos),
+              const SizedBox(height: 30),
+              _buildHorizontalVideoSection("Trending", trendingVideos),
+              const SizedBox(height: 30),
+              _buildHorizontalVideoSection("Featured This Month", featuredVideos),
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildHorizontalVideoSection(String title, List<dynamic> videos) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.white54),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 240, // Fixed height for the horizontal scroll
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            itemCount: videos.length,
+            itemBuilder: (context, index) {
+              return Container(
+                width: 150, // Fixed width for each video card
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                child: InkWell(
+                  onTap: () {
+                    List<PostModel> searchPosts = videos.map((e) => e as PostModel).toList();
+                    Get.to(() => ProfileReelsPlayer(
+                      videos: searchPosts,
+                      initialIndex: index,
+                    ));
+                  },
+                  child: _buildVideoCard(videos[index]),
                 ),
               );
             },
-            child: _buildVideoCard(videos[index]),
           ),
+        ),
+      ],
     );
   }
 
+  // --- REUSABLE VIDEO CARD (Miniaturized for Horizontal List) ---
   Widget _buildVideoCard(dynamic videoData) {
-    // Cast videoData to PostModel (since that's what it actually is)
     final PostModel post = videoData as PostModel;
-
-    // Access the video property directly from the PostModel object
     final video = post.video;
 
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: Colors.black12,
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Thumbnail with error handling
+          // Thumbnail
           Image.network(
             video?.thumbnailUrl ?? '',
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
               return Container(
-                color: Colors.grey[300],
-                child: const Icon(
-                  Icons.video_library,
-                  size: 40,
-                  color: Colors.grey,
-                ),
+                color: Colors.black26,
+                child: const Icon(Icons.video_library, size: 30, color: Colors.white24),
               );
             },
           ),
@@ -289,21 +278,22 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
+                stops: const [0.5, 1.0],
               ),
             ),
           ),
 
           // Play Icon
           Center(
-            child: Icon(
-              Icons.play_circle_fill,
-              color: Colors.white.withOpacity(0.8),
-              size: 40,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), shape: BoxShape.circle),
+              child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 30),
             ),
           ),
 
-          // Title and Duration
+          // Title, User and Duration
           Positioned(
             bottom: 8,
             left: 8,
@@ -313,859 +303,209 @@ class _RecommendedAccountsScreenState extends State<RecommendedAccountsScreen> {
               children: [
                 Text(
                   video?.title ?? post.text ?? 'Highlight',
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, height: 1.2),
                 ),
-                if (video?.duration != null)
-                  Text(
-                    "${video!.duration?.toStringAsFixed(0)}s",
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 10,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchHeader() {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: Dimensions.width20,
-        vertical: Dimensions.height15,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          CustomTextField(
-            controller: searchController,
-            maxLines: 1,
-            hintText: 'Search people, highlights, or clubs...',
-            prefixIcon: Icons.search,
-            suffixIcon: Obx(
-              () =>
-                  userController.searchQuery.value.isNotEmpty
-                      ? IconButton(
-                        icon: const Icon(Icons.clear, size: 20),
-                        onPressed: () {
-                          searchController.clear();
-                          userController.onSearchChanged('');
-                        },
-                      )
-                      : const SizedBox.shrink(),
-            ),
-            onChanged: (value) => userController.onSearchChanged(value),
-          ),
-
-          // Only show role filters for Accounts
-          Obx(
-            () =>
-                userController.searchQuery.value.isEmpty
-                    ? Column(
-                      children: [
-                        SizedBox(height: Dimensions.height15),
-                        _buildFilterChips(),
-                      ],
-                    )
-                    : const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChips() {
-    return Obx(() {
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            // --- 1. Role Filter: Fans ---
-            _buildFilterChip(
-              label: 'Fans',
-              icon: Icons.person_outline,
-              isSelected: userController.selectedRole.value == 'fan',
-              onTap: () {
-                if (userController.selectedRole.value == 'fan') {
-                  userController.selectedRole.value = '';
-                } else {
-                  userController.selectedRole.value = 'fan';
-                  userController.selectedPosition.value = '';
-                }
-                userController.applyFilters();
-              },
-            ),
-
-            SizedBox(width: Dimensions.width10),
-
-            // --- 2. Role Filter: Players ---
-            _buildFilterChip(
-              label: 'Players',
-              icon: Icons.sports_soccer,
-              isSelected: userController.selectedRole.value == 'player',
-              onTap: () {
-                if (userController.selectedRole.value == 'player') {
-                  userController.selectedRole.value = '';
-                  userController.selectedPosition.value = '';
-                } else {
-                  userController.selectedRole.value = 'player';
-                }
-                userController.applyFilters();
-              },
-            ),
-
-            // --- CONDITIONAL: Position Filter ---
-            // This is now placed immediately after "Players"
-            if (userController.selectedRole.value == 'player') ...[
-              SizedBox(width: Dimensions.width10),
-              // Animate the appearance of the position chip
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOutBack,
-                builder: (context, value, child) {
-                  return Transform.scale(scale: value, child: child);
-                },
-                child: _buildFilterChip(
-                  label:
-                      userController.selectedPosition.value.isEmpty
-                          ? 'Position'
-                          : userController.selectedPosition.value,
-                  icon: Icons.location_on,
-                  isSelected: userController.selectedPosition.value.isNotEmpty,
-                  onTap: () {
-                    _showPositionBottomSheet(context);
-                  },
-                ),
-              ),
-
-              SizedBox(width: Dimensions.width10),
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 320),
-                curve: Curves.easeOutBack,
-                builder: (context, value, child) {
-                  return Transform.scale(scale: value, child: child);
-                },
-                child: _buildFilterChip(
-                  label:
-                      userController.selectedAgeRange.value.isEmpty
-                          ? 'Age'
-                          : userController.selectedAgeRange.value,
-                  icon: Icons.cake_outlined,
-                  isSelected: userController.selectedAgeRange.value.isNotEmpty,
-                  onTap: () => _showAgeBottomSheet(context),
-                ),
-              ),
-            ],
-            SizedBox(width: Dimensions.width10),
-
-            _buildFilterChip(
-              label:
-                  userController.selectedRegion.value.isEmpty
-                      ? 'Region'
-                      : userController.selectedRegion.value,
-              icon: Icons.location_city,
-              isSelected: userController.selectedRegion.value.isNotEmpty,
-              onTap: () => _showRegionBottomSheet(context),
-            ),
-
-            SizedBox(width: Dimensions.width10),
-
-            // --- 3. Role Filter: Agents ---
-            _buildFilterChip(
-              label: 'Agents',
-              icon: Icons.business_center,
-              isSelected: userController.selectedRole.value == 'agent',
-              onTap: () {
-                if (userController.selectedRole.value == 'agent') {
-                  userController.selectedRole.value = '';
-                } else {
-                  userController.selectedRole.value = 'agent';
-                  userController.selectedPosition.value = '';
-                }
-                userController.applyFilters();
-              },
-            ),
-
-            SizedBox(width: Dimensions.width10),
-
-            // --- 4. Role Filter: Clubs ---
-            _buildFilterChip(
-              label: 'Clubs',
-              icon: Icons.shield,
-              isSelected: userController.selectedRole.value == 'club',
-              onTap: () {
-                if (userController.selectedRole.value == 'club') {
-                  userController.selectedRole.value = '';
-                } else {
-                  userController.selectedRole.value = 'club';
-                  userController.selectedPosition.value = '';
-                }
-                userController.applyFilters();
-              },
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
-  void _showRegionBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Select Region',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Text(
+                        "@${post.author?.username ?? 'user'}",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 10),
                       ),
                     ),
-                    Obx(() {
-                      final hasRegion =
-                          userController.selectedRegion.value.isNotEmpty;
-                      return hasRegion
-                          ? TextButton.icon(
-                            onPressed: () {
-                              userController.selectedRegion.value = '';
-                              userController.applyFilters();
-                              Navigator.pop(context);
-                            },
-                            icon: const Icon(Icons.clear, size: 18),
-                            label: const Text('Clear'),
-                          )
-                          : const SizedBox.shrink();
-                    }),
+                    if (video?.duration != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(4)),
+                        child: Text(
+                          "${video!.duration?.toStringAsFixed(0)}s",
+                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                   ],
-                ),
-                const SizedBox(height: 8),
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: _nigerianStates.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final region = _nigerianStates[index];
-                      return Obx(() {
-                        final selected =
-                            userController.selectedRegion.value == region;
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            backgroundColor:
-                                selected
-                                    ? AppColors.primary.withOpacity(.15)
-                                    : Colors.grey[100],
-                            child: Icon(
-                              Icons.location_city,
-                              color:
-                                  selected
-                                      ? AppColors.primary
-                                      : Colors.grey[700],
-                            ),
-                          ),
-                          title: Text(
-                            region,
-                            style: TextStyle(
-                              fontWeight:
-                                  selected ? FontWeight.w700 : FontWeight.w600,
-                            ),
-                          ),
-                          trailing:
-                              selected
-                                  ? Icon(
-                                    Icons.check_circle,
-                                    color: AppColors.primary,
-                                  )
-                                  : const Icon(Icons.chevron_right),
-                          onTap: () {
-                            userController.selectedRegion.value = region;
-                            userController.applyFilters();
-                            Navigator.pop(context);
-                          },
-                        );
-                      });
-                    },
-                  ),
                 ),
               ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  void _showAgeBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) {
-        final ranges = const ['U18', '18-20', '21-29', '30-34', '35+'];
-
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Select Age Range',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                  ),
-                  Obx(() {
-                    final has =
-                        userController.selectedAgeRange.value.isNotEmpty;
-                    return has
-                        ? TextButton.icon(
-                          onPressed: () {
-                            userController.selectedAgeRange.value = '';
-                            userController.applyFilters();
-                            Navigator.pop(context);
-                          },
-                          icon: const Icon(Icons.clear, size: 18),
-                          label: const Text('Clear'),
-                        )
-                        : const SizedBox.shrink();
-                  }),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              ...ranges.map((r) {
-                return Obx(() {
-                  final selected = userController.selectedAgeRange.value == r;
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      backgroundColor:
-                          selected
-                              ? AppColors.primary.withOpacity(.15)
-                              : Colors.grey[100],
-                      child: Icon(
-                        Icons.cake_outlined,
-                        color: selected ? AppColors.primary : Colors.grey[700],
-                      ),
-                    ),
-                    title: Text(
-                      r,
-                      style: TextStyle(
-                        fontWeight:
-                            selected ? FontWeight.w700 : FontWeight.w600,
-                      ),
-                    ),
-                    trailing:
-                        selected
-                            ? Icon(Icons.check_circle, color: AppColors.primary)
-                            : const Icon(Icons.chevron_right),
-                    onTap: () {
-                      userController.selectedAgeRange.value = r;
-                      userController.applyFilters();
-                      Navigator.pop(context);
-                    },
-                  );
-                });
-              }).toList(),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildFilterChip({
-    required String label,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(25),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(
-          horizontal: Dimensions.width15,
-          vertical: Dimensions.height10,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.grey[100],
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.grey[300]!,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isSelected ? Colors.white : Colors.grey[700],
-            ),
-            SizedBox(width: Dimensions.width5),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey[800],
-                fontWeight: FontWeight.w600,
-                fontSize: Dimensions.font14,
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  // Enhanced Account Card
-  Widget _buildAccountCard(UserModel user) {
-    return Obx(() {
-      final currentUser = _findCurrentUser(user.id) ?? user;
-      final isFollowed = currentUser.isFollowed;
-      final isFollowBusy = userController.followBusyUserIds.contains(user.id);
+  // ===========================================================================
+  // FILTER MODAL
+  // ===========================================================================
 
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-        margin: EdgeInsets.only(bottom: Dimensions.height15),
-        child: Material(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          elevation: 2,
-          shadowColor: Colors.black.withOpacity(0.08),
-          child: InkWell(
-            onTap:
-                () => Get.toNamed(
-                  AppRoutes.othersProfileScreen,
-                  arguments: {'targetId': currentUser.id},
-                ),
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: EdgeInsets.all(Dimensions.width15),
-              child: Row(
+  void _showFilterModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Stack(
+                  // Drag Handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 5,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+
+                  const Text("Filters", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 25),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildFilterDropdown("Position", _selectedPosition, ['Forward', 'Midfielder', 'Defender', 'Goalkeeper'], (val) => setModalState(() => _selectedPosition = val!)),
+                          const SizedBox(height: 20),
+                          _buildFilterDropdown("Location", _selectedLocation, ['Lagos', 'Abuja', 'Kano', 'Rivers'], (val) => setModalState(() => _selectedLocation = val!)),
+                          const SizedBox(height: 20),
+                          _buildFilterDropdown("Availability", _selectedAvailability, ['Free Agent', 'Under Contract', 'Loan'], (val) => setModalState(() => _selectedAvailability = val!)),
+                          const SizedBox(height: 20),
+                          _buildFilterDropdown("Preferred Foot", _selectedFoot, ['Right', 'Left', 'Both'], (val) => setModalState(() => _selectedFoot = val!)),
+                          const SizedBox(height: 20),
+                          _buildFilterDropdown("Experience", _selectedExperience, ['Amateur', 'Academy', 'Semi-Pro', 'Professional'], (val) => setModalState(() => _selectedExperience = val!)),
+                          const SizedBox(height: 40),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Bottom Buttons (Apply & Reset)
+                  Row(
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(50),
-                        child: Image.network(
-                          currentUser.profilePicture.isNotEmpty
-                              ? currentUser.profilePicture
-                              : 'https://placehold.net/avatar-2.png',
-                          height: 65,
-                          width: 65,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) {
-                            return Container(
-                              height: 65,
-                              width: 65,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.person,
-                                color: AppColors.primary,
-                                size: 32,
-                              ),
-                            );
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setModalState(() {
+                              _selectedPosition = '';
+                              _selectedLocation = '';
+                              _selectedAvailability = '';
+                              _selectedFoot = '';
+                              _selectedExperience = '';
+                            });
                           },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text("Reset", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // TODO: Apply filter logic here
+                            Get.back();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text("Apply", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(width: Dimensions.width15),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                currentUser.displayName,
-                                style: TextStyle(
-                                  fontSize: Dimensions.font17,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.grey[900],
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            SizedBox(width: Dimensions.width5),
-                            _buildVerifiedBadge(currentUser.role),
-                          ],
-                        ),
-                        SizedBox(height: Dimensions.height5),
-                        if (currentUser.bio != null &&
-                            currentUser.bio!.isNotEmpty)
-                          Padding(
-                            padding: EdgeInsets.only(
-                              bottom: Dimensions.height10,
-                            ),
-                            child: Text(
-                              currentUser.bio!,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: Dimensions.font14,
-                                color: Colors.grey[600],
-                                height: 1.3,
-                              ),
-                            ),
-                          ),
-                        SizedBox(height: Dimensions.height10),
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: _buildActionButton(
-                                label:
-                                    isFollowBusy
-                                        ? 'Please wait'
-                                        : (isFollowed ? 'Following' : 'Follow'),
-                                icon:
-                                    isFollowBusy
-                                        ? Icons.hourglass_top_rounded
-                                        : (isFollowed
-                                            ? Icons.check
-                                            : Icons.add),
-                                isPrimary: !isFollowed,
-                                isBusy: isFollowBusy,
-                                onTap:
-                                    isFollowBusy
-                                        ? null
-                                        : () {
-                                          if (isFollowed) {
-                                            userController.unfollowUser(
-                                              currentUser.id,
-                                            );
-                                          } else {
-                                            userController.followUser(
-                                              currentUser.id,
-                                            );
-                                          }
-                                        },
-                              ),
-                            ),
-                            SizedBox(width: Dimensions.width10),
-                            _buildIconButton(
-                              icon: Icons.more_horiz,
-                              onTap:
-                                  () => _showOptionsBottomSheet(
-                                    context,
-                                    currentUser,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterDropdown(String label, String currentValue, List<String> options, ValueChanged<String?> onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              dropdownColor: const Color(0xFF1F2937),
+              value: currentValue.isEmpty ? null : currentValue,
+              hint: Text("Select $label", style: TextStyle(color: Colors.white.withOpacity(0.3))),
+              icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white.withOpacity(0.5)),
+              style: const TextStyle(color: Colors.white, fontSize: 15),
+              items: options.map((String value) {
+                return DropdownMenuItem<String>(value: value, child: Text(value));
+              }).toList(),
+              onChanged: onChanged,
             ),
           ),
         ),
-      );
-    });
-  }
-
-  // Verified Badge
-  Widget _buildVerifiedBadge(String role) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.verified, size: 14, color: AppColors.primary),
-          const SizedBox(width: 4),
-          Text(
-            role.capitalizeFirst ?? '',
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColors.primary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
-  // Action Button
-  Widget _buildActionButton({
-    required String label,
-    required IconData icon,
-    required bool isPrimary,
-    required VoidCallback? onTap,
-    bool isBusy = false,
-  }) {
-    return Material(
-      color:
-          isPrimary
-              ? (isBusy
-                  ? AppColors.primary.withOpacity(0.75)
-                  : AppColors.primary)
-              : Colors.grey[100],
-      borderRadius: BorderRadius.circular(25),
-      child: InkWell(
-        onTap: isBusy ? null : onTap,
-        borderRadius: BorderRadius.circular(25),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: isPrimary ? Colors.white : Colors.grey[700],
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isPrimary ? Colors.white : Colors.grey[800],
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // --- HELPERS ---
 
-  UserModel? _findCurrentUser(String userId) {
-    for (final collection in [
-      userController.filteredUsers,
-      userController.searchUsers,
-      userController.recommendedUsers,
-      userController.searchResults,
-    ]) {
-      final index = collection.indexWhere((user) => user.id == userId);
-      if (index != -1) {
-        return collection[index];
-      }
-    }
-
-    return null;
-  }
-
-  // Icon Button
-  Widget _buildIconButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.grey[100],
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Icon(icon, size: 20, color: Colors.grey[700]),
-        ),
-      ),
-    );
-  }
-
-  // Empty State
-  Widget _buildEmptyState({
-    required IconData icon,
-    required String title,
-    required String message,
-  }) {
+  Widget _buildPlaceholderTab(String text) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 80, color: Colors.grey[300]),
-          SizedBox(height: Dimensions.height20),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: Dimensions.font18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[800],
-            ),
-          ),
-          SizedBox(height: Dimensions.height10),
-          Text(
-            message,
-            style: TextStyle(
-              fontSize: Dimensions.font14,
-              color: Colors.grey[600],
-            ),
-          ),
+          Icon(Icons.video_library_outlined, size: 60, color: Colors.white.withOpacity(0.1)),
+          const SizedBox(height: 15),
+          Text(text, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14)),
         ],
       ),
     );
   }
 
-  // Info Dialog
-  void _showInfoDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Row(
-              children: [
-                Icon(Icons.info_outline, color: AppColors.primary),
-                const SizedBox(width: 10),
-                Text(
-                  'About Recommendations',
-                  style: TextStyle(fontSize: Dimensions.font20),
-                ),
-              ],
-            ),
-            content: const Text(
-              'Accounts are suggested based on your interests and connections. Your account may also be suggested to people you may know.',
-              style: TextStyle(height: 1.5),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Got it'),
-              ),
-            ],
-          ),
-    );
-  }
-
-  // Position Bottom Sheet
-  void _showPositionBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder:
-          (context) => PositionsBottomSheet(
-            onSelect: (position) {
-              userController.selectedPosition.value = position;
-              userController.applyFilters();
-            },
-            currentPosition: userController.selectedPosition.value,
-          ),
-    );
-  }
-
-  // Options Bottom Sheet
-  void _showOptionsBottomSheet(BuildContext context, UserModel user) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder:
-          (context) => Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: Icon(Iconsax.gift),
-                  title: const Text('Gift User'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Add report functionality
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.block_outlined, color: Colors.red),
-                  title: const Text('Block User'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    userController.blockUser(user.id);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.report_outlined),
-                  title: const Text('Report User'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Add report functionality
-                  },
-                ),
-                const SizedBox(height: 10),
-              ],
-            ),
-          ),
+  Widget _buildEmptyState(IconData icon, String title, String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 80, color: Colors.white.withOpacity(0.1)),
+          const SizedBox(height: 20),
+          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
+          const SizedBox(height: 10),
+          Text(message, style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.5))),
+        ],
+      ),
     );
   }
 }

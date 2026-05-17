@@ -17,18 +17,22 @@ import 'gift_bottom_modal.dart';
 class ReelsInteractionOverlay extends StatelessWidget {
   final PostModel post;
   final PostController controller;
-  final UserModel? authorProfile;
 
   const ReelsInteractionOverlay({
     Key? key,
     required this.post,
     required this.controller,
-    this.authorProfile,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     UserController userController = Get.find<UserController>();
+
+    // 1. Generate the Creator Info Text safely
+    String creatorInfo = '';
+    if (post.author != null) {
+      creatorInfo = _buildCreatorInfo(post.author!);
+    }
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -39,10 +43,10 @@ class ReelsInteractionOverlay extends StatelessWidget {
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.black54, Colors.transparent],
+          colors: [Colors.black87, Colors.transparent],
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          stops: [0.0, 0.5],
+          stops: [0.0, 0.6],
         ),
       ),
       child: Column(
@@ -52,7 +56,9 @@ class ReelsInteractionOverlay extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              // ----------------------------------------------------
               // LEFT SIDE: Details
+              // ----------------------------------------------------
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,13 +66,13 @@ class ReelsInteractionOverlay extends StatelessWidget {
                     // 1. Username
                     InkWell(
                       onTap: () async {
-                        final authorId = post.author?.id;
+                        final authorId = post.author?.id ?? post.authorId;
                         final currentUserId = userController.user.value?.id;
 
                         if (authorId != null &&
                             authorId.isNotEmpty &&
                             authorId != currentUserId) {
-                          unawaited(controller.deactivatePlayback());
+                          controller.deactivatePlayback();
                           Get.toNamed(
                             AppRoutes.othersProfileScreen,
                             arguments: {'targetId': authorId},
@@ -74,7 +80,7 @@ class ReelsInteractionOverlay extends StatelessWidget {
                         }
                       },
                       child: Text(
-                        post.author?.username.capitalizeFirst ?? '',
+                        post.author?.name ?? 'Unknown',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -109,7 +115,7 @@ class ReelsInteractionOverlay extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.9),
-                              fontSize: Dimensions.font14,
+                              fontSize: Dimensions.font15,
                               height: 1.3,
                             ),
                           );
@@ -118,43 +124,14 @@ class ReelsInteractionOverlay extends StatelessWidget {
                       },
                     ),
 
-                    // 3. Tags (If they exist)
-                    if (post.tags != null && post.tags.isNotEmpty) ...[
-                      SizedBox(height: Dimensions.height10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children:
-                            post.tags
-                                .map(
-                                  (tag) => Text(
-                                    '#$tag',
-                                    style: const TextStyle(
-                                      color:
-                                          Colors.white, // Or Colors.blueAccent
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                      ),
-                    ],
-
-                    // 4. Creator Info Pill (If authorProfile is provided)
-                    if (authorProfile != null) ...[
+                    // 4. Creator Info Pill (ONLY SHOW IF TEXT IS NOT EMPTY)
+                    if (creatorInfo.isNotEmpty) ...[
                       SizedBox(height: Dimensions.height10),
                       Row(
                         children: [
-                          Icon(
-                            Iconsax.info_circle,
-                            size: 14,
-                            color: Colors.white.withOpacity(0.7),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
+                          Container(
                             child: Text(
-                              _buildCreatorInfo(authorProfile!),
+                              creatorInfo,
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.7),
                                 fontSize: 12,
@@ -166,66 +143,90 @@ class ReelsInteractionOverlay extends StatelessWidget {
                           ),
                         ],
                       ),
-                      SizedBox(height: Dimensions.height10 * 8),
                     ],
 
+                    // 3. Tags
+                    if (post.tags.isNotEmpty) ...[
+                      SizedBox(height: Dimensions.height10),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: Dimensions.width10,
+                          vertical: Dimensions.height5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(
+                            Dimensions.radius10
+                          ),
+                        ),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children:
+                              post.tags
+                                  .map(
+                                    (tag) => Text(
+                                      '#$tag',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                        ),
+                      ),
+                    ],
+
+
+
                     SizedBox(height: Dimensions.height150),
-
-
-
                   ],
                 ),
               ),
+
+              // ----------------------------------------------------
               // RIGHT SIDE: Interaction Buttons
+              // ----------------------------------------------------
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Profile Pic
                   _ProfileAvatar(
                     url: post.author?.profilePicture,
-                    argument: post.author?.id,
+                    argument: post.author?.id ?? post.authorId,
                     controller: controller,
                   ),
                   const SizedBox(height: 20),
 
-                  // Likes
                   Obx(() {
                     final currentPost =
                         controller.posts.firstWhereOrNull(
-                              (p) => p.id == post.id,
+                          (p) => p.id == post.id,
                         ) ??
-                            post;
+                        post;
                     final bool isLiked = currentPost.isLiked;
 
                     return GestureDetector(
                       onTap: () => controller.toggleLike(currentPost.id),
                       child: _InteractionIcon(
                         icon: isLiked ? Iconsax.heart5 : Iconsax.heart,
-                        // Filled vs. Outline
                         label: "${currentPost.likes.length}",
-                        color:
-                        isLiked
-                            ? Colors.red
-                            : Colors.white, // Change color if liked
+                        color: isLiked ? Colors.red : Colors.white,
                       ),
                     );
                   }),
-
                   const SizedBox(height: 20),
 
                   Obx(() {
-                    // Find the updated post model from the observable list.
                     final currentPost =
                         controller.posts.firstWhereOrNull(
-                              (p) => p.id == post.id,
+                          (p) => p.id == post.id,
                         ) ??
-                            post;
-
+                        post;
                     return GestureDetector(
-                      onTap: () {
-                        // 🚀 Call the function that handles fetching and displaying the UI
-                        controller.showCommentsForPost(currentPost.id);
-                      },
+                      onTap:
+                          () => controller.showCommentsForPost(currentPost.id),
                       child: _InteractionIcon(
                         icon: Iconsax.message,
                         label: "${currentPost.comments.length}",
@@ -233,37 +234,34 @@ class ReelsInteractionOverlay extends StatelessWidget {
                     );
                   }),
                   const SizedBox(height: 20),
+
                   Obx(() {
-                    final isBookmarked = controller.isPostBookmarked(
-                      post.id,
-                    );
+                    final isBookmarked = controller.isPostBookmarked(post.id);
                     return InkWell(
                       onTap: () => controller.toggleBookmark(post.id),
                       child: _InteractionIcon(
                         icon:
-                        isBookmarked
-                            ? Icons.bookmark
-                            : Icons.bookmark_border,
-                        color:
-                        isBookmarked ? AppColors.white : Colors.white,
+                            isBookmarked
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                        color: isBookmarked ? AppColors.white : Colors.white,
                         label: 'Save',
                       ),
                     );
                   }),
                   const SizedBox(height: 20),
+
                   GestureDetector(
                     onTap: () {
                       controller.pauseAll();
-                      final link =
-                          "https://api.hiliteapp.net/post/${post.id}";
-
+                      final link = "https://api.hiliteapp.net/post/${post.id}";
                       Share.share(
-                        'Check out this video on Hilite! $link',
-                        subject: 'Watch this reel on Hilite',
+                        'Check out this on Hilite! $link',
+                        subject: 'Watch this on Hilite',
                       );
                     },
-                    child: _InteractionIcon(
-                      icon: Iconsax.send_1, // Or Iconsax.share
+                    child: const _InteractionIcon(
+                      icon: Iconsax.send_1,
                       label: "Share",
                       color: Colors.white,
                     ),
@@ -274,12 +272,12 @@ class ReelsInteractionOverlay extends StatelessWidget {
                     onTap: () {
                       Get.bottomSheet(
                         GiftSelectionBottomSheet(
-                          recipientId: post.author?.id ?? "",
+                          recipientId: post.author?.id ?? post.authorId ?? "",
                         ),
                         isScrollControlled: true,
                       );
                     },
-                    child: _InteractionIcon(
+                    child: const _InteractionIcon(
                       icon: Icons.card_giftcard,
                       label: "Gift",
                       color: Colors.amber,
@@ -295,33 +293,59 @@ class ReelsInteractionOverlay extends StatelessWidget {
     );
   }
 
+
   String _buildCreatorInfo(UserModel user) {
-    if (user.role.toLowerCase() == 'player' && user.playerDetails != null) {
+    String role = user.role.toLowerCase();
+
+
+    if (role.isEmpty) {
+      if (user.playerDetails != null)
+        role = 'player';
+      else if (user.clubDetails != null)
+        role = 'club';
+      else if (user.agentDetails != null)
+        role = 'agent';
+      else
+        role = 'fan';
+    }
+
+    if (role == 'player' && user.playerDetails != null) {
       final p = user.playerDetails!;
       final age = _calculateAge(p.dob);
       final ageStr = age != null ? '$age yrs' : '';
-      final foot =
+
+
+      String footStr =
           p.preferredFoot.isNotEmpty
-              ? '${p.preferredFoot.capitalizeFirst} Foot'
+              ? '${p.preferredFoot[0].toUpperCase()}${p.preferredFoot.substring(1)} Foot'
               : '';
+
       final pos = p.position.isNotEmpty ? p.position.toUpperCase() : '';
 
-      // Combines available details into "CAM • 22 yrs • Right Foot"
-      return [pos, ageStr, foot].where((s) => s.isNotEmpty).join(' • ');
-    } else if (user.role.toLowerCase() == 'club' && user.clubDetails != null) {
+      return [pos, ageStr, footStr].where((s) => s.isNotEmpty).join(' • ');
+    } else if (role == 'club' && user.clubDetails != null) {
       final c = user.clubDetails!;
+      String typeStr =
+          c.clubType.isNotEmpty
+              ? '${c.clubType[0].toUpperCase()}${c.clubType.substring(1)}'
+              : '';
+
       return [
-        c.clubType.capitalizeFirst,
+        typeStr,
         c.yearFounded.isNotEmpty ? 'Est. ${c.yearFounded}' : '',
-      ].where((s) => s != null && s.isNotEmpty).join(' • ');
-    } else if (user.role.toLowerCase() == 'agent' &&
-        user.agentDetails != null) {
+      ].where((s) => s.isNotEmpty).join(' • ');
+    } else if (role == 'agent' && user.agentDetails != null) {
+      final a = user.agentDetails!;
       return [
-        user.agentDetails!.agencyName,
-        '${user.agentDetails!.experience} Exp',
+        a.agencyName,
+        a.experience.isNotEmpty ? '${a.experience} Exp' : '',
       ].where((s) => s.isNotEmpty).join(' • ');
     }
-    return user.role.capitalizeFirst ?? 'Fan';
+
+
+    return role.isNotEmpty
+        ? '${role[0].toUpperCase()}${role.substring(1)}'
+        : 'Fan Profile';
   }
 
   int? _calculateAge(DateTime? dob) {
