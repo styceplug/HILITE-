@@ -35,7 +35,8 @@ class CompetitionController extends GetxController {
   GlobalLoaderController loader = Get.find<GlobalLoaderController>();
   DateTime? selectedDate;
   XFile? bannerImage;
-
+  bool isLoading = false;
+  List<CompetitionModel> joinedCompetitionList = [];
   RxList<CompetitionModel> myCompetitions = <CompetitionModel>[].obs;
   bool _isRegistering = false;
 
@@ -50,6 +51,25 @@ class CompetitionController extends GetxController {
   }
 
 
+
+
+  Future<void> fetchJoinedCompetitions() async {
+    isLoading = true;
+    update();
+
+    try {
+      Response response = await competitionRepo.getRegisteredCompetition();
+      if (response.statusCode == 200 && response.body['code'] == '00') {
+        List<dynamic> rawList = response.body['data'] ?? [];
+        joinedCompetitionList = rawList.map((e) => CompetitionModel.fromJson(e)).toList();
+      }
+    } catch (e) {
+      debugPrint("Error fetching joined competitions: $e");
+    } finally {
+      isLoading = false;
+      update();
+    }
+  }
 
   Future<void> getMyCompetitions() async {
     try {

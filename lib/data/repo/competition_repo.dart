@@ -11,6 +11,13 @@ class CompetitionRepo {
   CompetitionRepo({required this.apiClient});
 
 
+
+  Future<Response> getRegisteredCompetition() async {
+    return await apiClient.getData(AppConstants.GET_JOINED_COMPETITIONS);
+  }
+
+
+
   Future<Response> createCompetition({
     required String name,
     required String location,
