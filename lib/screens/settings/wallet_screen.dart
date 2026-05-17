@@ -35,7 +35,7 @@ class WalletScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: CustomAppbar(
-        leadingIcon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+        leadingIcon:  Icon(Icons.arrow_back_ios_new, color: Colors.white),
         title: 'My Wallet',
       ),
       backgroundColor: scaffoldBackground,
@@ -116,7 +116,7 @@ class WalletScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text("Open Trials", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text("Recent Transactions", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                     // "View All" button with right arrow icon
                     TextButton(
                       onPressed: () {
