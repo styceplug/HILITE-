@@ -40,7 +40,7 @@ class _MyTrialsScreenState extends State<MyTrialsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgColor,
+      backgroundColor: AppColors.backgroundColor,
       appBar: CustomAppbar(title: 'My Trials', leadingIcon: const BackButton()),
       body: Obx(() {
         if (trialController.myTrials.isEmpty) {
@@ -193,7 +193,7 @@ class _TrialDetailsScreenState extends State<TrialDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgColor,
+      backgroundColor: AppColors.backgroundColor,
       appBar: CustomAppbar(
         title: 'Trial Details',
         leadingIcon: const BackButton(),

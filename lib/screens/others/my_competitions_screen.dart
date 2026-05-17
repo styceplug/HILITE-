@@ -35,7 +35,7 @@ class _MyCompetitionsScreenState extends State<MyCompetitionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgColor,
+      backgroundColor: AppColors.backgroundColor,
       appBar: CustomAppbar(
         title: 'My Competitions',
         leadingIcon: const BackButton(),
@@ -199,7 +199,7 @@ class _CompetitionDetailsScreenState extends State<CompetitionDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgColor,
+      backgroundColor: AppColors.backgroundColor,
       appBar: CustomAppbar(
         title: 'Competition Details',
         leadingIcon: const BackButton(),
