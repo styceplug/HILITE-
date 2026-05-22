@@ -46,9 +46,13 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
   late TrialController trialController;
   late CompetitionController compController;
 
+  late PageController _pageController;
+
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _selectedTabIndex);
+
     userController = Get.find<UserController>();
 
     trialController = Get.put(TrialController(trialRepo: Get.find()));
@@ -65,6 +69,12 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
       compController.fetchJoinedCompetitions();
 
     });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
@@ -134,7 +144,14 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
           bool isSelected = _selectedTabIndex == index;
           return Expanded(
             child: InkWell(
-              onTap: () => setState(() => _selectedTabIndex = index),
+              // --- 2. UPDATE ONTAP TO USE ANIMATETOPAGE ---
+              onTap: () {
+                _pageController.animateToPage(
+                  index,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              },
               child: Column(
                 children: [
                   Padding(
@@ -145,12 +162,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
                       _tabs[index],
                       style: TextStyle(
                         fontSize: Dimensions.font14,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w500,
-                        color:
-                            isSelected
-                                ? Colors.white
-                                : Colors.white.withOpacity(0.5),
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                        color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
                       ),
                     ),
                   ),
@@ -173,27 +186,38 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
   }
 
   Widget _buildSelectedTabContent() {
+    return PageView(
+      controller: _pageController,
+      physics: const BouncingScrollPhysics(),
+      onPageChanged: (index) {
+        setState(() => _selectedTabIndex = index);
+      },
+      children: [
+        _buildPageWrapper(_buildAllTab()),
+        _buildPageWrapper(_buildTrialsTab()),
+        _buildPageWrapper(_buildCompetitionsTab()),
+        _buildPageWrapper(_buildJoinedTab()),
+      ],
+    );
+  }
+
+  Widget _buildPageWrapper(Widget childContent) {
     return RefreshIndicator(
       color: AppColors.buttonColor,
       backgroundColor: const Color(0xFF1F2937),
       onRefresh: () async {
-        await trialController.fetchTrials();
-        await compController.getCompetitions();
-        await trialController.fetchJoinedTrials();
-        await compController.fetchJoinedCompetitions();
+        // Run all fetches concurrently for faster refreshing
+        await Future.wait([
+          trialController.fetchTrials(),
+          compController.getCompetitions(),
+          trialController.fetchJoinedTrials(),
+          compController.fetchJoinedCompetitions(),
+        ]);
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.all(Dimensions.width20),
-        child: Builder(
-          builder: (context) {
-            if (_selectedTabIndex == 0) return _buildAllTab();
-            if (_selectedTabIndex == 1) return _buildTrialsTab();
-            if (_selectedTabIndex == 2) return _buildCompetitionsTab();
-            if (_selectedTabIndex == 3) return _buildJoinedTab();
-            return const SizedBox.shrink();
-          },
-        ),
+        child: childContent,
       ),
     );
   }
@@ -505,6 +529,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
                     padding: EdgeInsets.only(bottom: Dimensions.height15),
                     child: TrialCard(
                       trial: trial,
+                      isJoined: false,
                       onTap: () {
                         if (trial.id.isNotEmpty) Get.toNamed(AppRoutes.trialDetailScreen, arguments: trial.id);
                       },
@@ -525,6 +550,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
                     padding: EdgeInsets.only(bottom: Dimensions.height15),
                     child: CompetitionCard(
                       competition: comp,
+                      isJoined: false,
                       onTap: () {
                         if (comp.sId != null && comp.sId!.isNotEmpty) {
                           Get.to(() => CompetitionDetailsScreen(competitionId: comp.sId!));

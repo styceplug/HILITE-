@@ -16,6 +16,9 @@
 
 
 
+
+
+
     <application
         android:label="HILITE"
         android:name="${applicationName}"
@@ -33,12 +36,16 @@
 
 
 
+
+
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="api.hiliteapp.net" android:pathPrefix="/post" />
             </intent-filter>
+
+
 
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
@@ -49,6 +56,11 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
 
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
