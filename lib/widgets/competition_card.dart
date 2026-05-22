@@ -13,11 +13,14 @@ import 'custom_button.dart';
 class CompetitionCard extends StatelessWidget {
   final CompetitionModel competition;
   final VoidCallback onTap;
+  final bool isJoined;
+
 
   const CompetitionCard({
     Key? key,
     required this.competition,
     required this.onTap,
+    this.isJoined = true,
   }) : super(key: key);
 
   @override
@@ -157,9 +160,10 @@ class CompetitionCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                      if (isJoined)
                       CustomButton(
                         onPressed: onTap,
-                        text: 'View details',
+                        text: 'Join now',
                         textStyle: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: Dimensions.font13,
@@ -170,7 +174,7 @@ class CompetitionCard extends StatelessWidget {
                           vertical: Dimensions.height10,
                         ),
                         backgroundColor: AppColors.buttonColor,
-                      ),
+                      ) else Icon(Icons.chevron_right, color: Colors.white.withOpacity(0.5)),
                     ],
                   ),
                 ],

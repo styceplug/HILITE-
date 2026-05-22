@@ -54,14 +54,34 @@ class CountryData {
 
 class StateData {
   final String name;
-  StateData({required this.name});
+  final List<String> subdivisions;
+
+  StateData({required this.name, this.subdivisions = const []});
+
   factory StateData.fromJson(Map<String, dynamic> json) {
-    return StateData(name: json['name'] as String);
+    List<String> parsedSubdivisions = [];
+
+    // Safely handle whatever the JSON throws at us
+    if (json['subdivision'] != null) {
+      if (json['subdivision'] is List) {
+        // It's a proper List
+        parsedSubdivisions = (json['subdivision'] as List).map((e) => e.toString()).toList();
+      } else if (json['subdivision'] is String) {
+        // It's a comma-separated String, let's split it!
+        parsedSubdivisions = (json['subdivision'] as String)
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+    }
+
+    return StateData(
+      name: json['name'] as String,
+      subdivisions: parsedSubdivisions,
+    );
   }
 }
-
-
-
 
 class SearchableBottomSheet extends StatefulWidget {
   final String title;
@@ -206,23 +226,22 @@ class _SearchableBottomSheetState extends State<SearchableBottomSheet> {
   }
 }
 
-
-// ==========================================
-// 3. UI: COUNTRY & STATE COMBINED WIDGET
-// ==========================================
-
 class CountryState extends StatefulWidget {
   final String? selectedCountry;
   final String? selectedState;
+  final String? selectedLga; // <-- NEW
   final Function(String?) onCountryChanged;
   final Function(String?) onStateChanged;
+  final Function(String?) onLgaChanged; // <-- NEW
 
   const CountryState({
     super.key,
     required this.selectedCountry,
     required this.selectedState,
+    required this.selectedLga,
     required this.onCountryChanged,
     required this.onStateChanged,
+    required this.onLgaChanged,
   });
 
   @override
@@ -264,6 +283,17 @@ class _CountryStateState extends State<CountryState> {
           );
         }
 
+        // --- ADD THIS TO CATCH THE ERROR ---
+        if (snapshot.hasError) {
+          debugPrint("JSON ERROR: ${snapshot.error}");
+          return Center(
+              child: Text(
+                  "Error: ${snapshot.error}",
+                  style: const TextStyle(color: Colors.redAccent)
+              )
+          );
+        }
+
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(child: Text("No countries available", style: TextStyle(color: Colors.white.withOpacity(0.5))));
         }
@@ -277,6 +307,16 @@ class _CountryStateState extends State<CountryState> {
 
         final stateNames = selectedCountryObj?.states.map((s) => s.name).toList() ?? [];
 
+        // Find the selected state object to get its subdivisions (LGAs)
+        final selectedStateObj = widget.selectedState != null && selectedCountryObj != null
+            ? selectedCountryObj.states.where((s) => s.name == widget.selectedState).firstOrNull
+            : null;
+
+        final lgaNames = selectedStateObj?.subdivisions ?? [];
+
+        // Check if Nigeria is selected
+        final isNigeria = widget.selectedCountry?.toLowerCase() == 'nigeria';
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -287,7 +327,6 @@ class _CountryStateState extends State<CountryState> {
               onTap: () {
                 _openSelectionSheet("Select Country", countryNames, (selected) {
                   widget.onCountryChanged(selected);
-                  widget.onStateChanged(null); // Reset state when country changes
                 });
               },
             ),
@@ -314,6 +353,30 @@ class _CountryStateState extends State<CountryState> {
                 });
               },
             ),
+
+            // --- LGA SELECTOR (ONLY IF NIGERIA) ---
+            if (isNigeria) ...[
+              const SizedBox(height: 20),
+              _buildSelectorField(
+                hint: "Choose an LGA",
+                value: widget.selectedLga,
+                onTap: () {
+                  if (widget.selectedState == null) {
+                    Get.snackbar('Hold on', 'Please select a state first',
+                        backgroundColor: const Color(0xFF1F2937), colorText: Colors.white);
+                    return;
+                  }
+                  if (lgaNames.isEmpty) {
+                    Get.snackbar('Info', 'No LGAs available for this state',
+                        backgroundColor: const Color(0xFF1F2937), colorText: Colors.white);
+                    return;
+                  }
+                  _openSelectionSheet("Select LGA", lgaNames, (selected) {
+                    widget.onLgaChanged(selected);
+                  });
+                },
+              ),
+            ],
           ],
         );
       },
@@ -329,7 +392,7 @@ class _CountryStateState extends State<CountryState> {
         decoration: BoxDecoration(
           color: Colors.white10,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.textColor.withOpacity(0.5)),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -338,8 +401,7 @@ class _CountryStateState extends State<CountryState> {
               value ?? hint,
               style: TextStyle(
                 color: value == null ? Colors.white.withOpacity(0.4) : Colors.white,
-                fontSize: Dimensions.font17,
-                fontFamily: 'Poppins',
+                fontSize: 15,
               ),
             ),
             Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white.withOpacity(0.5)),
@@ -349,8 +411,6 @@ class _CountryStateState extends State<CountryState> {
     );
   }
 }
-
-
 
 class CountryDropdown extends StatefulWidget {
   final String? selectedCountry;
@@ -406,10 +466,20 @@ class _CountryDropdownState extends State<CountryDropdown> {
           );
         }
 
+        // --- ADD THIS TO CATCH THE ERROR ---
+        if (snapshot.hasError) {
+          debugPrint("JSON ERROR: ${snapshot.error}");
+          return Center(
+              child: Text(
+                  "Error: ${snapshot.error}",
+                  style: const TextStyle(color: Colors.redAccent)
+              )
+          );
+        }
+
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(child: Text("No countries available", style: TextStyle(color: Colors.white.withOpacity(0.5))));
         }
-
         final countries = snapshot.data!;
 
         return InkWell(
