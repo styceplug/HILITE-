@@ -122,11 +122,11 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
     return Positioned(
       top: MediaQuery.of(context).padding.top + 10,
       left: 20,
-      right: 20,
+      // right: 20,
       child: Hero(
         tag: 'search_bar',
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(Dimensions.radius10),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
             child: Material(
@@ -136,38 +136,25 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
                   unawaited(controller.deactivatePlayback());
                   Get.toNamed(AppRoutes.recommendedAccountsScreen);
                 },
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: Dimensions.height5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
+                child: IntrinsicWidth(
+                  child: Container(
+                    // width: Dimensions.width50,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: Dimensions.width10,
+                      vertical: Dimensions.height10*0.7,
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        CupertinoIcons.search,
-                        color: Colors.white,
-                        size: 24,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(Dimensions.radius10),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
                       ),
-                      const SizedBox(width: 15),
-                      const Text(
-                        'Search...',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Iconsax.people, color: Colors.white),
-                        onPressed: () {},
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
+                    ),
+                    child: Icon(
+                     CupertinoIcons.search,
+                     color: Colors.white.withOpacity(0.4),
+                     size: Dimensions.iconSize30,
+                                          ),
                   ),
                 ),
               ),
