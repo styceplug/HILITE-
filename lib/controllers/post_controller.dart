@@ -241,7 +241,8 @@ class PostController extends GetxController {
         likes: post.likes,
         comments: post.comments,
         isLiked: post.isLiked,
-        isBookmarked: isBookmarking, // <--- Update the flag
+        isBookmarked: isBookmarking,
+
       );
     }
   }

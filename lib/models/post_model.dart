@@ -10,7 +10,7 @@ class PostModel {
   final String id;
   final String type;
   final String? text;
-  final UserModel? author; 
+  final UserModel? author;
   final String? authorId;
   final ContentDetails? video;
   final ContentDetails? image;
@@ -19,6 +19,8 @@ class PostModel {
   final bool isLiked;
   final bool isBookmarked;
   final List<String> tags;
+  final double? score;
+  final DateTime? createdAt;
 
   PostModel({
     required this.id,
@@ -33,6 +35,8 @@ class PostModel {
     this.isLiked = false,
     this.isBookmarked = false,
     this.tags = const [],
+    this.score,
+    this.createdAt,
   });
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
@@ -49,7 +53,6 @@ class PostModel {
     String? parsedAuthorId;
 
     if (data['author'] is Map<String, dynamic>) {
-      // --- NOW PARSING AS USER MODEL ---
       parsedAuthor = UserModel.fromJson(data['author']);
       parsedAuthorId = parsedAuthor.id;
     } else if (data['author'] is String) {
@@ -69,6 +72,9 @@ class PostModel {
       isLiked: data['isLiked'] ?? false,
       isBookmarked: data['isBookmarked'] ?? false,
       tags: data['tags'] != null ? List<String>.from(data['tags']) : [],
+      // --- ADD THESE TWO LINES ---
+      score: (data['score'] is int) ? (data['score'] as int).toDouble() : (data['score'] ?? 0.0),
+      createdAt: DateTime.tryParse(data['createdAt'] ?? '') ?? DateTime.now(),
     );
   }
 }
