@@ -140,7 +140,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          user.role == 'club' ? (club?.clubName ?? user.name) : user.name.capitalizeFirst ?? 'Unknown',
+                          user.role == 'club' ? (club?.clubName ?? user.name): user.role == 'agent' ? user.agentDetails?.agencyName ?? user.name : user.name.capitalizeFirst ?? 'Unknown',
                           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                       ],
@@ -846,6 +846,7 @@ class _OthersProfileState extends State<OthersProfileScreen> {
         number: '',
         country: 'Country',
         state: 'State',
+        lga: 'LGA',
         profilePicture: '',
         tokenBalance: '0',
         followers: 12500,
