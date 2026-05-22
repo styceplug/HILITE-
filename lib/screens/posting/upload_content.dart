@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:hilite/routes/routes.dart';
 import 'package:hilite/screens/posting/video_trim_screen.dart';
 import 'package:hilite/utils/dimensions.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -48,7 +49,18 @@ class _UploadContentState extends State<UploadContent> {
       final cameras = await availableCameras();
       if (cameras.isEmpty) return;
 
-      final selectedCamera = _isFrontCamera ? cameras.last : cameras.first;
+      // --- 🛠️ BULLETPROOF LENS SELECTION ---
+      final targetLens = _isFrontCamera
+          ? CameraLensDirection.front
+          : CameraLensDirection.back;
+
+      // Find the camera that matches our target lens
+      CameraDescription? selectedCamera = cameras.firstWhereOrNull(
+            (camera) => camera.lensDirection == targetLens,
+      );
+
+      // Fallback just in case the device doesn't have that lens
+      selectedCamera ??= cameras.first;
 
       _cameraController = CameraController(
         selectedCamera,
@@ -66,13 +78,22 @@ class _UploadContentState extends State<UploadContent> {
 
   Future<void> _toggleCamera() async {
     if (_cameraController != null) {
+      // 1. Immediately hide the preview
+      setState(() => _isCameraInitialized = false);
+
+      // 2. Safely pause and dispose the old controller
+      if (_cameraController!.value.isRecordingVideo) {
+        await _cameraController!.stopVideoRecording();
+      }
       await _cameraController!.dispose();
+      _cameraController = null;
     }
-    setState(() {
-      _isFrontCamera = !_isFrontCamera;
-      _isCameraInitialized = false;
-    });
-    await Future.delayed(const Duration(milliseconds: 300));
+
+    // 3. Flip the boolean
+    _isFrontCamera = !_isFrontCamera;
+
+    // 4. Wait a beat for hardware to reset, then initialize
+    await Future.delayed(const Duration(milliseconds: 100));
     await _initializeCamera();
   }
 
@@ -107,20 +128,73 @@ class _UploadContentState extends State<UploadContent> {
       }
     } else {
       final file = await _cameraController!.takePicture();
-      // From Camera: Use _isVideoMode (false)
       _navigateToPostDetails(file, isVideo: false);
     }
   }
 
-  void _navigateToPostDetails(XFile file, {required bool isVideo}) {
+  Future<void> _navigateToPostDetails(XFile file, {required bool isVideo}) async {
     if (isVideo) {
       Get.to(() => VideoTrimScreen(file: file), transition: Transition.fadeIn);
       return;
     }
 
-    Get.toNamed(
-      AppRoutes.postDetailScreen,
-      arguments: {'file': file, 'isVideo': isVideo},
+    // --- NEW: Trigger Image Cropper ---
+    final CroppedFile? croppedFile = await _cropImage(file.path);
+
+    // If the user cropped the image and clicked "Done"
+    if (croppedFile != null) {
+      Get.toNamed(
+        AppRoutes.postDetailScreen,
+        arguments: {'file': XFile(croppedFile.path), 'isVideo': false},
+      );
+    }
+    // If they clicked "Cancel", it just silently returns to the camera screen
+  }
+
+
+
+  Future<CroppedFile?> _cropImage(String imagePath) async {
+    return await ImageCropper().cropImage(
+      sourcePath: imagePath,
+      // 🛠️ aspectRatioPresets was moved inside the UI settings!
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Photo',
+          toolbarColor: const Color(0xFF030A1B), // Your premium dark background
+          toolbarWidgetColor: Colors.white,
+          initAspectRatio: CropAspectRatioPreset.original,
+          lockAspectRatio: false,
+          backgroundColor: Colors.black,
+          activeControlsWidgetColor: Colors.blueAccent, // Your brand color
+          dimmedLayerColor: Colors.black.withOpacity(0.8),
+          cropFrameColor: Colors.white,
+          cropGridColor: Colors.white.withOpacity(0.5),
+          // Added here for Android
+          aspectRatioPresets: [
+            CropAspectRatioPreset.square,
+            CropAspectRatioPreset.ratio4x3,
+            CropAspectRatioPreset.ratio16x9,
+            CropAspectRatioPreset.original,
+          ],
+        ),
+        IOSUiSettings(
+          title: 'Crop Photo',
+          cancelButtonTitle: 'Cancel',
+          doneButtonTitle: 'Done',
+          aspectRatioPickerButtonHidden: false,
+          resetButtonHidden: false,
+          rectX: 0.0,
+          rectY: 0.0,
+          aspectRatioLockEnabled: false,
+          // Added here for iOS
+          aspectRatioPresets: [
+            CropAspectRatioPreset.square,
+            CropAspectRatioPreset.ratio4x3,
+            CropAspectRatioPreset.ratio16x9,
+            CropAspectRatioPreset.original,
+          ],
+        ),
+      ],
     );
   }
 

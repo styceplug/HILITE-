@@ -11,8 +11,10 @@ import 'package:intl/intl.dart';
 class TrialCard extends StatelessWidget {
   final TrialModel trial;
   final VoidCallback onTap;
+  final bool isJoined;
 
-  const TrialCard({required this.trial, required this.onTap});
+
+  const TrialCard({required this.trial, required this.onTap, this.isJoined = true});
 
   @override
   Widget build(BuildContext context) {
@@ -166,20 +168,23 @@ class TrialCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      CustomButton(
-                        onPressed: onTap,
-                        text: 'JOIN',
-                        textStyle: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: Dimensions.font13,
-                        ),
-                        borderRadius: BorderRadius.circular(Dimensions.radius10),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: Dimensions.width10*1.2,
-                          vertical: Dimensions.height10,
-                        ),
-                        backgroundColor: AppColors.buttonColor,
-                      ),
+                      if (isJoined)
+                        CustomButton(
+                          onPressed: onTap,
+                          text: 'JOIN',
+                          textStyle: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: Dimensions.font13,
+                          ),
+                          borderRadius: BorderRadius.circular(Dimensions.radius10),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: Dimensions.width10 * 1.2,
+                            vertical: Dimensions.height10,
+                          ),
+                          backgroundColor: AppColors.buttonColor,
+                        )
+                      else
+                        Icon(Icons.chevron_right, color: Colors.white.withOpacity(0.5)),
                     ],
                   ),
                 ],
