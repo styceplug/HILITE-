@@ -183,7 +183,7 @@ class PostRepo {
 
   Future<Response> getRecommendedPosts({
     required String contentType,
-    int limit = 20,
+    int limit = 200,
     int skip = 0,
   }) async {
     String url =

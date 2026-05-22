@@ -483,7 +483,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               final post = savedPosts[index];
               return GestureDetector(
                 onTap: () {
-                  Get.toNamed(AppRoutes.postDetailScreen, arguments: post.id);
+                  if (post.type == 'video') {
+                    final videoOnlyList = savedPosts.where((p) => p.type == 'video').toList();
+
+                    final videoIndex = videoOnlyList.indexOf(post);
+
+                    if (videoIndex != -1) {
+                      Get.to(
+                            () => ProfileReelsPlayer(
+                          videos: videoOnlyList,
+                          initialIndex: videoIndex,
+                        ),
+                      );
+                    }
+                  }else {
+                    Get.to(() => ProfileImageViewer(imageUrl: post.image!.url!));
+                  }
                 },
                 child: _buildTileItem(post, post.type ?? 'image'),
               );
@@ -628,7 +643,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildStatCard(
                   icon: Iconsax.location,
                   label: "Location",
-                  value: "${user.state ?? ''}, ${user.country ?? ''}".trim().replaceAll(RegExp(r'^,|,$'), '')
+                  value: " ${user.lga ?? ''}, ${user.state ?? ''}, ${user.country ?? ''}".trim().replaceAll(RegExp(r'^,|,$'), '')
               ),
           ],
         ),
