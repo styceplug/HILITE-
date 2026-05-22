@@ -25,6 +25,7 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
   String? selectedClubType;
   String? selectedCountry;
   String? selectedState;
+  String? selectedLga;
   bool isPasswordVisible = false;
   bool termsPolicy = false;
   Timer? debounceTimer;
@@ -79,6 +80,8 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
     "clubType": selectedClubType?.toLowerCase(),
     "country": selectedCountry,
     "state": selectedState,
+    "lga": selectedLga,
+
   };
 
   void _openFullScreenClubPicker() {
@@ -241,13 +244,19 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
                     CountryState(
                       selectedCountry: selectedCountry,
                       selectedState: selectedState,
-                      onCountryChanged: (country) {
-                        setState(() {
-                          selectedCountry = country;
-                          selectedState = null;
-                        });
-                      },
-                      onStateChanged: (state) => setState(() => selectedState = state),
+                      selectedLga: selectedLga, // Pass LGA down
+                      onCountryChanged: (c) => setState(() {
+                        selectedCountry = c;
+                        selectedState = null; // Clear state on country change
+                        selectedLga = null;   // Clear LGA on country change
+                      }),
+                      onStateChanged: (s) => setState(() {
+                        selectedState = s;
+                        selectedLga = null;   // Clear LGA on state change
+                      }),
+                      onLgaChanged: (l) => setState(() {
+                        selectedLga = l;      // Update LGA
+                      }),
                     ),
 
                     SizedBox(height: Dimensions.height20),

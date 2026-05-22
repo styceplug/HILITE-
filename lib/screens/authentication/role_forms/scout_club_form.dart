@@ -34,6 +34,7 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
 
   String? selectedCountry;
   String? selectedState;
+  String? selectedLga;
   String? selectedRole;
   String? selectedExperience;
   bool isPasswordVisible = false;
@@ -93,6 +94,7 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
     "roleType": selectedRole?.toLowerCase(),
     "country": selectedCountry,
     "state": selectedState,
+    "lga": selectedLga,
   };
 
   // --- REUSABLE FULL SCREEN PICKER ---
@@ -333,17 +335,19 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
                     CountryState(
                       selectedCountry: selectedCountry,
                       selectedState: selectedState,
-                      onCountryChanged: (country) {
-                        setState(() {
-                          selectedCountry = country;
-                          selectedState = null;
-                        });
-                      },
-                      onStateChanged: (state) {
-                        setState(() {
-                          selectedState = state;
-                        });
-                      },
+                      selectedLga: selectedLga, // Pass LGA down
+                      onCountryChanged: (c) => setState(() {
+                        selectedCountry = c;
+                        selectedState = null; // Clear state on country change
+                        selectedLga = null;   // Clear LGA on country change
+                      }),
+                      onStateChanged: (s) => setState(() {
+                        selectedState = s;
+                        selectedLga = null;   // Clear LGA on state change
+                      }),
+                      onLgaChanged: (l) => setState(() {
+                        selectedLga = l;      // Update LGA
+                      }),
                     ),
                     SizedBox(height: Dimensions.height20),
 
