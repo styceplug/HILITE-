@@ -28,6 +28,7 @@ class _FootballerFormState extends State<FootballerForm> {
   final formKey = GlobalKey<FormState>();
   String? selectedCountry;
   String? selectedState;
+  String? selectedLga;
   AuthController authController = Get.find<AuthController>();
   bool isPasswordVisible = false;
   bool termsPolicy = false;
@@ -92,6 +93,7 @@ class _FootballerFormState extends State<FootballerForm> {
       "role": "player",
       "country": selectedCountry,
       "state": selectedState,
+      "lga": selectedLga,
       // "dob": dobController.text,
       // "number": contactController.text,
       "position": positionController.text,
@@ -375,21 +377,23 @@ class _FootballerFormState extends State<FootballerForm> {
                       ),
                     ),
                     SizedBox(height: Dimensions.height20),
-                    CountryState(
-                      selectedCountry: selectedCountry,
-                      selectedState: selectedState,
-                      onCountryChanged: (country) {
-                        setState(() {
-                          selectedCountry = country;
-                          selectedState = null;
-                        });
-                      },
-                      onStateChanged: (state) {
-                        setState(() {
-                          selectedState = state;
-                        });
-                      },
-                    ),
+                  CountryState(
+                    selectedCountry: selectedCountry,
+                    selectedState: selectedState,
+                    selectedLga: selectedLga,
+                    onCountryChanged: (c) => setState(() {
+                      selectedCountry = c;
+                      selectedState = null;
+                      selectedLga = null;
+                    }),
+                    onStateChanged: (s) => setState(() {
+                      selectedState = s;
+                      selectedLga = null;
+                    }),
+                    onLgaChanged: (l) => setState(() {
+                      selectedLga = l;
+                    }),
+                  ),
                     SizedBox(height: Dimensions.height20),
 
                     CustomTextField(

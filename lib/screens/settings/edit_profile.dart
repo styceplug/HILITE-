@@ -34,6 +34,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // Location State
   String? selectedCountry;
   String? selectedState;
+  String? selectedLga;
 
   // Player
   List<String> selectedPositions = []; // Holds the full display strings
@@ -96,6 +97,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     selectedCountry = user?.country;
     selectedState = user?.state;
+    selectedLga = user?.lga;
 
     // --- REVERSE MAP POSITIONS ---
     // Backend returns "GK, ST". We map it back to ["GK — Goalkeeper", "ST — Striker"] for the UI.
@@ -202,6 +204,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     // --- LOCATION FIX ---
     addIfChanged('country', selectedCountry, user.country);
     addIfChanged('state', selectedState, user.state);
+    addIfChanged('lga', selectedLga, user.lga);
 
     // Player
     if (user.role == 'player') {
@@ -329,8 +332,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 CountryState(
                   selectedCountry: selectedCountry,
                   selectedState: selectedState,
-                  onCountryChanged: (c) => setState(() => selectedCountry = c),
-                  onStateChanged: (s) => setState(() => selectedState = s),
+                  selectedLga: selectedLga, // Pass LGA down
+                  onCountryChanged: (c) => setState(() {
+                    selectedCountry = c;
+                    selectedState = null; // Clear state on country change
+                    selectedLga = null;   // Clear LGA on country change
+                  }),
+                  onStateChanged: (s) => setState(() {
+                    selectedState = s;
+                    selectedLga = null;   // Clear LGA on state change
+                  }),
+                  onLgaChanged: (l) => setState(() {
+                    selectedLga = l;      // Update LGA
+                  }),
                 ),
                 const SizedBox(height: 20),
 
