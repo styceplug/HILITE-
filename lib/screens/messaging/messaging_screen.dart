@@ -62,6 +62,11 @@ class _MessagingScreenState extends State<MessagingScreen>
       _draftPlayer.playing &&
       _draftPlayer.playerState.processingState != ProcessingState.completed;
 
+
+  Worker? _messageListener;
+  Worker? _typingListener;
+  bool _isFirstLoad = true;
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +74,15 @@ class _MessagingScreenState extends State<MessagingScreen>
     ctrl = Get.find<ChatController>();
     ctrl.initChat(chat: widget.chat, myId: widget.myId);
     _scrollCtrl.addListener(_onScroll);
+    _scrollToBottom(animate: false);
+    _messageListener = ever(ctrl.messages, (_) {
+      _scrollToBottom(animate: !_isFirstLoad);
+      _isFirstLoad = false;
+    });
+
+    _typingListener = ever(ctrl.peerIsTyping, (_) {
+      _scrollToBottom(animate: true);
+    });
     _draftPlayer = AudioPlayer();
     _draftPlayerStateSub = _draftPlayer.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
@@ -87,7 +101,6 @@ class _MessagingScreenState extends State<MessagingScreen>
       setState(() => _draftDuration = duration);
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
   }
 
   @override
@@ -96,6 +109,8 @@ class _MessagingScreenState extends State<MessagingScreen>
     ctrl.closeChat();
     _textCtrl.dispose();
     _scrollCtrl.dispose();
+    _messageListener?.dispose();
+    _typingListener?.dispose();
     _recordingTimer?.cancel();
     unawaited(_AudioMessagePlaybackCoordinator.stopActive());
     _draftPlayerStateSub?.cancel();
@@ -135,14 +150,20 @@ class _MessagingScreenState extends State<MessagingScreen>
     }
   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+  void _scrollToBottom({bool animate = true}) {
+    // Shorter delay for the instant snap to prevent flashing
+    Future.delayed(Duration(milliseconds: animate ? 150 : 50), () {
+      if (mounted && _scrollCtrl.hasClients && _scrollCtrl.position.maxScrollExtent > 0) {
+        if (animate) {
+          _scrollCtrl.animateTo(
+            _scrollCtrl.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        } else {
+          // INSTANT SNAP TO BOTTOM (No animation)
+          _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+        }
       }
     });
   }
