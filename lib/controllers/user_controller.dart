@@ -36,7 +36,10 @@ class UserController extends GetxController {
   RxList<PostModel> searchVideos = <PostModel>[].obs;
   final RxSet<String> followBusyUserIds = <String>{}.obs;
   final Map<String, bool> _followStateOverrides = <String, bool>{};
-
+  RxList<String> selectedPositions = <String>[].obs;
+  RxString selectedAvailability = ''.obs;
+  RxString selectedFoot = ''.obs;
+  RxString selectedExperience = ''.obs;
   bool isPostsLoading = false;
 
   // List<PersonalPostModel> myPosts = [];
@@ -623,106 +626,94 @@ class UserController extends GetxController {
 
   void applyFilters() {
     print("🔍 Starting applyFilters...");
-    print("   - Total recommended users: ${recommendedUsers.length}");
-    print("   - Search query: '${searchQuery.value}'");
-    print("   - Selected role: '${selectedRole.value}'");
-    print("   - Selected position: '${selectedPosition.value}'");
-    print("   - Selected club: '${selectedClub.value}'");
-    print("   - Selected age range: '${selectedAgeRange.value}'");
-    print("   - Selected region: '${selectedRegion.value}'");
-    print("   - Search results: ${filteredUsers.length}");
 
-    List<UserModel> list = List.from(recommendedUsers);
+    // 1. Base list: If searching, use search results. Otherwise, use recommendations.
+    List<UserModel> list = searchQuery.value.isNotEmpty
+        ? List.from(searchUsers)
+        : List.from(recommendedUsers);
 
-    // 🔍 Filter by search query
-    if (searchQuery.value.isNotEmpty) {
-      final query = searchQuery.value.toLowerCase().trim();
-      final beforeCount = list.length;
-
-      list =
-          list.where((user) {
-            final nameLower = user.name.toLowerCase();
-            final usernameLower = user.username.toLowerCase();
-            final bioLower = user.bio?.toLowerCase() ?? '';
-            final clubNameLower =
-                user.clubDetails?.clubName.toLowerCase() ?? '';
-
-            return nameLower.contains(query) ||
-                usernameLower.contains(query) ||
-                bioLower.contains(query) ||
-                clubNameLower.contains(query);
-          }).toList();
-
-      print("   - After search filter: $beforeCount → ${list.length}");
-    }
-
-    // 👤 Filter by role (fan/player/agent/club)
+    // 2. Filter by Role
     if (selectedRole.value.isNotEmpty) {
-      final beforeCount = list.length;
-      list = list.where((user) => user.role == selectedRole.value).toList();
-      print("   - After role filter: $beforeCount → ${list.length}");
+      list = list.where((user) => user.role.toLowerCase() == selectedRole.value.toLowerCase()).toList();
     }
 
-    // ⚽ Filter by position (only for players)
-    if (selectedPosition.value.isNotEmpty) {
-      final beforeCount = list.length;
-      list =
-          list.where((user) {
-            return user.playerDetails?.position == selectedPosition.value;
-          }).toList();
-      print("   - After position filter: $beforeCount → ${list.length}");
-    }
-
-    // 🏟️ Filter by club name
-    if (selectedClub.value.isNotEmpty) {
-      final clubQuery = selectedClub.value.toLowerCase().trim();
-      final beforeCount = list.length;
-
-      list =
-          list.where((user) {
-            final clubName = user.clubDetails?.clubName.toLowerCase() ?? '';
-            return clubName.contains(clubQuery);
-          }).toList();
-
-      print("   - After club filter: $beforeCount → ${list.length}");
-    }
-
-    // 🎂 Filter by age range (only for players)
-    if (selectedAgeRange.value.isNotEmpty) {
-      final beforeCount = list.length;
-      final range = selectedAgeRange.value;
-
-      list =
-          list.where((user) {
-            // only apply to players
-            if (user.role != 'player') return false;
-
-            final dob = user.playerDetails?.dob;
-            return _matchesAgeRange(dob, range);
-          }).toList();
-
-      print("   - After age filter ($range): $beforeCount → ${list.length}");
-    }
-
-    // 🌍 Filter by region/state
+    // 3. Filter by Location (Smart matching for Country, State, or LGA)
     if (selectedRegion.value.isNotEmpty) {
-      final beforeCount = list.length;
       final region = selectedRegion.value.toLowerCase().trim();
-
-      list =
-          list.where((user) {
-            return user.state.toLowerCase().trim() == region;
-          }).toList();
-
-      print("   - After region filter: $beforeCount → ${list.length}");
+      list = list.where((user) {
+        return user.country.toLowerCase().contains(region) ||
+            user.state.toLowerCase().contains(region) ||
+            (user.lga.toLowerCase().contains(region));
+      }).toList();
     }
 
-    list = _excludeCurrentUser(list);
+    // --- PLAYER SPECIFIC FILTERS ---
+    if (selectedRole.value == 'player' || selectedRole.value.isEmpty) {
 
-    // Update filtered list
+      // A. Multi-Select Positions
+      if (selectedPositions.isNotEmpty) {
+        list = list.where((user) {
+          if (user.role != 'player') return false;
+          final userPos = user.playerDetails?.position?.toLowerCase() ?? '';
+          // Returns true if ANY of the selected positions exist in the user's position string
+          return selectedPositions.any((p) => userPos.contains(p.toLowerCase()));
+        }).toList();
+      }
+
+      // B. Age Range
+      if (selectedAgeRange.value.isNotEmpty) {
+        list = list.where((user) {
+          if (user.role != 'player') return false;
+          return _matchesAgeRange(user.playerDetails?.dob, selectedAgeRange.value);
+        }).toList();
+      }
+
+      // C. Preferred Foot
+      if (selectedFoot.value.isNotEmpty) {
+        list = list.where((user) {
+          if (user.role != 'player') return false;
+          return user.playerDetails?.preferredFoot?.toLowerCase() == selectedFoot.value.toLowerCase();
+        }).toList();
+      }
+
+      // D. Availability / Current Club
+      if (selectedAvailability.value.isNotEmpty) {
+        final availQuery = selectedAvailability.value.toLowerCase().trim();
+        list = list.where((user) {
+          if (user.role != 'player') return false;
+          final club = user.playerDetails?.currentClub?.toLowerCase() ?? '';
+          return club.contains(availQuery);
+        }).toList();
+      }
+    }
+
+    // --- AGENT SPECIFIC FILTERS ---
+    if (selectedRole.value == 'agent' && selectedExperience.value.isNotEmpty) {
+      final expQuery = selectedExperience.value.toLowerCase().trim();
+      list = list.where((user) {
+        if (user.role != 'agent') return false;
+        final exp = user.agentDetails?.experience?.toLowerCase() ?? '';
+        return exp.contains(expQuery);
+      }).toList();
+    }
+
+    // Exclude current user and update UI
+    list = _excludeCurrentUser(list);
     filteredUsers.assignAll(list);
 
     print("🔎 Filters applied: ${filteredUsers.length} results");
+  }
+
+  void clearAllFilters() {
+    searchQuery.value = '';
+    selectedRole.value = '';
+    selectedPositions.clear();
+    selectedRegion.value = '';
+    selectedAgeRange.value = '';
+    selectedFoot.value = '';
+    selectedAvailability.value = '';
+    selectedExperience.value = '';
+    applyFilters();
   }
 
   bool _matchesAgeRange(dynamic dob, String range) {
@@ -779,14 +770,6 @@ class UserController extends GetxController {
 
   Timer? _searchDebounce;
 
-  void clearAllFilters() {
-    searchQuery.value = '';
-    selectedRole.value = '';
-    selectedPosition.value = '';
-    selectedClub.value = '';
-    selectedRegion.value = '';
-    applyFilters();
-  }
 
   @override
   void onClose() {

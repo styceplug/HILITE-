@@ -12,6 +12,7 @@ class UserModel {
   final String number;
   final String country;
   final String state;
+  final String lga;
   final String profilePicture;
   final String? bio;
   final String tokenBalance;
@@ -39,6 +40,7 @@ class UserModel {
     required this.number,
     required this.country,
     required this.state,
+    required this.lga,
     required this.tokenBalance,
     this.bio,
     required this.profilePicture,
@@ -94,6 +96,7 @@ class UserModel {
       number: json['number'] ?? '',
       country: json['country'] ?? '',
       state: json['state'] ?? '',
+      lga: json['lga'] ?? '',
       tokenBalance:
           (json['tokenBalance'] != null)
               ? json['tokenBalance'].toString()
@@ -142,6 +145,8 @@ class UserModel {
       'number': number,
       'country': country,
       'state': state,
+      'lga': lga,
+      'tokenBalance': tokenBalance,
       'bio': bio,
       'profilePicture': profilePicture,
       'playerDetails': playerDetails?.toJson(),
@@ -176,6 +181,7 @@ class UserModel {
     String? number,
     String? country,
     String? state,
+    String? lga,
     String? profilePicture,
     String? tokenBalance,
     String? bio,
@@ -204,6 +210,7 @@ class UserModel {
       country: country ?? this.country,
       tokenBalance: tokenBalance ?? this.tokenBalance,
       state: state ?? this.state,
+      lga: lga ?? this.lga,
       bio: bio ?? this.bio,
       profilePicture: profilePicture ?? this.profilePicture,
       playerDetails: playerDetails ?? this.playerDetails,
