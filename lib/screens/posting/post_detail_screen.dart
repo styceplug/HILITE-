@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/controllers/post_controller.dart';
+import 'package:hilite/screens/posting/user_tagging.dart';
 import 'package:hilite/utils/dimensions.dart';
 import 'package:hilite/widgets/custom_appbar.dart';
 import 'package:hilite/widgets/custom_button.dart';
@@ -10,6 +11,8 @@ import 'package:hilite/widgets/custom_textfield.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../data/repo/user_repo.dart';
+import '../../models/user_model.dart';
 import '../../utils/colors.dart';
 
 import 'dart:io';
@@ -39,13 +42,17 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
   List<String> selectedTags = [];
   final List<String> suggestedTags = ['Speed', 'Dribbling', 'Finishing', 'Goal', 'Highlights', 'ScoutMe'];
 
+  final UserRepo userRepo = Get.find<UserRepo>();
+  List<UserModel> taggedUsers = [];
+
+
+
   @override
   void initState() {
     super.initState();
     _descController = TextEditingController();
     _tagController = TextEditingController();
 
-    // Extract arguments safely
     final args = Get.arguments as Map<String, dynamic>;
     file = args['file'] as XFile;
     isVideo = args['isVideo'] as bool? ?? false;
@@ -74,6 +81,10 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     super.dispose();
   }
 
+
+
+
+
   // --- TAG LOGIC ---
   void _addTag(String tag) {
     String cleanTag = tag.trim().replaceAll('#', '');
@@ -96,10 +107,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
 
     final String caption = _descController.text.trim();
 
-    // Create a local copy of the tags to guarantee everything is captured
     List<String> finalTags = List.from(selectedTags);
-
-    // If they typed a tag but forgot to press space/enter before clicking post, catch it!
     String pendingTag = _tagController.text.trim().replaceAll('#', '');
     if (pendingTag.isNotEmpty && !finalTags.contains(pendingTag)) {
       finalTags.add(pendingTag);
@@ -107,8 +115,10 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
 
     FocusScope.of(context).unfocus();
 
-    // --- DEBUG PRINT ---
-    debugPrint("📱 [UI LAYER] UPLOADING WITH TAGS: $finalTags");
+    // Convert the List of UserModels into a List of IDs
+    final List<String> userTagIds = taggedUsers.map((user) => user.id).toList();
+
+    debugPrint("📱 [UI LAYER] UPLOADING WITH HASHTAGS: $finalTags AND USER TAGS: $userTagIds");
 
     postController.uploadMediaPost(
       file: file,
@@ -117,7 +127,8 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
       description: caption,
       text: caption,
       isPublic: true,
-      tags: finalTags, // <-- Pass the guaranteed list
+      tags: finalTags,
+      userTags: userTagIds, // Passed to API
     );
   }
 
@@ -250,14 +261,16 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- CAPTION INPUT ---
-        CustomTextField( // Assuming your CustomTextField takes styling
+        // --- 1. CAPTION INPUT ---
+        CustomTextField(
           controller: _descController,
           hintText: 'Write a caption...',
-          maxLines: 3,
+          maxLines: 4,
           onChanged: (val) => setState(() {}),
         ),
-        const SizedBox(height: 5),
+
+        // --- 3. CHARACTER COUNTER ---
+        const SizedBox(height: 4),
         Align(
           alignment: Alignment.centerRight,
           child: Text(
@@ -265,9 +278,61 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
             style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 12),
           ),
         ),
+
+
+         SizedBox(height: Dimensions.height15),
+
+// --- DEDICATED TAG PEOPLE ROW ---
+        InkWell(
+          onTap: () {
+            FocusScope.of(context).unfocus(); // Dismiss keyboard
+            Get.bottomSheet(
+              UserTaggingSheet(
+                initiallySelected: taggedUsers,
+                onComplete: (newSelection) {
+                  setState(() {
+                    taggedUsers = newSelection;
+                  });
+                },
+              ),
+              isScrollControlled: true, // Allows sheet to cover 80% of screen
+            );
+          },
+          child: Container(
+            // margin: EdgeInsets.symmetric(horizontal: Dimensions.width25),
+            padding:  EdgeInsets.symmetric(vertical: Dimensions.height20,horizontal: Dimensions.width5),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
+                top: BorderSide(color: Colors.white.withOpacity(0.1)),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.person_add_alt_1, color: Colors.white),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    "Tag People",
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                ),
+                if (taggedUsers.isNotEmpty)
+                  Text(
+                    "${taggedUsers.length} selected",
+                    style: TextStyle(color: Colors.blueAccent, fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                const SizedBox(width: 8),
+                const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white54),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 20),
 
-        // --- TAG INPUT ---
+
+
+        // --- 4. REGULAR TAG INPUT ---
         const Text("Tags", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 10),
 
@@ -284,7 +349,6 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
             contentPadding: const EdgeInsets.symmetric(vertical: 14),
           ),
           onChanged: (val) {
-            // Automatically add tag if user presses space or comma
             if (val.endsWith(' ') || val.endsWith(',')) {
               _addTag(val.substring(0, val.length - 1));
             }
@@ -293,7 +357,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
         ),
         const SizedBox(height: 15),
 
-        // --- SELECTED TAGS WRAP ---
+        // --- 5. SELECTED TAGS WRAP ---
         if (selectedTags.isNotEmpty) ...[
           Wrap(
             spacing: 8.0,
@@ -321,7 +385,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
           const SizedBox(height: 20),
         ],
 
-        // --- SUGGESTED TAGS ---
+        // --- 6. SUGGESTED TAGS ---
         Text("Suggested", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
         const SizedBox(height: 10),
         SingleChildScrollView(

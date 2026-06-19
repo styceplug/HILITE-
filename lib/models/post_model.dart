@@ -21,6 +21,7 @@ class PostModel {
   final List<String> tags;
   final double? score;
   final DateTime? createdAt;
+  final List<UserModel> taggedUsers;
 
   PostModel({
     required this.id,
@@ -37,6 +38,7 @@ class PostModel {
     this.tags = const [],
     this.score,
     this.createdAt,
+    this.taggedUsers = const [],
   });
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
@@ -59,6 +61,19 @@ class PostModel {
       parsedAuthorId = data['author'];
     }
 
+    List<UserModel> parsedTaggedUsers = [];
+    if (data['taggedUsers'] != null && data['taggedUsers'] is List) {
+      for (var item in data['taggedUsers']) {
+        if (item is Map<String, dynamic>) {
+          // If the backend populates the user object
+          parsedTaggedUsers.add(UserModel.fromJson(item));
+        } else if (item is String) {
+          // Fallback just in case it returns raw IDs
+          parsedTaggedUsers.add(UserModel.minimal(item));
+        }
+      }
+    }
+
     return PostModel(
       id: data['_id'] ?? '',
       type: data['type'] ?? 'text',
@@ -72,7 +87,7 @@ class PostModel {
       isLiked: data['isLiked'] ?? false,
       isBookmarked: data['isBookmarked'] ?? false,
       tags: data['tags'] != null ? List<String>.from(data['tags']) : [],
-      // --- ADD THESE TWO LINES ---
+      taggedUsers: parsedTaggedUsers,
       score: (data['score'] is int) ? (data['score'] as int).toDouble() : (data['score'] ?? 0.0),
       createdAt: DateTime.tryParse(data['createdAt'] ?? '') ?? DateTime.now(),
     );
@@ -129,12 +144,16 @@ class ContentDetails {
 
 class PersonalPostModel {
   String? id;
-  String? type; // 'text', 'image', 'video'
+  String? type;
   String? text;
   String? mediaUrl;
   String? thumbnail;
-  double? duration; // Added from JSON
-  DateTime createdAt; // ⚠️ REQUIRED for the sorting logic
+  double? duration;
+  DateTime createdAt;
+  List<dynamic> likes;
+  List<dynamic> comments;
+  bool isLiked;
+  List<UserModel>? taggedUsers;
 
   PersonalPostModel({
     this.id,
@@ -144,6 +163,10 @@ class PersonalPostModel {
     this.thumbnail,
     this.duration,
     required this.createdAt,
+    this.likes = const [],
+    this.comments = const [],
+    this.isLiked = false,
+    this.taggedUsers,
   });
 
   factory PersonalPostModel.fromJson(Map<String, dynamic> json) {
@@ -164,6 +187,18 @@ class PersonalPostModel {
       extractedMediaUrl = MediaUrlHelper.resolve(json['mediaUrl'] ?? json['file']);
     }
 
+    List<UserModel> parsedTaggedUsers = [];
+    if (json['taggedUsers'] != null && json['taggedUsers'] is List) {
+      for (var item in json['taggedUsers']) {
+        if (item is Map<String, dynamic>) {
+          parsedTaggedUsers.add(UserModel.fromJson(item));
+        } else if (item is String) {
+          // Handle case where API returns a string ID instead of a User object
+          parsedTaggedUsers.add(UserModel.minimal(item));
+        }
+      }
+    }
+
     return PersonalPostModel(
       id: json['_id'],
       type: json['type'],
@@ -172,6 +207,10 @@ class PersonalPostModel {
       thumbnail: extractedThumbnail,
       duration: extractedDuration,
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      likes: json['likes'] ?? [],
+      comments: json['comments'] ?? [],
+      isLiked: json['isLiked'] ?? false,
+      taggedUsers: parsedTaggedUsers,
     );
   }
 }

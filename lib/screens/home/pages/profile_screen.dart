@@ -481,7 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             itemCount: savedPosts.length,
             itemBuilder: (context, index) {
               final post = savedPosts[index];
-              return GestureDetector(
+              /*return GestureDetector(
                 onTap: () {
                   if (post.type == 'video') {
                     final videoOnlyList = savedPosts.where((p) => p.type == 'video').toList();
@@ -501,13 +501,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   }
                 },
                 child: _buildTileItem(post, post.type ?? 'image'),
+              );*/
+              return GestureDetector(
+                onTap: () {
+                  final tappedIndex = savedPosts.indexOf(post);
+                  if (tappedIndex != -1) {
+                    Get.to(
+                          () => ProfileReelsPlayer(
+                        videos: savedPosts,
+                        initialIndex: tappedIndex,
+                      ),
+                    );
+                  }
+                },
+                child: _buildTileItem(post, post.type ?? 'image'),
               );
             },
           );
         },
       );
     } else if (currentTab == 'Info') {
-      // --- ROUTE TO NEW INFO TAB ---
+
       if (controller.user.value != null) {
         return _buildInfoTab(controller.user.value!);
       }
@@ -531,7 +545,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return const SizedBox.shrink();
   }
 
-  // --- NEW: INFO TAB LAYOUT ---
+
   Widget _buildInfoTab(UserModel user) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -651,7 +665,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Helper widget for the sleek stat cards
   Widget _buildStatCard({required IconData icon, required String label, required String value}) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: Dimensions.width10, vertical: Dimensions.height10),
@@ -703,7 +716,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // --- NEW: SKELETONIZER GRID BUILDER ---
   Widget _buildSkeletonGrid() {
     return Skeletonizer(
       enabled: true,
@@ -783,7 +795,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         return GestureDetector(
           onTap: () {
-            if (postType == 'video') {
+            /*if (postType == 'video') {
               final videoOnlyList =
               allPosts.where((p) => p.type == 'video').toList();
               final converted =
@@ -801,15 +813,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }
             } else {
               Get.to(() => ProfileImageViewer(imageUrl: post.mediaUrl!));
+            }*/
+            final converted = allPosts.map((p) => personalToPostModel(p)).toList();
+            final tappedIndex = allPosts.indexOf(post);
+
+            if (tappedIndex != -1) {
+              Get.to(
+                    () => ProfileReelsPlayer(
+                  videos: converted,
+                  initialIndex: tappedIndex,
+                ),
+              );
             }
           },
           onLongPress: () {
             if (post.id == null) return;
             Get.dialog(
               AlertDialog(
-                title: const Text('Delete Post'),
-                content: const Text(
+                title:  Text('Delete Post',style: TextStyle(color: AppColors.black,fontSize: Dimensions.font20,fontWeight: FontWeight.w500),),
+                content:  Text(
                   'Are you sure you want to delete this post? This action cannot be undone.',
+                  style: TextStyle(color: AppColors.black,fontSize: Dimensions.font14,fontWeight: FontWeight.w400),
                 ),
                 actions: [
                   TextButton(

@@ -56,6 +56,7 @@ class PostRepo {
     required String description,
     required bool isPublic,
     required List<String> tags,
+    required List<String> userTags,
   }) {
     final Map<String, String> fields = {
       'text': text,
@@ -70,6 +71,10 @@ class PostRepo {
       fields['tags'] = tags.join(',');
     }
 
+    if (userTags.isNotEmpty) {
+      fields['userTag'] = jsonEncode(userTags);
+    }
+
     debugPrint('🚀 [API LAYER] PREPARED FIELDS: $fields');
 
     return fields;
@@ -81,7 +86,8 @@ class PostRepo {
     required String title,
     required String description,
     required bool isPublic,
-    required List<String> tags, // Required parameter
+    required List<String> tags,
+    required List<String> userTags,
     String? thumbnailPath,
   }) async {
     MediaType contentType = MediaType('video', 'mp4');
@@ -107,6 +113,7 @@ class PostRepo {
           description: description,
           isPublic: isPublic,
           tags: tags,
+          userTags: userTags,
         ),
         headers: apiClient.mainHeaders,
         thumbnailPath: thumbnailPath,
@@ -126,7 +133,8 @@ class PostRepo {
     required String title,
     required String description,
     required bool isPublic,
-    required List<String> tags, // Added required parameter
+    required List<String> tags,
+    required List<String> userTags,
   }) async {
     MediaType contentType = MediaType('image', 'jpeg');
     if (imageFile.path.endsWith('.png')) {
@@ -149,6 +157,7 @@ class PostRepo {
           description: description,
           isPublic: isPublic,
           tags: tags,
+          userTags: userTags,
         ),
         headers: apiClient.mainHeaders,
       );
