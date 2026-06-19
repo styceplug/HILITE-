@@ -48,6 +48,24 @@ class _FootballerFormState extends State<FootballerForm> {
   TextEditingController weightController = TextEditingController();
   TextEditingController bioController = TextEditingController();
 
+  bool get isFormFilled {
+    return nameController.text.trim().isNotEmpty &&
+        usernameController.text.trim().isNotEmpty &&
+        emailController.text.trim().isNotEmpty &&
+        passwordController.text.trim().isNotEmpty &&
+        positionController.text.isNotEmpty &&
+        footController.text.isNotEmpty &&
+        selectedCountry != null &&
+        selectedState != null &&
+        selectedLga != null &&
+        termsPolicy == true &&
+        authController.isUsernameAvailable.value == true;
+  }
+
+  void _onFieldChanged() {
+    setState(() {});
+  }
+
   void togglePass() {
     setState(() {
       isPasswordVisible = !isPasswordVisible;
@@ -75,6 +93,29 @@ class _FootballerFormState extends State<FootballerForm> {
   @override
   void initState() {
     super.initState();
+
+    nameController.addListener(_onFieldChanged);
+    usernameController.addListener(_onFieldChanged);
+    emailController.addListener(_onFieldChanged);
+    passwordController.addListener(_onFieldChanged);
+  }
+
+  @override
+  void dispose() {
+    // Always dispose listeners to prevent memory leaks
+    nameController.removeListener(_onFieldChanged);
+    usernameController.removeListener(_onFieldChanged);
+    emailController.removeListener(_onFieldChanged);
+    passwordController.removeListener(_onFieldChanged);
+
+    nameController.dispose();
+    usernameController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    positionController.dispose();
+    footController.dispose();
+    debounceTimer?.cancel();
+    super.dispose();
   }
 
   Map<String, dynamic> body() {
@@ -377,23 +418,26 @@ class _FootballerFormState extends State<FootballerForm> {
                       ),
                     ),
                     SizedBox(height: Dimensions.height20),
-                  CountryState(
-                    selectedCountry: selectedCountry,
-                    selectedState: selectedState,
-                    selectedLga: selectedLga,
-                    onCountryChanged: (c) => setState(() {
-                      selectedCountry = c;
-                      selectedState = null;
-                      selectedLga = null;
-                    }),
-                    onStateChanged: (s) => setState(() {
-                      selectedState = s;
-                      selectedLga = null;
-                    }),
-                    onLgaChanged: (l) => setState(() {
-                      selectedLga = l;
-                    }),
-                  ),
+                    CountryState(
+                      selectedCountry: selectedCountry,
+                      selectedState: selectedState,
+                      selectedLga: selectedLga,
+                      onCountryChanged:
+                          (c) => setState(() {
+                            selectedCountry = c;
+                            selectedState = null;
+                            selectedLga = null;
+                          }),
+                      onStateChanged:
+                          (s) => setState(() {
+                            selectedState = s;
+                            selectedLga = null;
+                          }),
+                      onLgaChanged:
+                          (l) => setState(() {
+                            selectedLga = l;
+                          }),
+                    ),
                     SizedBox(height: Dimensions.height20),
 
                     CustomTextField(
@@ -413,7 +457,6 @@ class _FootballerFormState extends State<FootballerForm> {
                         ),
                       ),
                     ),
-
 
                     SizedBox(height: Dimensions.height20),
                     InkWell(
@@ -452,6 +495,8 @@ class _FootballerFormState extends State<FootballerForm> {
 
                     CustomButton(
                       text: "Submit Player Profile",
+                      isDisabled: !termsPolicy,
+                      backgroundColor: AppColors.buttonColor,
                       onPressed: () {
                         if (!termsPolicy) {
                           CustomSnackBar.failure(

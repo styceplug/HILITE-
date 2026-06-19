@@ -59,10 +59,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyA2UtQAPC0fGRHY2lSDzsb109RMBmFT76o',
-    appId: '1:522058165852:ios:71b8766a87b8120c2a0099',
+    appId: '1:522058165852:ios:ad592c4ff01030d12a0099',
     messagingSenderId: '522058165852',
     projectId: 'hilite-fd1fe',
     storageBucket: 'hilite-fd1fe.firebasestorage.app',
-    iosBundleId: 'com.project.hilite.hilite',
+    iosBundleId: 'com.project.hilite',
   );
+
 }

@@ -40,63 +40,40 @@ Future<void> init() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   Get.put(sharedPreferences);
   Get.put(UploadService(), permanent: true);
+  Get.put(SocketHelper(), permanent: true);
+  Get.put(GlobalLoaderController());
 
-  Get.lazyPut(
-    () => ApiClient(
+  Get.put(
+    ApiClient(
       appBaseUrl: AppConstants.BASE_URL,
       sharedPreferences: Get.find(),
     ),
   );
-  Get.lazyPut(() => ApiChecker());
 
-  Get.lazyPut(
-    () => AppRepo(apiClient: Get.find(), sharedPreferences: Get.find()),
-  );
+  Get.lazyPut(() => ApiChecker());
+  Get.lazyPut(() => AppRepo(apiClient: Get.find(), sharedPreferences: Get.find()));
   Get.lazyPut(() => VersionRepo(apiClient: Get.find()));
-  Get.lazyPut(
-    () => AuthRepo(apiClient: Get.find(), sharedPreferences: Get.find()),
-  );
-  Get.lazyPut(
-    () => UserRepo(
-      apiClient: Get.find(),
-      sharedPreferences: Get.find(),
-      authRepo: Get.find(),
-    ),
-  );
+  Get.lazyPut(() => AuthRepo(apiClient: Get.find(), sharedPreferences: Get.find()));
+  Get.lazyPut(() => UserRepo(apiClient: Get.find(), sharedPreferences: Get.find(), authRepo: Get.find()));
   Get.lazyPut(() => PostRepo(apiClient: Get.find()));
   Get.lazyPut(() => TrialRepo(apiClient: Get.find()));
   Get.lazyPut(() => NotificationRepo(apiClient: Get.find()));
   Get.lazyPut(() => CompetitionRepo(apiClient: Get.find()));
   Get.lazyPut(() => WalletRepo(apiClient: Get.find()), fenix: true);
-
-  Get.put(SocketHelper(), permanent: true);
   Get.lazyPut<ChatRepo>(() => ChatRepo(apiClient: Get.find()), fenix: true);
 
-  Get.lazyPut(() => AppController(appRepo: Get.find()));
+  Get.put(UserController(userRepo: Get.find(), sharedPreferences: Get.find()));
+  Get.put(AuthController(authRepo: Get.find(), sharedPreferences: Get.find()));
+
+  Get.put(PostController(postRepo: Get.find()));
+
+  Get.put(AppController(appRepo: Get.find()));
+
   Get.lazyPut(() => VersionController(versionRepo: Get.find()));
-  Get.lazyPut(
-    () => AuthController(authRepo: Get.find(), sharedPreferences: Get.find()),
-  );
-  Get.lazyPut(
-    () => UserController(userRepo: Get.find(), sharedPreferences: Get.find()),
-  );
-  Get.lazyPut(() => GlobalLoaderController());
   Get.lazyPut(() => WalletController(walletRepo: Get.find()), fenix: true);
-  Get.lazyPut(() => PostController(postRepo: Get.find()));
   Get.lazyPut(() => NotificationController(notificationRepo: Get.find()), fenix: true);
   Get.lazyPut(() => TrialController(trialRepo: Get.find()), fenix: true);
-  Get.lazyPut(
-    () => CompetitionController(competitionRepo: Get.find()),
-    fenix: true,
-  );
-
-  Get.lazyPut(
-    () => ChatListController(chatRepo: Get.find(), socketHelper: Get.find()),
-    fenix: true,
-  );
-
-  Get.lazyPut(
-    () => ChatController(chatRepo: Get.find(), socketHelper: Get.find()),
-    fenix: true,
-  );
+  Get.lazyPut(() => CompetitionController(competitionRepo: Get.find()), fenix: true);
+  Get.lazyPut(() => ChatListController(chatRepo: Get.find(), socketHelper: Get.find()), fenix: true);
+  Get.lazyPut(() => ChatController(chatRepo: Get.find(), socketHelper: Get.find()), fenix: true);
 }
