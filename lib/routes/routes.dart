@@ -116,7 +116,7 @@ class AppRoutes {
               },
             ),
           ),
-          body: ReelsVideoItem(
+          body: ReelsMediaItem(
             index: 0, // Single video, so index is always 0
             post: post,
             controller: controller,

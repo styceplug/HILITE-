@@ -275,7 +275,7 @@ class _RelationshipScreenState extends State<RelationshipScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '@${user.username}',
+                      '@${user.displayName}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
