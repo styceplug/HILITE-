@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hilite/utils/colors.dart';
 
@@ -37,6 +38,7 @@ class CustomAppbar extends StatelessWidget implements PreferredSizeWidget {
 
     return AppBar(
       backgroundColor: AppColors.backgroundColor ,
+      systemOverlayStyle: SystemUiOverlayStyle.light,
       elevation: elevation,
       centerTitle: true,
       automaticallyImplyLeading: false,

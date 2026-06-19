@@ -258,6 +258,29 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     ),
                   ),
                   SizedBox(height: Dimensions.height20),
+
+                  InkWell(
+                    onTap: toggleTerms,
+                    child: Row(
+                      children: [
+                        Icon(
+                          termsPolicy ? Icons.toggle_on : Icons.toggle_off,
+                          color: AppColors.buttonColor,
+                          size: Dimensions.iconSize30 * 2,
+                        ),
+                        SizedBox(width: Dimensions.width5),
+                        Text(
+                          'I am 13 years or older',
+                          style: TextStyle(
+                            color: AppColors.white,
+                            fontSize: Dimensions.font13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: Dimensions.height20),
         
                   Text(
                     'By signing up, you agree to our Terms of Service and Privacy Policy',
@@ -272,6 +295,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         
                   CustomButton(
                     text: 'SIGN UP',
+                    isDisabled: !termsPolicy,
                     onPressed: createAccount,
                     backgroundColor: AppColors.buttonColor,
                   ),

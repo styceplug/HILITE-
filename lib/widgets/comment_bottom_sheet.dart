@@ -9,6 +9,7 @@ import 'package:hilite/widgets/custom_textfield.dart';
 import 'package:hilite/widgets/snackbars.dart';
 
 import '../controllers/post_controller.dart';
+import '../models/comment_model.dart';
 
 class CommentsBottomSheet extends StatelessWidget {
   final String postId;
@@ -17,103 +18,148 @@ class CommentsBottomSheet extends StatelessWidget {
   CommentsBottomSheet({required this.postId, super.key});
 
   String timeAgo(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-
-    final weeks = diff.inDays ~/ 7;
-    if (weeks < 4) return '${weeks}w ago';
-
-    final months = diff.inDays ~/ 30;
-    if (months < 12) return '${months}mo ago';
-
-    final years = diff.inDays ~/ 365;
-    return '${years}y ago';
+    final Duration diff = DateTime.now().difference(date);
+    if (diff.inDays >= 365) {
+      final int years = (diff.inDays / 365).floor();
+      return '${years}y';
+    } else if (diff.inDays >= 30) {
+      final int months = (diff.inDays / 30).floor();
+      return '${months}mo';
+    } else if (diff.inDays >= 1) {
+      return '${diff.inDays}d';
+    } else if (diff.inHours >= 1) {
+      return '${diff.inHours}h';
+    } else if (diff.inMinutes >= 1) {
+      return '${diff.inMinutes}m';
+    } else if (diff.inSeconds >= 5) {
+      return '${diff.inSeconds}s';
+    } else {
+      return 'Now';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.5, // 85% screen height
+      // Increased to 65% for a better reading experience
+      height: MediaQuery.of(context).size.height * 0.65,
       decoration: const BoxDecoration(
-        color: Colors.black,
+        color: Color(0xFF0A0A0A), // Slightly off-black for depth
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
+          // Drag Handle
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+
+          // Header
           Padding(
-            padding: EdgeInsets.symmetric(vertical: Dimensions.height20),
-            child: Text(
+            padding: EdgeInsets.symmetric(vertical: Dimensions.height15),
+            child: Obx(() => Text(
               'Comments (${postController.comments.length})',
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
               ),
-            ),
+            )),
           ),
-          const Divider(color: Colors.grey, height: 1),
+          const Divider(color: Colors.white10, height: 1, thickness: 1),
 
+          // Comments List
           Expanded(
             child: Obx(() {
+              final sortedComments = List<CommentModel>.from(postController.comments)
+                ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
               if (postController.isLoading.value) {
                 return const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                 );
               }
+
               if (postController.comments.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'Be the first to comment!',
-                    style: TextStyle(color: Colors.grey),
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.chat_bubble_outline, color: Colors.white.withOpacity(0.2), size: 50),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Be the first to comment!',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                    ],
                   ),
                 );
               }
 
               return ListView.builder(
-                itemCount: postController.comments.length,
+                padding: const EdgeInsets.only(top: 10, bottom: 20),
+                itemCount: sortedComments.length,
                 itemBuilder: (context, index) {
-                  final comment = postController.comments[index];
+                  final comment = sortedComments[index];
+
                   return Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 15,
-                      vertical: 10,
+                      horizontal: 16,
+                      vertical: 12,
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         CircleAvatar(
                           radius: 18,
+                          backgroundColor: Colors.white12,
                           backgroundImage: NetworkImage(
-                            (comment.user.profilePicture?.trim().isNotEmpty ??
-                                    false)
+                            (comment.user.profilePicture?.trim().isNotEmpty ?? false)
                                 ? comment.user.profilePicture!
                                 : _CommentInputFieldState._fallbackAvatarUrl,
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Username and Time
-                              Text(
-                                '${comment.user.username} · ${timeAgo(comment.createdAt)}',
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
+                              // Username and Time (Hierarchical)
+                              RichText(
+                                text: TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: comment.user.username,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: '  ·  ${timeAgo(comment.createdAt)}',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.5),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                              const SizedBox(height: 4),
                               // Comment Content
                               Text(
                                 comment.content,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.95),
                                   fontSize: 14,
+                                  height: 1.3, // Better readability
                                 ),
                               ),
                             ],
@@ -127,16 +173,17 @@ class CommentsBottomSheet extends StatelessWidget {
             }),
           ),
 
-          // 2. Comment Input Field
+          // Comment Input Field
           _CommentInputField(postId: postId),
-          SizedBox(height: Dimensions.height30),
+
+          // Padding for modern iOS/Android home indicators
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
         ],
       ),
     );
   }
 }
 
-// Separate Widget for the Input Field
 class _CommentInputField extends StatefulWidget {
   final String postId;
 
