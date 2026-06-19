@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
@@ -10,25 +12,32 @@ import 'package:timezone/data/latest.dart' as tzData;
 import 'package:permission_handler/permission_handler.dart';
 
 import '../controllers/user_controller.dart';
+import '../widgets/snackbars.dart';
 
 
 
 @pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print("🌙 Background Message: ${message.messageId}");
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print("🌙 Background Message: ${message.messageId} | data: ${message.data}");
 }
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
+
   factory NotificationService() => _instance;
+
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications =
+  FlutterLocalNotificationsPlugin();
+  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
 
   Future<void> initialize() async {
-    tzData.initializeTimeZones();
-
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    // Local notifications init
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings();
 
     const initSettings = InitializationSettings(
@@ -41,91 +50,205 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
-    // ✅ Pre-create channel so Android doesn’t block notifications silently
-    const androidChannel = AndroidNotificationChannel(
-      'live_room_channel',
-      'Live Room Notifications',
-      description: 'Notifications for upcoming live room sessions',
-      importance: Importance.high,
+    await _createNotificationChannels();
+
+    // iOS: show notifications while app is open (optional but recommended)
+    await _fcm.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
     );
 
-    await _notifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(androidChannel);
+    await _initPushNotifications();
   }
 
-  void _onNotificationTapped(NotificationResponse response) {
-    if (response.payload != null) {
-      print('Notification tapped with payload: ${response.payload}');
-      // Handle navigation here if needed
+  Future<bool> requestNotificationPermission() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+    // Request permission from the user (iOS triggers a popup, Android 13+ triggers a popup)
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false, // Set to true if you want silent notifications initially
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print('✅ User granted permission');
+      CustomSnackBar.success(message: "Notification permission granted");
+      return true;
+    } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
+      print('✅ User granted provisional permission');
+      CustomSnackBar.success(message: "Notification permission granted");
+      return true;
+    } else {
+      print('⚠️ User declined or has not accepted permission');
+      return false;
     }
   }
 
-  Future<bool> requestPermissions() async {
-    if (Platform.isAndroid) {
-      final androidImpl =
-      _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  Future<void> _initPushNotifications() async {
+    final settings = await _fcm.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
 
-      if (androidImpl != null) {
-        final granted = await androidImpl.requestNotificationsPermission();
-        await Permission.scheduleExactAlarm.request();
-        return granted ?? false;
+    if (settings.authorizationStatus != AuthorizationStatus.authorized) {
+      print('❌ Push Permission Denied');
+      return;
+    }
+
+    print('✅ Push Permission Granted');
+
+    // Get current token + sync
+    await syncTokenToServer();
+
+    // Token refresh (VERY IMPORTANT)
+    _fcm.onTokenRefresh.listen((newToken) async {
+      print("🔁 FCM Token refreshed: $newToken");
+      await syncTokenToServer(tokenOverride: newToken);
+    });
+
+    // Foreground messages -> show local notification
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final notification = message.notification;
+
+      if (notification != null && Platform.isAndroid) {
+        showRemoteNotification(notification, message.data);
       }
-    } else if (Platform.isIOS) {
-      final iosImpl =
-      _notifications.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-      return await iosImpl?.requestPermissions(alert: true, badge: true, sound: true) ?? false;
+    });
+
+    // Click from background
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      _handleNavigation(message.data);
+    });
+
+    // Click from terminated
+    final initialMessage = await _fcm.getInitialMessage();
+    if (initialMessage != null) {
+      _handleNavigation(initialMessage.data);
     }
-    return false;
   }
 
-  Future<void> scheduleRoomNotification({
-    required int id,
-    required String title,
-    required String hostName,
-    required String sessionType,
-    required DateTime scheduledDateTime,
-  }) async {
-    final hasPermission = await requestPermissions();
-    if (!hasPermission) throw Exception('Notification permissions not granted');
+  /// Call this after login too (and it’s safe to call multiple times)
 
-    final now = DateTime.now();
-    final notificationTime = scheduledDateTime.subtract(const Duration(minutes: 5));
 
-    // ✅ Fix: Don’t throw for close times — just trigger instantly if needed
-    final targetTime = notificationTime.isBefore(now) ? now.add(const Duration(seconds: 5)) : notificationTime;
+  Future<void> syncTokenToServer({String? tokenOverride}) async {
+    String? token = tokenOverride;
 
+    try {
+      if (token == null) {
+        // ✅ 1. Wait for APNs token on iOS FIRST
+        if (Platform.isIOS) {
+          String? apnsToken = await _fcm.getAPNSToken();
+
+          // Wait up to 3 seconds for the APNs token if it's not immediately available
+          int retries = 0;
+          while (apnsToken == null && retries < 3) {
+            await Future.delayed(const Duration(seconds: 1));
+            apnsToken = await _fcm.getAPNSToken();
+            retries++;
+          }
+
+          if (apnsToken == null) {
+            print("⚠️ APNs token not received. Cannot fetch FCM token.");
+            return;
+          }
+        }
+
+        // ✅ 2. Now it is safe to request the FCM token
+        token = await _fcm.getToken();
+      }
+
+      if (token == null) return;
+
+      // ✅ 3. Sync to backend
+      final userController = Get.find<UserController>();
+      await userController.saveDeviceToken();
+      print("✅ Token synced to backend: $token");
+
+    } catch (e) {
+      print("⚠️ Could not sync token now: $e");
+    }
+  }
+
+
+  Future<void> showRemoteNotification(
+      RemoteNotification notification,
+      Map<String, dynamic> payload,
+      ) async {
     const androidDetails = AndroidNotificationDetails(
-      'live_room_channel',
-      'Live Room Notifications',
-      channelDescription: 'Notifications for upcoming live room sessions',
-      importance: Importance.high,
+      'general_channel',
+      'General Notifications',
+      channelDescription: 'otoNav system alerts',
+      importance: Importance.max,
       priority: Priority.high,
-      ticker: 'Live Room Starting Soon',
       icon: '@mipmap/ic_launcher',
-      enableVibration: true,
-      playSound: true,
     );
 
     const iosDetails = DarwinNotificationDetails();
-
-    final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
-
-    await _notifications.zonedSchedule(
-      id,
-      '$sessionType Live Room Starting Soon! 🎙️',
-      '$hostName is hosting "$title" — Join in 5 minutes!',
-      tz.TZDateTime.from(targetTime, tz.local),
-      details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      payload: 'live_room_$id',
-      matchDateTimeComponents: DateTimeComponents.time, // optional, can remove if not repeating
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
     );
 
-    print('✅ Notification scheduled for $targetTime');
+    await _notifications.show(
+      notification.hashCode,
+      notification.title,
+      notification.body,
+      details,
+      payload: jsonEncode(payload),
+    );
   }
 
-  Future<void> cancelNotification(int id) async => _notifications.cancel(id);
+  Future<void> _createNotificationChannels() async {
+    final androidPlugin = _notifications
+        .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+    >();
 
-  Future<void> cancelAllNotifications() async => _notifications.cancelAll();
+    const generalChannel = AndroidNotificationChannel(
+      'general_channel',
+      'General Notifications',
+      description: 'otoNav system alerts',
+      importance: Importance.max,
+      playSound: true,
+    );
+
+    await androidPlugin?.createNotificationChannel(generalChannel);
+  }
+
+  void _onNotificationTapped(NotificationResponse response) {
+    final raw = response.payload;
+    if (raw == null || raw.isEmpty) return;
+
+    try {
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      // _handleNavigation(data);
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  void _handleNavigation(Map<String, dynamic> data) {
+    // You decide your payload contract from backend.
+    // Example:
+    // { "type": "order", "orderId": "123", "status": "picked_up" }
+
+    // final type = data['type'];
+    //
+    // if (type == 'order' && data['orderId'] != null) {
+    //   Get.toNamed(AppRoutes.orderDetails, arguments: {
+    //     "orderId": data['orderId'],
+    //   });
+    //   return;
+    // }
+
+    // fallback
+    Get.offAllNamed(AppRoutes.splashScreen);
+  }
 }
