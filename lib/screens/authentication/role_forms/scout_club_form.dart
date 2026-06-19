@@ -385,6 +385,9 @@ class _AgentProfileFormState extends State<AgentProfileForm> {
 
                     CustomButton(
                       text: "Sign Up",
+                      isDisabled: !termsPolicy,
+                      backgroundColor: AppColors.buttonColor,
+
                       onPressed: () {
                         if (!termsPolicy) {
                           CustomSnackBar.failure(message: 'You must confirm you are 18 or older.');

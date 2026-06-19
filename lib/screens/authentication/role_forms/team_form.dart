@@ -294,6 +294,7 @@ class _ClubProfileFormState extends State<ClubProfileForm> {
                     CustomButton(
                       text: "Sign Up",
                       backgroundColor: AppColors.buttonColor,
+                      isDisabled: !termsPolicy,
                       onPressed: () {
                         if (!termsPolicy) {
                           CustomSnackBar.failure(
