@@ -184,7 +184,7 @@ class _BookmarkPlayerScreenState extends State<BookmarkPlayerScreen> {
             itemBuilder: (_, index) {
               final post = widget.posts[index];
               // Reuse your existing ReelsVideoItem
-              return ReelsVideoItem(
+              return ReelsMediaItem(
                 index: index,
                 post: post,
                 controller: controller,

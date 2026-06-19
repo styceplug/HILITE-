@@ -216,7 +216,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.all(Dimensions.width20),
+        padding: EdgeInsets.fromLTRB(Dimensions.width20, Dimensions.height20, Dimensions.width20, Dimensions.height100),
         child: childContent,
       ),
     );

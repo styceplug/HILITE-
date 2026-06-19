@@ -74,7 +74,6 @@ class AppController extends GetxController {
   }
 
 
-
   Future<void> checkLoginAndNavigate() async {
     final loggedIn = authController.userLoggedIn();
 
@@ -104,10 +103,8 @@ class AppController extends GetxController {
 
     if (movePage) {
       if (pageController.hasClients) {
-        pageController.animateToPage(
+        pageController.jumpToPage(
           page,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
         );
       } else {
         WidgetsBinding.instance.addPostFrameCallback((_) {
