@@ -377,7 +377,6 @@ class UserController extends GetxController {
     try {
       FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-      // 1. Request Permission
       NotificationSettings settings = await messaging.requestPermission(
         alert: true,
         badge: true,
@@ -385,26 +384,22 @@ class UserController extends GetxController {
       );
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        // 🍎 iOS SPECIFIC FIX: Wait for APNs Token
         if (Platform.isIOS) {
           String? apnsToken = await messaging.getAPNSToken();
 
-          // Retry logic: Wait up to 3 seconds if token is null
           if (apnsToken == null) {
             await Future.delayed(const Duration(seconds: 3));
             apnsToken = await messaging.getAPNSToken();
           }
 
-          // If still null, we are likely on a Simulator or config is wrong
           if (apnsToken == null) {
             print(
               "❌ APNs Token is null. Are you on a Simulator? Push won't work.",
             );
-            return; // Stop here to prevent the crash
+            return;
           }
         }
 
-        // 2. Now it's safe to get the FCM Token
         String? token = await messaging.getToken();
 
         if (token != null) {
@@ -412,7 +407,10 @@ class UserController extends GetxController {
           print("📱 Device Token: $token");
 
           // 3. Send to Backend
-          Response response = await userRepo.updateDeviceToken(token, platform);
+          Response response = await userRepo.updateDeviceToken(
+            token: token,
+            platform: platform,
+          );
 
           if (response.statusCode == 200) {
             print("✅ Device Token Synced Successfully");
@@ -425,6 +423,7 @@ class UserController extends GetxController {
       print("❌ Error saving device token: $e");
     }
   }
+
 
   void clearExternalCache() {
     externalPostCache = {'text': [], 'image': [], 'video': []};

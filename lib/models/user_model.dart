@@ -229,6 +229,29 @@ class UserModel {
       isBlocked: isBlocked ?? this.isBlocked,
     );
   }
+
+  factory UserModel.minimal(String id) {
+    return UserModel(
+      id: id,
+      name: 'Unknown',
+      username: 'Unknown',
+      email: '',
+      role: '',
+      number: '',
+      country: '',
+      state: '',
+      lga: '',
+      tokenBalance: '0',
+      profilePicture: '',
+      followers: 0,
+      following: 0,
+      blocked: 0,
+      bookmarks: 0,
+      posts: 0,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
 }
 
 class PlayerDetails {

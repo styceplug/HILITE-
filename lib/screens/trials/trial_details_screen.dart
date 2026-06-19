@@ -334,7 +334,9 @@ class TrialDetailScreen extends StatelessWidget {
       backgroundColor: const Color(0xFF030A1B),
       elevation: 0,
       leading: GestureDetector(
-        onTap: () => Get.back(),
+        onTap: () {
+          Get.back();
+        },
         child: Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
