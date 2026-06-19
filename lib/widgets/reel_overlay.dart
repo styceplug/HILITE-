@@ -7,6 +7,7 @@ import 'package:hilite/controllers/user_controller.dart';
 import 'package:hilite/models/user_model.dart';
 import 'package:hilite/routes/routes.dart';
 import 'package:hilite/utils/dimensions.dart';
+import 'package:hilite/widgets/tagged_users_sheet.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -56,9 +57,7 @@ class ReelsInteractionOverlay extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // ----------------------------------------------------
-              // LEFT SIDE: Details
-              // ----------------------------------------------------
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,6 +178,37 @@ class ReelsInteractionOverlay extends StatelessWidget {
                       ),
                     ],
 
+                    // Check if there are actually people tagged
+                    if (post.taggedUsers.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          Get.bottomSheet(
+                            TaggedUsersSheet(taggedUsers: post.taggedUsers),
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                          );
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(4), // Slightly rounded box
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.person, color: Colors.white, size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                "${post.taggedUsers.length} people",
+                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
 
 
                     SizedBox(height: Dimensions.height150),
@@ -186,9 +216,7 @@ class ReelsInteractionOverlay extends StatelessWidget {
                 ),
               ),
 
-              // ----------------------------------------------------
-              // RIGHT SIDE: Interaction Buttons
-              // ----------------------------------------------------
+
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [

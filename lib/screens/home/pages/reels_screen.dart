@@ -20,20 +20,21 @@ class ReelsScreen extends StatefulWidget {
 
 class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
   final PostController controller = Get.find<PostController>();
-  final String currentType = "video";
+  final String image = "image";
+  final String video = "video";
   bool _isScreenVisible = true;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this); // Listen for app backgrounding
+    WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (controller.posts.isEmpty) {
         controller.activatePlayback();
-        controller.loadRecommendedPosts(currentType);
+        controller.loadRecommendedPosts(image);
+        controller.loadRecommendedPosts(video);
       } else {
-        // If returning to this tab, resume the current video
         _resumeVideo();
       }
     });
@@ -85,7 +86,8 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
         },
         child: RefreshIndicator(
           onRefresh: () async {
-            await controller.loadRecommendedPosts(currentType);
+            await controller.loadRecommendedPosts(video);
+            await controller.loadRecommendedPosts(image);
           },
           child: Obx(() {
             if (controller.posts.isEmpty && controller.isLoading.value) {
@@ -102,7 +104,7 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
                   itemCount: controller.posts.length,
                   onPageChanged: (index) => controller.onPageChanged(index),
                   itemBuilder: (_, index) {
-                    return ReelsVideoItem(
+                    return ReelsMediaItem(
                       index: index,
                       post: controller.posts[index],
                       controller: controller,
