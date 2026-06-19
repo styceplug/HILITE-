@@ -67,7 +67,9 @@ class UserRepo {
     );
   }
 
-  Future<Response> updateDeviceToken(String token, String platform) async {
+  Future<Response> updateDeviceToken(
+      {required String token, required String platform}) async {
+
     return await apiClient.putData(AppConstants.POST_DEVICE_TOKEN, {
       "deviceToken": token,
       "platform": platform,
