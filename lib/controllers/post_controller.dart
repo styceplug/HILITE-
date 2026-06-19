@@ -120,8 +120,7 @@ class PostController extends GetxController {
         }
 
         if (deepLinkPost != null && deepLinkPost.type == 'video') {
-          // 2. Prepare the Feed
-          // If we already have posts loaded, we can reuse them to save time
+
           List<PostModel> currentFeed = [];
           if (posts.isNotEmpty) {
             currentFeed = List.from(posts);
@@ -140,8 +139,7 @@ class PostController extends GetxController {
             }
           }
 
-          // 3. Merge: [DeepLink, ...Rest]
-          // Remove deep link post from existing feed to avoid duplicates
+
           currentFeed.removeWhere((p) => p.id == deepLinkPost!.id);
 
           // Assign merged list
@@ -289,16 +287,15 @@ class PostController extends GetxController {
     required String text,
     required bool isPublic,
     required List<String> tags,
+    required List<String> userTags,
   }) async {
     final uploadService = Get.find<UploadService>();
 
-    // Prevent starting a second upload while one is in progress
     if (uploadService.isUploading) {
       CustomSnackBar.failure(message: 'An upload is already in progress.');
       return;
     }
 
-    // ── 1. Generate thumbnail (video only) ───────────────────────────────────
     String? thumbnailPath;
     if (isVideo) {
       try {
@@ -315,15 +312,10 @@ class PostController extends GetxController {
       }
     }
 
-    // ── 2. Navigate away immediately so user can browse ──────────────────────
-    // Close the PostDetailsScreen and return to the home feed
     Get.offAllNamed(AppRoutes.homeScreen);
     AppController appController = Get.find<AppController>();
     appController.changeCurrentAppPage(0);
 
-    // ── 3. Start upload in background ────────────────────────────────────────
-    // We intentionally do NOT await this — fire and forget.
-    // UploadService's reactive state drives the pill widget.
     _runUploadInBackground(
       file: file,
       isVideo: isVideo,
@@ -333,6 +325,7 @@ class PostController extends GetxController {
       isPublic: isPublic,
       thumbnailPath: thumbnailPath,
       tags: tags,
+      userTags: userTags,
     );
   }
 
@@ -345,6 +338,7 @@ class PostController extends GetxController {
     required bool isPublic,
     String? thumbnailPath,
     required List<String> tags,
+    required List<String> userTags,
   }) async {
     try {
       final response = isVideo
@@ -355,7 +349,8 @@ class PostController extends GetxController {
         text: text,
         isPublic: isPublic,
         thumbnailPath: thumbnailPath,
-        tags: tags, // <-- Add this!
+        tags: tags,
+        userTags: userTags,
       )
           : await postRepo.uploadImagePost(
         imageFile: file,
@@ -363,7 +358,8 @@ class PostController extends GetxController {
         description: description,
         text: text,
         isPublic: isPublic,
-        tags: tags, // <-- Add this!
+        tags: tags,
+        userTags: userTags,
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -673,11 +669,19 @@ class PostController extends GetxController {
   }
 
   Future<void> _initController(int index) async {
-    if (!_isValidVideoIndex(index)) {
-      debugPrint('Controller init skipped: Invalid index or not a video post.');
+    // 1. Is it a valid index within bounds?
+    if (index < 0 || index >= posts.length) return;
+
+    // 2. NEW: If it's an image, mark it ready instantly and skip video engine setup
+    if (posts[index].type != 'video') {
+      if (!initializedIndexes.contains(index)) {
+        initializedIndexes.add(index);
+        update(['video_item_$index']);
+      }
       return;
     }
 
+    // 3. Continue with Video Initialization
     if (videoControllers.containsKey(index)) return;
 
     final pendingInit = _controllerInitFutures[index];
@@ -785,6 +789,15 @@ class PostController extends GetxController {
   }
 
   Future<void> _playAtIndex(int index) async {
+
+    if (index < 0 || index >= posts.length) return;
+
+    if (posts[index].type != 'video') {
+      await _pauseAllExcept(-1);
+      return;
+    }
+
+
     if (!_isPlaybackActive || !_isValidVideoIndex(index)) {
       await stopVideoAtIndex(index);
       return;
@@ -934,3 +947,7 @@ class PostController extends GetxController {
         posts[index].id == postId;
   }
 }
+
+
+
+
