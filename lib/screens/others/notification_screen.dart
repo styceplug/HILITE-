@@ -31,10 +31,29 @@ class _NotificationScreenState extends State<NotificationScreen> {
     });
   }
 
+  // Helper to make the dates look like "2h", "1d", "Just now"
+  String _getTimeAgo(DateTime? date) {
+    if (date == null) return '';
+
+    try {
+      DateTime localDate = date.toLocal();
+      Duration diff = DateTime.now().difference(localDate);
+
+      if (diff.inDays > 365) return '${(diff.inDays / 365).floor()}y';
+      if (diff.inDays > 0) return '${diff.inDays}d';
+      if (diff.inHours > 0) return '${diff.inHours}h';
+      if (diff.inMinutes > 0) return '${diff.inMinutes}m';
+
+      return 'Just now';
+    } catch (e) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF030A1B), // Premium Dark Background
+      backgroundColor: const Color(0xFF030A1B),
       appBar: CustomAppbar(
         backgroundColor: const Color(0xFF030A1B),
         centerTitle: false,
@@ -45,26 +64,26 @@ class _NotificationScreenState extends State<NotificationScreen> {
             style: TextStyle(
               fontSize: Dimensions.font20,
               color: Colors.white,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700, // Slightly bolder for a premium feel
+              letterSpacing: 0.5,
             ),
           ),
         ),
         leadingIcon: const BackButton(color: Colors.white),
         actionIcon: GestureDetector(
-          onTap: () {
-            notificationController.markAllAsRead();
-          },
+          onTap: () => notificationController.markAllAsRead(),
           child: Container(
             margin: EdgeInsets.only(right: Dimensions.width10),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.blueAccent.withOpacity(0.1), // Brand tint
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.blueAccent.withOpacity(0.3)),
             ),
             child: const Text(
               'Mark all read',
               style: TextStyle(
-                color: Colors.white,
+                color: Colors.blueAccent,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -74,70 +93,36 @@ class _NotificationScreenState extends State<NotificationScreen> {
       ),
       body: GetBuilder<NotificationController>(
         builder: (controller) {
-          // Check if we are loading and the list is empty
           final bool isInitialLoad = controller.isLoading && controller.notificationList.isEmpty;
 
           return RefreshIndicator(
-            color: AppColors.buttonColor,
-            backgroundColor: const Color(0xFF1F2937),
+            color: Colors.blueAccent,
+            backgroundColor: const Color(0xFF161E2E),
             onRefresh: () async {
               await controller.getNotifications();
             },
-            // --- TRUE SKELETONIZER MAGIC HAPPENS HERE ---
             child: Skeletonizer(
               enabled: isInitialLoad,
+              // Customize the skeleton sweeping effect
+              effect: ShimmerEffect(
+                baseColor: Colors.white.withOpacity(0.05),
+                highlightColor: Colors.white.withOpacity(0.1),
+                duration: const Duration(seconds: 2),
+              ),
               child: isInitialLoad || controller.notificationList.isNotEmpty
-                  ? ListView.separated(
+                  ? ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                 padding: EdgeInsets.symmetric(vertical: Dimensions.height10),
-                // If loading, show 7 dummy items. Otherwise, show real items.
-                itemCount: isInitialLoad ? 7 : controller.notificationList.length,
-                separatorBuilder: (context, index) => Divider(
-                  height: 1,
-                  color: Colors.white.withOpacity(0.05),
-                  indent: Dimensions.width20 * 3.5,
-                ),
+                itemCount: isInitialLoad ? 8 : controller.notificationList.length,
                 itemBuilder: (context, index) {
-
                   if (isInitialLoad) {
-                    // Pass dummy text to the REAL layout so Skeletonizer paints over it perfectly
-                    return _buildNotificationLayout(
-                      typeColor: Colors.grey,
-                      typeIcon: Iconsax.notification, // Make sure you have Iconsax imported
-                      isUnread: false,
-                      title: 'Loading Notification Title',
-                      message: 'This is a placeholder message to allow the skeletonizer to draw realistic text lines.',
-                      onTap: null,
-                    );
+                    return _buildSkeletonTile();
                   }
-
-                  // Render Real Data
                   var notification = controller.notificationList[index];
                   return _buildNotificationTile(notification, controller);
                 },
               )
-                  : Stack(
-                children: [
-                  ListView(), // Allows Pull-to-refresh even when empty
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Iconsax.notification, size: 70, color: Colors.white.withOpacity(0.1)),
-                        SizedBox(height: Dimensions.height20),
-                        const Text(
-                          'No notifications yet',
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
-                        ),
-                        SizedBox(height: Dimensions.height10),
-                        Text(
-                          'You have no new alerts at this time.',
-                          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                  : _buildEmptyState(),
             ),
           );
         },
@@ -145,21 +130,72 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // Extracts real data and passes it to the master layout
+  Widget _buildEmptyState() {
+    return Stack(
+      children: [
+        ListView(physics: const AlwaysScrollableScrollPhysics()), // Allows pull-to-refresh
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.03),
+                ),
+                child: Icon(Iconsax.notification_bing, size: 60, color: Colors.white.withOpacity(0.2)),
+              ),
+              SizedBox(height: Dimensions.height20),
+              const Text(
+                'You\'re all caught up!',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: Dimensions.height10),
+              Text(
+                'No new notifications at this time.',
+                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Specifically designed layout to look perfect when Skeletonizer paints over it
+  Widget _buildSkeletonTile() {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: Dimensions.height10, horizontal: Dimensions.width20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Bone.circle(size: 48), // Explicit Skeletonizer bone
+          SizedBox(width: Dimensions.width15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Bone.text(words: 3),
+                SizedBox(height: Dimensions.height10),
+                const Bone.text(words: 8),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildNotificationTile(NotificationModel notification, NotificationController controller) {
     Color typeColor = controller.getColorByType(notification.type);
     IconData typeIcon = controller.getIconByType(notification.type);
     bool isUnread = notification.isRead == false;
+    String timeAgo = _getTimeAgo(notification.createdAt);
 
-    return _buildNotificationLayout(
-      typeColor: typeColor,
-      typeIcon: typeIcon,
-      isUnread: isUnread,
-      title: notification.title ?? "Notification",
-      message: notification.message ?? "",
+    return InkWell(
       onTap: () {
         notificationController.markSingleNotificationAsRead(notification.id);
-
         String? target = notification.url;
 
         if (target != null && target.trim().isNotEmpty) {
@@ -168,50 +204,34 @@ class _NotificationScreenState extends State<NotificationScreen> {
             arguments: {'targetId': target.trim()},
           );
         } else {
-          CustomSnackBar.showToast(message: 'Can not view profile at this time, try again later.');
+          CustomSnackBar.showToast(message: 'Profile unavailable at this time.');
         }
       },
-    );
-  }
-
-
-  Widget _buildNotificationLayout({
-    required Color typeColor,
-    required IconData typeIcon,
-    required bool isUnread,
-    required String title,
-    required String message,
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      highlightColor: Colors.white.withOpacity(0.05),
-      splashColor: Colors.white.withOpacity(0.1),
+      highlightColor: Colors.white.withOpacity(0.02),
+      splashColor: Colors.white.withOpacity(0.05),
       child: Container(
-        padding: EdgeInsets.symmetric(
-          vertical: Dimensions.height15,
-          horizontal: Dimensions.width20,
-        ),
+        margin: EdgeInsets.symmetric(horizontal: Dimensions.width15, vertical: 6),
+        padding: EdgeInsets.all(Dimensions.width15),
         decoration: BoxDecoration(
-          color: isUnread ? Colors.white.withOpacity(0.05) : Colors.transparent,
+          color: isUnread ? const Color(0xFF161E2E) : Colors.transparent, // Elevated card look for unread
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isUnread ? Colors.white.withOpacity(0.08) : Colors.transparent,
+          ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Icon Circle
             Container(
-              height: Dimensions.height10 * 5,
-              width: Dimensions.width10 * 5,
+              height: 48,
+              width: 48,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: typeColor.withOpacity(0.15),
                 border: Border.all(color: typeColor.withOpacity(0.3)),
               ),
-              child: Icon(
-                typeIcon,
-                color: typeColor,
-                size: Dimensions.iconSize24,
-              ),
+              child: Icon(typeIcon, color: typeColor, size: 22),
             ),
             SizedBox(width: Dimensions.width15),
 
@@ -220,45 +240,64 @@ class _NotificationScreenState extends State<NotificationScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: Dimensions.font16,
-                      fontWeight: isUnread ? FontWeight.bold : FontWeight.w500,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          notification.title ?? "Alert",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: Dimensions.font16,
+                            fontWeight: isUnread ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (timeAgo.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Text(
+                            timeAgo,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isUnread ? Colors.blueAccent : Colors.white.withOpacity(0.4),
+                              fontWeight: isUnread ? FontWeight.w600 : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   SizedBox(height: Dimensions.height5),
                   Text(
-                    message,
+                    notification.message ?? "",
                     overflow: TextOverflow.ellipsis,
                     maxLines: 2,
                     style: TextStyle(
                       fontSize: Dimensions.font14,
-                      color: isUnread ? Colors.white.withOpacity(0.8) : Colors.white.withOpacity(0.4),
+                      color: isUnread ? Colors.white.withOpacity(0.8) : Colors.white.withOpacity(0.5),
                       height: 1.4,
                     ),
                   ),
                 ],
               ),
             ),
-            SizedBox(width: Dimensions.width10),
 
-            // Dot Indicator for Unread
+            // Dot Indicator for Unread (Optional since we have the elevated background, but keeps it clear)
             if (isUnread)
               Container(
-                margin: const EdgeInsets.only(top: 6),
-                height: 10,
-                width: 10,
+                margin: const EdgeInsets.only(top: 6, left: 10),
+                height: 8,
+                width: 8,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.buttonColor,
+                  color: Colors.blueAccent,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.buttonColor.withOpacity(0.4),
-                      blurRadius: 6,
+                      color: Colors.blueAccent.withOpacity(0.5),
+                      blurRadius: 8,
                       spreadRadius: 2,
                     )
                   ],

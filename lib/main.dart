@@ -23,11 +23,12 @@ Future<void> main() async {
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
-      statusBarColor: AppColors.primary,
-      statusBarIconBrightness: Brightness.dark,
-      statusBarBrightness: Brightness.light,
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarIconBrightness: Brightness.light,
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
       systemNavigationBarDividerColor: Colors.transparent,
     ),
   );
@@ -76,16 +77,20 @@ class MyApp extends StatelessWidget {
               builder: (context, constraint) {
                 Dimensions.init(context);
 
-                return GetMaterialApp(
+                return AnnotatedRegion(child: GetMaterialApp(
                   debugShowCheckedModeBanner: false,
                   title: AppConstants.APP_NAME,
+                  unknownRoute: GetPage(
+                    name: '/notfound',
+                    page: () => const Scaffold(backgroundColor: AppColors.backgroundColor),
+                  ),
                   theme: ThemeData(
-                    fontFamily: 'Poppins',
-                    scaffoldBackgroundColor: AppColors.backgroundColor,
-                    textTheme: Theme.of(context).textTheme.apply(
-                      bodyColor: AppColors.textColor,
-                      displayColor: AppColors.textColor,
-                    )
+                      fontFamily: 'Poppins',
+                      scaffoldBackgroundColor: AppColors.backgroundColor,
+                      textTheme: Theme.of(context).textTheme.apply(
+                        bodyColor: AppColors.textColor,
+                        displayColor: AppColors.textColor,
+                      )
                   ),
                   getPages: AppRoutes.routes,
                   initialRoute: AppRoutes.splash,
@@ -101,7 +106,7 @@ class MyApp extends StatelessWidget {
                       );
                     });
                   },
-                );
+                ), value: SystemUiOverlayStyle.light);
               },
             );
           },
@@ -111,16 +116,34 @@ class MyApp extends StatelessWidget {
   }
 }
 
-void _handleDeepLink(Uri uri) {
-  // Check if link is https://hiliteapp.net/post/6926...
-  if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'post') {
-    String videoId = uri.pathSegments[1];
-    print("🔗 Deep Link to Post ID: $videoId");
+String? _lastProcessedLinkId;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+void _handleDeepLink(Uri uri) {
+  if (uri.pathSegments.length >= 2 &&
+      uri.pathSegments[0] == 'post' &&
+      uri.pathSegments[1].isNotEmpty) {
+
+    final videoId = uri.pathSegments[1];
+
+    if (_lastProcessedLinkId == videoId) {
+      print("🎛️ Skipped duplicate deep link event for ID: $videoId");
+      return;
+    }
+
+    _lastProcessedLinkId = videoId;
+
+    Future.delayed(const Duration(seconds: 2), () {
+      _lastProcessedLinkId = null;
+    });
+
+    void tryHandle() {
       if (Get.isRegistered<PostController>()) {
         Get.find<PostController>().handleDeepLink(videoId);
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) => tryHandle());
       }
-    });
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => tryHandle());
   }
 }

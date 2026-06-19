@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hilite/routes/routes.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
@@ -13,6 +14,7 @@ import '../../controllers/chat_controller.dart';
 import '../../models/message_model.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../utils/app_constants.dart';
+import '../../widgets/image_approval_screen.dart';
 
 enum _VoiceComposerMode { idle, recording, preview }
 
@@ -36,11 +38,12 @@ class _MessagingScreenState extends State<MessagingScreen>
 
   late final ChatController ctrl;
   final AudioRecorder _audioRecorder = AudioRecorder();
-  late final AudioPlayer _draftPlayer;
+  late AudioPlayer _draftPlayer;
   StreamSubscription<PlayerState>? _draftPlayerStateSub;
   StreamSubscription<Duration>? _draftPositionSub;
   StreamSubscription<Duration?>? _draftDurationSub;
   Timer? _recordingTimer;
+  DateTime? _recordingStartTime;
 
   _VoiceComposerMode _voiceMode = _VoiceComposerMode.idle;
   String? _draftRecordingPath;
@@ -61,7 +64,6 @@ class _MessagingScreenState extends State<MessagingScreen>
   bool get _isDraftPlaying =>
       _draftPlayer.playing &&
       _draftPlayer.playerState.processingState != ProcessingState.completed;
-
 
   Worker? _messageListener;
   Worker? _typingListener;
@@ -100,7 +102,6 @@ class _MessagingScreenState extends State<MessagingScreen>
       if (!mounted || duration == null || !_hasVoiceDraft) return;
       setState(() => _draftDuration = duration);
     });
-
   }
 
   @override
@@ -133,11 +134,14 @@ class _MessagingScreenState extends State<MessagingScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      unawaited(_AudioMessagePlaybackCoordinator.stopActive());
+      _AudioMessagePlaybackCoordinator.stopActive().ignore();
       if (_isRecording) {
-        unawaited(_finalizeRecording(openPreview: true, showErrors: false));
+        _finalizeRecording(
+          openPreview: true,
+          showErrors: false,
+        ).catchError((e) => debugPrint('lifecycle finalize error: $e'));
       } else if (_isDraftPlaying) {
-        unawaited(_draftPlayer.pause());
+        _draftPlayer.pause().ignore();
       }
     }
   }
@@ -151,29 +155,87 @@ class _MessagingScreenState extends State<MessagingScreen>
   }
 
   void _scrollToBottom({bool animate = true}) {
-    // Shorter delay for the instant snap to prevent flashing
-    Future.delayed(Duration(milliseconds: animate ? 150 : 50), () {
-      if (mounted && _scrollCtrl.hasClients && _scrollCtrl.position.maxScrollExtent > 0) {
-        if (animate) {
-          _scrollCtrl.animateTo(
-            _scrollCtrl.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        } else {
-          // INSTANT SNAP TO BOTTOM (No animation)
-          _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
-        }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollCtrl.hasClients) return;
+      final max = _scrollCtrl.position.maxScrollExtent;
+      if (max <= 0) return;
+
+      if (animate) {
+        _scrollCtrl.animateTo(
+          max,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scrollCtrl.jumpTo(max);
       }
     });
   }
 
   Future<void> _pickImage() async {
     final xfile = await _picker.pickImage(source: ImageSource.gallery);
-    if (xfile == null) return;
+    if (xfile == null) return; // User canceled picker
 
-    await ctrl.sendImage(File(xfile.path));
-    _scrollToBottom();
+    // 1. Launch the Native Cropper
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: xfile.path,
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Photo',
+          toolbarColor: const Color(0xFF030A1B),
+          // Your premium dark background
+          toolbarWidgetColor: Colors.white,
+          initAspectRatio: CropAspectRatioPreset.original,
+          lockAspectRatio: false,
+          backgroundColor: Colors.black,
+          activeControlsWidgetColor: Colors.blueAccent,
+          // Your brand color
+          dimmedLayerColor: Colors.black.withOpacity(0.8),
+          cropFrameColor: Colors.white,
+          cropGridColor: Colors.white.withOpacity(0.5),
+          // Added here for Android
+          aspectRatioPresets: [
+            CropAspectRatioPreset.square,
+            CropAspectRatioPreset.ratio4x3,
+            CropAspectRatioPreset.ratio16x9,
+            CropAspectRatioPreset.original,
+          ],
+        ),
+        IOSUiSettings(
+          title: 'Crop Photo',
+          cancelButtonTitle: 'Cancel',
+          doneButtonTitle: 'Done',
+          aspectRatioPickerButtonHidden: false,
+          resetButtonHidden: false,
+          rectX: 0.0,
+          rectY: 0.0,
+          aspectRatioLockEnabled: false,
+          // Added here for iOS
+          aspectRatioPresets: [
+            CropAspectRatioPreset.square,
+            CropAspectRatioPreset.ratio4x3,
+            CropAspectRatioPreset.ratio16x9,
+            CropAspectRatioPreset.original,
+          ],
+        ),
+      ],
+    );
+
+    if (croppedFile == null) return; // User canceled cropping
+
+    final file = File(croppedFile.path);
+
+    // 2. Push to your custom full-screen Approval Overlay
+    final bool? shouldSend = await Get.to(
+      () => ImageApprovalScreen(imageFile: file),
+      transition: Transition.downToUp,
+    );
+
+    // 3. Send if approved
+    if (shouldSend == true) {
+      await ctrl.sendImage(file);
+      _scrollToBottom();
+    }
   }
 
   Future<void> _pickAudio() async {
@@ -213,6 +275,8 @@ class _MessagingScreenState extends State<MessagingScreen>
         ),
         path: path,
       );
+
+      _recordingStartTime = DateTime.now();
 
       _recordingTimer?.cancel();
       if (mounted) {
@@ -254,86 +318,147 @@ class _MessagingScreenState extends State<MessagingScreen>
   }) async {
     if (!_isRecording) return;
 
-    final recordedDuration = _recordingDuration;
+    // 1. EAGERLY exit recording mode to prevent double-tap race conditions
+    if (mounted) {
+      setState(() {
+        _voiceMode = _VoiceComposerMode.idle;
+      });
+    }
+
+    final actualDuration =
+        _recordingStartTime != null
+            ? DateTime.now().difference(_recordingStartTime!)
+            : _recordingDuration;
+
     _recordingTimer?.cancel();
 
     try {
       final path = await _audioRecorder.stop();
+      debugPrint(
+        '🎙️ stop() path=$path duration=$actualDuration openPreview=$openPreview',
+      );
+
+      // Reset duration after stop finishes
       if (mounted) {
         setState(() {
-          _voiceMode = _VoiceComposerMode.idle;
           _recordingDuration = Duration.zero;
         });
       }
 
       if (path == null || path.trim().isEmpty) {
+        debugPrint('🎙️ discard: null/empty path');
         return;
       }
 
       final recordedFile = File(path);
-      if (!await recordedFile.exists() || await recordedFile.length() == 0) {
+      var exists = await recordedFile.exists();
+      var length = exists ? await recordedFile.length() : 0;
+
+      // 2. HARDWARE SAFEGUARD: The 300ms flush buffer for slow devices
+      if (!exists || length == 0) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        exists = await recordedFile.exists();
+        length = exists ? await recordedFile.length() : 0;
+      }
+
+      debugPrint('🎙️ exists=$exists length=$length');
+
+      if (!exists || length == 0) {
+        debugPrint('🎙️ discard: file still empty after retry');
         await _deleteVoiceFile(path);
-        if (showErrors) {
-          Get.snackbar('Error', 'The recorded voice note was empty.');
+        if (showErrors && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('The recorded voice note was empty.')),
+          );
         }
         return;
       }
 
-      if (recordedDuration < _minimumVoiceNoteDuration) {
+      if (actualDuration < _minimumVoiceNoteDuration) {
+        debugPrint('🎙️ discard: too short ($actualDuration)');
         await _deleteVoiceFile(path);
-        if (showErrors) {
+        if (showErrors)
           Get.snackbar('Too short', 'Record a slightly longer voice note.');
-        }
         return;
       }
 
       if (!openPreview) {
+        debugPrint('🎙️ discard: explicit cancel');
         await _deleteVoiceFile(path);
         return;
       }
 
+      debugPrint('🎙️ opening preview');
       await _prepareVoiceDraft(path);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('🎙️ EXCEPTION: $e\n$st');
       if (mounted) {
         setState(() {
           _voiceMode = _VoiceComposerMode.idle;
           _recordingDuration = Duration.zero;
         });
       }
-      if (showErrors) {
-        Get.snackbar('Error', 'Failed to stop recording: $e');
-      }
+      if (showErrors) Get.snackbar('Error', 'Failed to stop recording: $e');
     }
   }
 
   Future<void> _prepareVoiceDraft(String path) async {
-    await _resetDraftPlayer();
+    debugPrint('📋 _prepareVoiceDraft: START path=$path');
 
     final previousDraft = _draftRecordingPath;
-    if (mounted) {
-      setState(() {
-        _voiceMode = _VoiceComposerMode.preview;
-        _draftRecordingPath = path;
-        _draftPosition = Duration.zero;
-        _draftDuration = Duration.zero;
-        _draftLoading = true;
-      });
-    }
+    if (!mounted) return;
+
+    setState(() {
+      _voiceMode = _VoiceComposerMode.preview;
+      _draftRecordingPath = path;
+      _draftPosition = Duration.zero;
+      _draftDuration = Duration.zero;
+      _draftLoading = true;
+    });
 
     if (previousDraft != null && previousDraft != path) {
       await _deleteVoiceFile(previousDraft);
     }
 
     try {
-      final duration = await _draftPlayer.setFilePath(path);
+      debugPrint('📋 stopping current draft player state');
+      if (_draftPlayer.playing) {
+        await _draftPlayer.stop();
+      }
+
+      // 🛑 THE NEW FIX: Break the Android file lock by copying the file
+      final originalFile = File(path);
+      final tempDir = await getTemporaryDirectory();
+      final safePlaybackPath = '${tempDir.path}/safe_preview_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+      // Copying forces the OS to create a fresh, unlocked file descriptor for ExoPlayer
+      final safeFile = await originalFile.copy(safePlaybackPath);
+
+      // Clean up the original locked file so we don't leak storage
+      if (await originalFile.exists()) {
+        await originalFile.delete();
+      }
+
+      debugPrint('📋 calling setAudioSource on safe path=${safeFile.path}');
+
+      // Use AudioSource.uri instead of setFilePath for safer native Android parsing
+      final duration = await _draftPlayer.setFilePath(
+        safeFile.path,
+      );
+
+      debugPrint('📋 setAudioSource done, duration=$duration');
       if (!mounted) return;
 
       setState(() {
+        // IMPORTANT: Update the draft path to the safe copy so the send/delete functions use it!
+        _draftRecordingPath = safeFile.path;
         _draftDuration = duration ?? Duration.zero;
         _draftPosition = Duration.zero;
         _draftLoading = false;
       });
-    } catch (e) {
+      debugPrint('📋 _prepareVoiceDraft: SUCCESS');
+    } catch (e, st) {
+      debugPrint('📋 _prepareVoiceDraft: EXCEPTION — $e\n$st');
       if (mounted) {
         setState(() {
           _voiceMode = _VoiceComposerMode.idle;
@@ -342,9 +467,11 @@ class _MessagingScreenState extends State<MessagingScreen>
           _draftDuration = Duration.zero;
           _draftLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load the recorded voice note')),
+        );
       }
       await _deleteVoiceFile(path);
-      Get.snackbar('Error', 'Could not load the recorded voice note');
     }
   }
 
@@ -434,10 +561,15 @@ class _MessagingScreenState extends State<MessagingScreen>
     final draftPath = _draftRecordingPath;
     if (draftPath == null || ctrl.isSending.value || _draftLoading) return;
 
-    final sent = await ctrl.sendAudio(File(draftPath));
-    if (!sent) return;
-
+    // Retain BEFORE sending — file must survive the full upload
     _retainedVoiceDraftPaths.add(draftPath);
+
+    final sent = await ctrl.sendAudio(File(draftPath));
+    if (!sent) {
+      _retainedVoiceDraftPaths.remove(draftPath); // rollback
+      return;
+    }
+
     await _resetDraftPlayer();
     if (mounted) {
       setState(() {
@@ -448,7 +580,7 @@ class _MessagingScreenState extends State<MessagingScreen>
         _draftLoading = false;
       });
     }
-    await _deleteVoiceFile(draftPath);
+    await _deleteVoiceFile(draftPath); // safe — sendAudio fully awaited
     _scrollToBottom();
   }
 
@@ -460,7 +592,14 @@ class _MessagingScreenState extends State<MessagingScreen>
     } catch (_) {}
 
     try {
-      await _draftPlayer.seek(Duration.zero);
+      final state = _draftPlayer.playerState.processingState;
+      if (state != ProcessingState.idle) {
+        await _draftPlayer.seek(Duration.zero);
+      }
+    } catch (_) {}
+
+    try {
+      await _draftPlayer.stop();
     } catch (_) {}
   }
 
@@ -762,12 +901,16 @@ class _MessageList extends StatelessWidget {
   List<({String label, List<ChatMessage> messages})> _groupByDate(
     List<ChatMessage> msgs,
   ) {
-    final map = <String, List<ChatMessage>>{};
+    // Sort ascending first
+    final sorted = [...msgs]
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
-    for (final m in msgs) {
+    final map = <String, List<ChatMessage>>{};
+    final keyOrder = <String>[]; // preserve insertion order explicitly
+
+    for (final m in sorted) {
       final now = DateTime.now();
       final d = m.createdAt;
-
       final String label;
       if (_isSameDay(d, now)) {
         label = 'Today';
@@ -777,10 +920,11 @@ class _MessageList extends StatelessWidget {
         label = DateFormat('MMM d, yyyy').format(d);
       }
 
+      if (!map.containsKey(label)) keyOrder.add(label);
       map.putIfAbsent(label, () => []).add(m);
     }
 
-    return map.entries.map((e) => (label: e.key, messages: e.value)).toList();
+    return keyOrder.map((k) => (label: k, messages: map[k]!)).toList();
   }
 
   bool _isSameDay(DateTime a, DateTime b) =>
